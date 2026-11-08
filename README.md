@@ -45,6 +45,30 @@ A payment application to demonstrate <strong>real-world</strong> usage of <a hre
 
 ---
 
+## License Compliance
+
+This repository is a personal fork of the [Cypress Real World App](https://github.com/cypress-io/cypress-realworld-app), originally created by Cypress.io and distributed under the [MIT License](LICENSE).
+
+I am using this project **solely for non-commercial purposes**, namely personal learning and as part of my portfolio to demonstrate my test automation skills. In accordance with the terms of the MIT License:
+
+- The original copyright notice and the MIT License text (see [LICENSE](LICENSE)) are retained in this repository and in all copies or substantial portions of the software.
+- All rights to the original work remain with its copyright holder, Copyright (c) 2020 Cypress.io. This fork is not affiliated with, endorsed by, or sponsored by Cypress.io.
+- The software is provided "as is", without warranty of any kind, express or implied, and I accept no liability for any claim or damages arising from its use.
+- Any modifications I make are my own and are likewise shared under the terms of the MIT License.
+
+**한국어 안내**
+
+이 저장소는 Cypress.io가 만들고 [MIT 라이선스](LICENSE)로 배포한 [Cypress Real World App](https://github.com/cypress-io/cypress-realworld-app)을 개인적으로 포크한 것입니다.
+
+저는 이 프로젝트를 **오직 비상업적 목적**, 즉 개인 학습과 테스트 자동화 역량을 보여주기 위한 포트폴리오 용도로만 사용합니다. MIT 라이선스 조건에 따라 다음을 준수합니다.
+
+- 원저작자의 저작권 고지와 MIT 라이선스 전문([LICENSE](LICENSE))을 이 저장소와 모든 사본 또는 주요 부분에 그대로 유지합니다.
+- 원본에 대한 모든 권리는 원저작권자(Copyright (c) 2020 Cypress.io)에게 있으며, 이 포크는 Cypress.io와 제휴, 보증, 후원 관계가 없습니다.
+- 소프트웨어는 명시적이든 묵시적이든 어떠한 보증도 없이 "있는 그대로" 제공되며, 사용으로 인한 어떠한 청구나 손해에 대해서도 책임을 지지 않습니다.
+- 제가 수정한 부분 역시 MIT 라이선스 조건에 따라 공유됩니다.
+
+---
+
 ## Features
 
 🛠 Built with [React][reactjs], [XState][xstate], [Express][express], [lowdb][lowdb], [Material-UI][material-ui] and [TypeScript][typescript]
