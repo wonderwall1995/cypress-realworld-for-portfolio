@@ -7,7 +7,7 @@ import {
   getBankAccountById,
   createBankAccountForUser,
   removeBankAccountById,
-} from "./database";
+} from "./bankaccount-db";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
 import { shortIdValidation, isBankAccountValidator } from "./validators";
 const router = express.Router();
@@ -15,12 +15,15 @@ const router = express.Router();
 // Routes
 
 //GET /bankAccounts (scoped-user)
-router.get("/", ensureAuthenticated, (req, res) => {
-  /* istanbul ignore next */
-  const accounts = getBankAccountsByUserId(req.user?.id!);
+router.get("/", ensureAuthenticated, async (req, res, next) => {
+  try {
+    const accounts = await getBankAccountsByUserId(req.user?.id!);
 
-  res.status(200);
-  res.json({ results: accounts });
+    res.status(200);
+    res.json({ results: accounts });
+  } catch (err) {
+    next(err);
+  }
 });
 
 //GET /bankAccounts/:bankAccountId (scoped-user)
@@ -28,37 +31,53 @@ router.get(
   "/:bankAccountId",
   ensureAuthenticated,
   validateMiddleware([shortIdValidation("bankAccountId")]),
-  (req, res) => {
-    const { bankAccountId } = req.params;
+  async (req, res, next) => {
+    try {
+      const { bankAccountId } = req.params;
 
-    const account = getBankAccountById(bankAccountId);
+      const account = await getBankAccountById(bankAccountId);
 
-    res.status(200);
-    res.json({ account });
+      res.status(200);
+      res.json({ account: account ?? undefined });
+    } catch (err) {
+      next(err);
+    }
   }
 );
 
 //POST /bankAccounts (scoped-user)
-router.post("/", ensureAuthenticated, validateMiddleware(isBankAccountValidator), (req, res) => {
-  /* istanbul ignore next */
-  const account = createBankAccountForUser(req.user?.id!, req.body);
+router.post(
+  "/",
+  ensureAuthenticated,
+  validateMiddleware(isBankAccountValidator),
+  async (req, res, next) => {
+    try {
+      const account = await createBankAccountForUser(req.user?.id!, req.body);
 
-  res.status(200);
-  res.json({ account });
-});
+      res.status(200);
+      res.json({ account });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 //DELETE (soft) /bankAccounts (scoped-user)
 router.delete(
   "/:bankAccountId",
   ensureAuthenticated,
   validateMiddleware([shortIdValidation("bankAccountId")]),
-  (req, res) => {
-    const { bankAccountId } = req.params;
+  async (req, res, next) => {
+    try {
+      const { bankAccountId } = req.params;
 
-    const account = removeBankAccountById(bankAccountId);
+      const account = await removeBankAccountById(bankAccountId);
 
-    res.status(200);
-    res.json({ account });
+      res.status(200);
+      res.json({ account });
+    } catch (err) {
+      next(err);
+    }
   }
 );
 

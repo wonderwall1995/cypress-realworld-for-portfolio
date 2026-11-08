@@ -1,11 +1,11 @@
-import { createBankAccountForUser, removeBankAccountById } from "../../database";
+import { createBankAccountForUser, removeBankAccountById } from "../../bankaccount-db";
 
 const Mutation = {
   createBankAccount: (obj: any, args: any, ctx: any) => {
     return createBankAccountForUser(ctx.user.id, args);
   },
-  deleteBankAccount: (obj: any, args: any, ctx: any) => {
-    removeBankAccountById(args.id);
+  deleteBankAccount: async (obj: any, args: any, ctx: any) => {
+    await removeBankAccountById(args.id);
     return true;
   },
 };

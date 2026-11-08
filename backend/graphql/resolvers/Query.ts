@@ -1,10 +1,10 @@
-import { getBankAccountsByUserId } from "../../database";
+import { getBankAccountsByUserId } from "../../bankaccount-db";
 
 const Query = {
-  listBankAccount(obj: any, args: any, ctx: any) {
+  async listBankAccount(obj: any, args: any, ctx: any) {
     /* istanbul ignore next */
     try {
-      return getBankAccountsByUserId(ctx.user.id);
+      return await getBankAccountsByUserId(ctx.user.id);
       /* istanbul ignore next */
     } catch (err: any) {
       /* istanbul ignore next */

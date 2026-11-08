@@ -253,6 +253,17 @@
       "isDeleted": false,
       "createdAt": "2024-01-26T14:01:01.815Z",
       "modifiedAt": "2024-03-07T08:44:31.174Z"
+    },
+    {
+      "id": "DDhYHf58I",
+      "uuid": "fa0c1b8c-0f04-45fa-a02f-045a03e94a9a",
+      "userId": "uBmeaz5pX",
+      "bankName": "Debug Bank",
+      "accountNumber": "987654321",
+      "routingNumber": "123456789",
+      "isDeleted": true,
+      "createdAt": "2026-11-08T23:13:27.235Z",
+      "modifiedAt": "2026-11-08T23:13:27.235Z"
     }
   ],
   "transactions": [
@@ -10986,4 +10997,3 @@
     }
   ]
 }
-
