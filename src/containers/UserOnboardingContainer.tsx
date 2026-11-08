@@ -70,13 +70,13 @@ const UserOnboardingContainer: React.FC<Props> = ({ authService, bankAccountsSer
   };
 
   return (
-    <Dialog data-test="user-onboarding-dialog" fullScreen={fullScreen} open={dialogIsOpen}>
-      <DialogTitle data-test="user-onboarding-dialog-title">
+    <Dialog data-testid="user-onboarding-dialog" fullScreen={fullScreen} open={dialogIsOpen}>
+      <DialogTitle data-testid="user-onboarding-dialog-title">
         {userOnboardingState.matches("stepOne") && "Get Started with Real World App"}
         {userOnboardingState.matches("stepTwo") && "Create Bank Account"}
         {userOnboardingState.matches("stepThree") && "Finished"}
       </DialogTitle>
-      <DialogContent data-test="user-onboarding-dialog-content">
+      <DialogContent data-testid="user-onboarding-dialog-content">
         <Box display="flex" alignItems="center" justifyContent="center">
           {userOnboardingState.matches("stepOne") && (
             <>
@@ -118,14 +118,14 @@ const UserOnboardingContainer: React.FC<Props> = ({ authService, bankAccountsSer
               style={{ paddingRight: "80%" }}
               onClick={/* istanbul ignore next */ () => sendAuth("LOGOUT")}
               color="secondary"
-              data-test="user-onboarding-logout"
+              data-testid="user-onboarding-logout"
             >
               Logout
             </Button>
           </Grid>
           <Grid item>
             {!userOnboardingState.matches("stepTwo") && (
-              <Button onClick={() => nextStep()} color="primary" data-test="user-onboarding-next">
+              <Button onClick={() => nextStep()} color="primary" data-testid="user-onboarding-next">
                 {userOnboardingState.matches("stepThree") ? "Done" : "Next"}
               </Button>
             )}

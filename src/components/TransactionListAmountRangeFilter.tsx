@@ -61,7 +61,7 @@ const TransactionListAmountRangeFilter: React.FC<TransactionListAmountRangeFilte
 
   const AmountRangeFilter = () => (
     <Grid
-      data-test="transaction-list-filter-amount-range"
+      data-testid="transaction-list-filter-amount-range"
       container
       direction="column"
       justifyContent="flex-start"
@@ -78,13 +78,13 @@ const TransactionListAmountRangeFilter: React.FC<TransactionListAmountRangeFilte
           sx={{ width: "100%" }}
         >
           <Grid item sx={{ width: "225px" }}>
-            <Typography color="textSecondary" data-test="transaction-list-filter-amount-range-text">
+            <Typography color="textSecondary" data-testid="transaction-list-filter-amount-range-text">
               Amount Range: {formatAmountRangeValues(amountRangeValue)}
             </Typography>
           </Grid>
           <Grid item>
             <Button
-              data-test="transaction-list-filter-amount-clear-button"
+              data-testid="transaction-list-filter-amount-clear-button"
               onClick={() => {
                 setAmountRangeValue(initialAmountRange);
                 resetAmountRange();
@@ -97,7 +97,7 @@ const TransactionListAmountRangeFilter: React.FC<TransactionListAmountRangeFilte
       </Grid>
       <Grid item>
         <Slider
-          data-test="transaction-list-filter-amount-range-slider"
+          data-testid="transaction-list-filter-amount-range-slider"
           sx={{ width: "200px" }}
           value={amountRangeValue}
           min={0}
@@ -118,7 +118,7 @@ const TransactionListAmountRangeFilter: React.FC<TransactionListAmountRangeFilte
         color="primary"
         variant="outlined"
         onClick={handleAmountRangeClick}
-        data-test="transaction-list-filter-amount-range-button"
+        data-testid="transaction-list-filter-amount-range-button"
         label={`Amount: ${formatAmountRangeValues(amountRangeValue)}`}
         deleteIcon={<ArrowDropDownIcon />}
         onDelete={handleAmountRangeClick}
@@ -147,10 +147,10 @@ const TransactionListAmountRangeFilter: React.FC<TransactionListAmountRangeFilte
           open={amountRangeOpen}
           ModalProps={{ onClose: handleAmountRangeClose }}
           anchor="bottom"
-          data-test="amount-range-filter-drawer"
+          data-testid="amount-range-filter-drawer"
         >
           <Button
-            data-test="amount-range-filter-drawer-close"
+            data-testid="amount-range-filter-drawer-close"
             onClick={() => handleAmountRangeClose()}
           >
             Close

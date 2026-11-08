@@ -23,25 +23,21 @@ A payment application used as a portfolio project for <strong>end-to-end testing
 
 ## License Compliance
 
-This repository is a personal fork of the [Cypress Real World App](https://github.com/cypress-io/cypress-realworld-app), originally created by Cypress.io and distributed under the [MIT License](LICENSE).
+This repository is a personal fork of the [Cypress Real World App](https://github.com/cypress-io/cypress-realworld-app) by Cypress.io, distributed under the [MIT License](LICENSE).
 
-I am using this project **solely for non-commercial purposes**, namely personal learning and as part of my portfolio to demonstrate my test automation skills. In accordance with the terms of the MIT License:
-
-- The original copyright notice and the MIT License text (see [LICENSE](LICENSE)) are retained in this repository and in all copies or substantial portions of the software.
-- All rights to the original work remain with its copyright holder, Copyright (c) 2020 Cypress.io. This fork is not affiliated with, endorsed by, or sponsored by Cypress.io.
-- The software is provided "as is", without warranty of any kind, express or implied, and I accept no liability for any claim or damages arising from its use.
-- Any modifications I make are my own and are likewise shared under the terms of the MIT License.
+- The original MIT License text and the copyright notice (Copyright (c) 2020 Cypress.io) are retained in [LICENSE](LICENSE).
+- This fork is used **solely for non-commercial purposes** (personal learning and portfolio), and it is not affiliated with, endorsed by, or sponsored by Cypress.io. Cypress logos and trademarks are not used.
+- My modifications are shared under the same MIT License.
+- The software is provided "as is", without warranty of any kind; see [LICENSE](LICENSE).
 
 **한국어 안내**
 
-이 저장소는 Cypress.io가 만들고 [MIT 라이선스](LICENSE)로 배포한 [Cypress Real World App](https://github.com/cypress-io/cypress-realworld-app)을 개인적으로 포크한 것입니다.
+이 저장소는 Cypress.io의 [Cypress Real World App](https://github.com/cypress-io/cypress-realworld-app)을 개인적으로 포크한 것이며, [MIT 라이선스](LICENSE)를 따릅니다.
 
-저는 이 프로젝트를 **오직 비상업적 목적**, 즉 개인 학습과 테스트 자동화 역량을 보여주기 위한 포트폴리오 용도로만 사용합니다. MIT 라이선스 조건에 따라 다음을 준수합니다.
-
-- 원저작자의 저작권 고지와 MIT 라이선스 전문([LICENSE](LICENSE))을 이 저장소와 모든 사본 또는 주요 부분에 그대로 유지합니다.
-- 원본에 대한 모든 권리는 원저작권자(Copyright (c) 2020 Cypress.io)에게 있으며, 이 포크는 Cypress.io와 제휴, 보증, 후원 관계가 없습니다.
-- 소프트웨어는 명시적이든 묵시적이든 어떠한 보증도 없이 "있는 그대로" 제공되며, 사용으로 인한 어떠한 청구나 손해에 대해서도 책임을 지지 않습니다.
-- 제가 수정한 부분 역시 MIT 라이선스 조건에 따라 공유됩니다.
+- 원본 MIT 라이선스 전문과 저작권 고지(Copyright (c) 2020 Cypress.io)를 [LICENSE](LICENSE)에 그대로 유지합니다.
+- **오직 비상업적 목적**(개인 학습, 포트폴리오)으로만 사용하며, Cypress.io와 제휴·보증·후원 관계가 없습니다. Cypress 로고와 상표는 사용하지 않습니다.
+- 제가 수정한 부분도 동일하게 MIT 라이선스로 공유합니다.
+- 소프트웨어는 어떠한 보증도 없이 "있는 그대로" 제공됩니다. 자세한 내용은 [LICENSE](LICENSE)를 참고하세요.
 
 ---
 
@@ -101,7 +97,7 @@ pnpm dev
 
 > 🚩 **Note**
 >
-> The app will run on port `3000` (frontend) and `3001` (API backend) by default. Please make sure there are no other applications or services running on both ports.
+> The app will run on port `7201` (frontend) and `7202` (API backend) by default. Please make sure there are no other applications or services running on both ports.
 > If you want to change the default ports, you can do so by modifying `PORT` and `VITE_BACKEND_PORT` variables in `.env` file.
 > If you change the frontend port, also update `baseURL` and `webServer.url` in [playwright.config.ts](./playwright.config.ts).
 
@@ -186,7 +182,7 @@ Prerequisites include an [Amazon Cognito][cognito] account. Environment variable
 
 - A user pool is required (identity pool is not used here)
   - The user pool must have a hosted UI domain configured, which must:
-    - allow callback and sign-out URLs of `http://localhost:3000/`,
+    - allow callback and sign-out URLs of `http://localhost:7201/`,
     - allow implicit grant Oauth grant type,
     - allow these OpenID Connect scopes:
       - aws.cognito.signin.user.admin
@@ -214,7 +210,7 @@ To start the application with Google, replace the current **src/index.tsx** file
 
 ## License
 
-[![license](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/cypress-io/cypress/blob/master/LICENSE)
+[![license](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
 This project is licensed under the terms of the [MIT license](/LICENSE).
 

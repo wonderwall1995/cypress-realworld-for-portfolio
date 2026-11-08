@@ -11,7 +11,7 @@ export interface UsersListProps {
 
 const UsersList: React.FC<UsersListProps> = ({ users, setReceiver }) => {
   return (
-    <List data-test="users-list">
+    <List data-testid="users-list">
       {users &&
         users.map((user: User, index: number) => (
           <UserListItem key={user.id} user={user} setReceiver={setReceiver} index={index} />

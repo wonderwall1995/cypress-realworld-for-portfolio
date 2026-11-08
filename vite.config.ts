@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
       "process.env": env,
     },
     server: {
-      port: 3000,
+      port: Number(loadEnv(mode, process.cwd(), "PORT").PORT) || 7201,
     },
     build: {
       outDir: "build",

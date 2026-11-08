@@ -89,7 +89,7 @@ const TransactionListDateRangeFilter: React.FC<TransactionListDateRangeFilterPro
           color="primary"
           variant="outlined"
           onClick={handleDateRangeClick}
-          data-test="transaction-list-filter-date-range-button"
+          data-testid="transaction-list-filter-date-range-button"
           label={"Date: ALL"}
           deleteIcon={<ArrowDropDownIcon />}
           onDelete={handleDateRangeClick}
@@ -100,9 +100,9 @@ const TransactionListDateRangeFilter: React.FC<TransactionListDateRangeFilterPro
           color="primary"
           variant="outlined"
           onClick={handleDateRangeClick}
-          data-test="transaction-list-filter-date-range-button"
+          data-testid="transaction-list-filter-date-range-button"
           label={`Date: ${dateRangeLabel(calendarValue)}`}
-          deleteIcon={<CancelIcon data-test="transaction-list-filter-date-clear-button" />}
+          deleteIcon={<CancelIcon data-testid="transaction-list-filter-date-clear-button" />}
           onDelete={() => {
             setCalendarValue(null);
             resetDateRange();
@@ -129,7 +129,7 @@ const TransactionListDateRangeFilter: React.FC<TransactionListDateRangeFilterPro
             onCalendarSelect={onCalendarSelect}
             xsBreakpoint={xsBreakpoint}
             color={indigo}
-            dataTest="transaction-list-filter-date-range"
+            dataTestId="transaction-list-filter-date-range"
             defaultValue={calendarValue}
           />
         </Popover>
@@ -140,16 +140,16 @@ const TransactionListDateRangeFilter: React.FC<TransactionListDateRangeFilterPro
           open={dateRangeOpen}
           ModalProps={{ onClose: handleDateRangeClose }}
           anchor="bottom"
-          data-test="date-range-filter-drawer"
+          data-testid="date-range-filter-drawer"
         >
-          <Button data-test="date-range-filter-drawer-close" onClick={() => handleDateRangeClose()}>
+          <Button data-testid="date-range-filter-drawer-close" onClick={() => handleDateRangeClose()}>
             Close
           </Button>
           <RangeCalendar
             onCalendarSelect={onCalendarSelect}
             xsBreakpoint={xsBreakpoint}
             color={indigo}
-            dataTest="transaction-list-filter-date-range"
+            dataTestId="transaction-list-filter-date-range"
             defaultValue={calendarValue}
           />
         </Drawer>
@@ -162,13 +162,13 @@ export function RangeCalendar({
   onCalendarSelect,
   xsBreakpoint,
   color,
-  dataTest,
+  dataTestId,
   defaultValue,
 }: {
   onCalendarSelect: (value: Value) => void;
   xsBreakpoint: boolean;
   color: Record<string, string>;
-  dataTest: string;
+  dataTestId: string;
   defaultValue: Value;
 }) {
   const [value, setValue] = useState<Value>(defaultValue);
@@ -183,7 +183,7 @@ export function RangeCalendar({
 
   return (
     <div
-      data-test={dataTest}
+      data-testid={dataTestId}
       style={{
         width,
         maxWidth: "100%",

@@ -42,6 +42,7 @@ const classes = {
   accountBalance: `${PREFIX}-accountBalance`,
   amount: `${PREFIX}-amount`,
   accountBalanceHidden: `${PREFIX}-accountBalanceHidden`,
+  bottomNav: `${PREFIX}-bottomNav`,
 };
 
 const StyledDrawer = styled(Drawer)(({ theme }) => ({
@@ -59,6 +60,8 @@ const StyledDrawer = styled(Drawer)(({ theme }) => ({
 
   [`& .${classes.drawerPaper}`]: {
     position: "relative",
+    display: "flex",
+    flexDirection: "column",
     whiteSpace: "nowrap",
     width: drawerWidth,
     transition: theme.transitions.create("width", {
@@ -104,6 +107,9 @@ const StyledDrawer = styled(Drawer)(({ theme }) => ({
     display: "none",
   },
 
+  [`& .${classes.bottomNav}`]: {
+    marginTop: "auto",
+  },
 }));
 
 const drawerWidth = 240;
@@ -119,7 +125,7 @@ export const mainListItems = (
       onClick={() => showTemporaryDrawer && toggleDrawer()}
       component={RouterLink}
       to="/"
-      data-test="sidenav-home"
+      data-testid="sidenav-home"
     >
       <ListItemIcon>
         <HomeIcon />
@@ -132,7 +138,7 @@ export const mainListItems = (
       onClick={() => showTemporaryDrawer && toggleDrawer()}
       component={RouterLink}
       to="/user/settings"
-      data-test="sidenav-user-settings"
+      data-testid="sidenav-user-settings"
     >
       <ListItemIcon>
         <PersonIcon />
@@ -145,7 +151,7 @@ export const mainListItems = (
       onClick={() => showTemporaryDrawer && toggleDrawer()}
       component={RouterLink}
       to="/bankaccounts"
-      data-test="sidenav-bankaccounts"
+      data-testid="sidenav-bankaccounts"
     >
       <ListItemIcon>
         <AccountBalanceIcon />
@@ -158,7 +164,7 @@ export const mainListItems = (
       onClick={() => showTemporaryDrawer && toggleDrawer()}
       component={RouterLink}
       to="/notifications"
-      data-test="sidenav-notifications"
+      data-testid="sidenav-notifications"
     >
       <ListItemIcon>
         <NotificationsIcon />
@@ -170,7 +176,7 @@ export const mainListItems = (
 
 export const secondaryListItems = (signOutPending: Function) => (
   <div>
-    <ListItem button onClick={() => signOutPending()} data-test="sidenav-signout">
+    <ListItem button onClick={() => signOutPending()} data-testid="sidenav-signout">
       <ListItemIcon>
         <LogoutIcon />
       </ListItemIcon>
@@ -201,7 +207,7 @@ const NavDrawer: React.FC<Props> = ({
 
   return (
     <StyledDrawer
-      data-test="sidenav"
+      data-testid="sidenav"
       variant={showTemporaryDrawer ? "temporary" : "persistent"}
       classes={{
         paper: clsx(classes.drawerPaper, !drawerOpen && classes.drawerPaperClose),
@@ -234,7 +240,7 @@ const NavDrawer: React.FC<Props> = ({
               <Typography
                 variant="subtitle1"
                 color="textPrimary"
-                data-test="sidenav-user-full-name"
+                data-testid="sidenav-user-full-name"
               >
                 {currentUser.firstName} {head(currentUser.lastName)}
               </Typography>
@@ -242,7 +248,7 @@ const NavDrawer: React.FC<Props> = ({
                 variant="subtitle2"
                 color="inherit"
                 gutterBottom
-                data-test="sidenav-username"
+                data-testid="sidenav-username"
               >
                 @{currentUser.username}
               </Typography>
@@ -265,7 +271,7 @@ const NavDrawer: React.FC<Props> = ({
                 variant="h6"
                 color="textPrimary"
                 className={classes.amount}
-                data-test="sidenav-user-balance"
+                data-testid="sidenav-user-balance"
               >
                 {currentUser.balance ? formatAmount(currentUser.balance) : formatAmount(0)}
               </Typography>
@@ -281,13 +287,12 @@ const NavDrawer: React.FC<Props> = ({
         <Grid item>
           <List>{mainListItems(toggleDrawer, showTemporaryDrawer)}</List>
         </Grid>
-        <Grid item>
-          <Divider />
-        </Grid>
-        <Grid item>
-          <List>{secondaryListItems(signOut)}</List>
-        </Grid>
       </Grid>
+      {/* Logout stays pinned to the bottom of the sidebar, like a footer */}
+      <div className={classes.bottomNav}>
+        <Divider />
+        <List>{secondaryListItems(signOut)}</List>
+      </div>
     </StyledDrawer>
   );
 };

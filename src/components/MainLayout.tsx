@@ -107,7 +107,7 @@ const MainLayout: React.FC<Props> = ({ children, notificationsService, authServi
         closeMobileDrawer={closeMobileDrawer}
         authService={authService}
       />
-      <main className={classes.content} data-test="main">
+      <main className={classes.content} data-testid="main">
         <div className={classes.appBarSpacer} />
         <Container maxWidth="md" className={classes.container}>
           <Grid container spacing={3}>

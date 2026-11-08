@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
+import "dotenv/config";
 
 const CI = !!process.env.CI;
+const BASE_URL = `http://localhost:${process.env.PORT || "7201"}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -12,7 +14,7 @@ export default defineConfig({
     ? [["github"], ["html", { open: "never" }]]
     : [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: BASE_URL,
     trace: "on-first-retry",
   },
   projects: [
@@ -20,10 +22,10 @@ export default defineConfig({
     { name: "firefox", use: { ...devices["Desktop Firefox"] } },
     { name: "mobile-chrome", use: { ...devices["Pixel 7"] } },
   ],
-  // Starts the Vite frontend (3000) and Express API (3001) before the tests
+  // Starts the Vite frontend (PORT) and Express API (VITE_BACKEND_PORT) before the tests
   webServer: {
     command: "pnpm start",
-    url: "http://localhost:3000",
+    url: BASE_URL,
     reuseExistingServer: !CI,
     timeout: 120_000,
   },

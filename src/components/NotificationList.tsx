@@ -18,7 +18,7 @@ const NotificationsList: React.FC<NotificationsListProps> = ({
   return (
     <>
       {notifications?.length > 0 ? (
-        <List data-test="notifications-list">
+        <List data-testid="notifications-list">
           {notifications.map((notification: NotificationResponseItem) => (
             <NotificationListItem
               key={notification.id}

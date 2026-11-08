@@ -127,7 +127,7 @@ const TransactionCreateStepTwo: React.FC<TransactionCreateStepTwoProps> = ({
           }}
         >
           {({ isValid, isSubmitting }) => (
-            <Form className={classes.form} data-test="transaction-create-form">
+            <Form className={classes.form} data-testid="transaction-create-form">
               <Field name="amount">
                 {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
                   <TextField
@@ -139,7 +139,7 @@ const TransactionCreateStepTwo: React.FC<TransactionCreateStepTwoProps> = ({
                     id={"transaction-create-amount-input"}
                     type="text"
                     placeholder="Amount"
-                    data-test={"transaction-create-amount-input"}
+                    data-testid={"transaction-create-amount-input"}
                     error={(touched || value !== initialValue) && Boolean(error)}
                     helperText={touched || value !== initialValue ? error : ""}
                     InputProps={{
@@ -160,7 +160,7 @@ const TransactionCreateStepTwo: React.FC<TransactionCreateStepTwoProps> = ({
                     id={"transaction-create-description-input"}
                     type="text"
                     placeholder="Add a note"
-                    data-test={"transaction-create-description-input"}
+                    data-testid={"transaction-create-description-input"}
                     error={(touched || value !== initialValue) && Boolean(error)}
                     helperText={touched || value !== initialValue ? error : ""}
                     {...field}
@@ -181,7 +181,7 @@ const TransactionCreateStepTwo: React.FC<TransactionCreateStepTwoProps> = ({
                     variant="contained"
                     color="primary"
                     className={classes.submit}
-                    data-test="transaction-create-submit-request"
+                    data-testid="transaction-create-submit-request"
                     disabled={!isValid || isSubmitting}
                     onClick={() => setTransactionType("request")}
                   >
@@ -195,7 +195,7 @@ const TransactionCreateStepTwo: React.FC<TransactionCreateStepTwoProps> = ({
                     variant="contained"
                     color="primary"
                     className={classes.submit}
-                    data-test="transaction-create-submit-payment"
+                    data-testid="transaction-create-submit-payment"
                     disabled={!isValid || isSubmitting}
                     onClick={() => setTransactionType("payment")}
                   >

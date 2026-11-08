@@ -78,7 +78,7 @@ const BankAccountForm: React.FC<BankAccountFormProps> = ({
       }}
     >
       {({ isValid, isSubmitting }) => (
-        <Form className={classes.form} data-test="bankaccount-form">
+        <Form className={classes.form} data-testid="bankaccount-form">
           <Field name="bankName">
             {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
               <TextField
@@ -89,7 +89,7 @@ const BankAccountForm: React.FC<BankAccountFormProps> = ({
                 id={"bankaccount-bankName-input"}
                 type="text"
                 placeholder="Bank Name"
-                data-test={"bankaccount-bankName-input"}
+                data-testid={"bankaccount-bankName-input"}
                 error={(touched || value !== initialValue) && Boolean(error)}
                 helperText={touched || value !== initialValue ? error : ""}
                 {...field}
@@ -106,7 +106,7 @@ const BankAccountForm: React.FC<BankAccountFormProps> = ({
                 id={"bankaccount-routingNumber-input"}
                 type="text"
                 placeholder="Routing Number"
-                data-test={"bankaccount-routingNumber-input"}
+                data-testid={"bankaccount-routingNumber-input"}
                 error={(touched || value !== initialValue) && Boolean(error)}
                 helperText={touched || value !== initialValue ? error : ""}
                 {...field}
@@ -123,7 +123,7 @@ const BankAccountForm: React.FC<BankAccountFormProps> = ({
                 id={"bankaccount-accountNumber-input"}
                 type="text"
                 placeholder="Account Number"
-                data-test={"bankaccount-accountNumber-input"}
+                data-testid={"bankaccount-accountNumber-input"}
                 error={(touched || value !== initialValue) && Boolean(error)}
                 helperText={touched || value !== initialValue ? error : ""}
                 {...field}
@@ -144,7 +144,7 @@ const BankAccountForm: React.FC<BankAccountFormProps> = ({
                 variant="contained"
                 color="primary"
                 className={classes.submit}
-                data-test="bankaccount-submit"
+                data-testid="bankaccount-submit"
                 disabled={!isValid || isSubmitting}
               >
                 Save

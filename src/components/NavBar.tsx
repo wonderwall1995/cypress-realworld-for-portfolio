@@ -130,14 +130,14 @@ const NavBar: React.FC<NavBarProps> = ({ drawerOpen, toggleDrawer, notifications
     >
       <Toolbar className={classes.toolbar}>
         <IconButton
-          data-test="sidenav-toggle"
+          data-testid="sidenav-toggle"
           edge="start"
           color="inherit"
           aria-label="open drawer"
           onClick={() => toggleDrawer()}
           size="large"
         >
-          <MenuIcon data-test="drawer-icon" />
+          <MenuIcon data-testid="drawer-icon" />
         </IconButton>
         <Typography
           component="h1"
@@ -145,7 +145,7 @@ const NavBar: React.FC<NavBarProps> = ({ drawerOpen, toggleDrawer, notifications
           color="inherit"
           noWrap
           className={classes.title}
-          data-test="app-name-logo"
+          data-testid="app-name-logo"
         >
           <Link
             to="/"
@@ -166,7 +166,7 @@ const NavBar: React.FC<NavBarProps> = ({ drawerOpen, toggleDrawer, notifications
           color="inherit"
           component={RouterLink}
           to="/transaction/new"
-          data-test="nav-top-new-transaction"
+          data-testid="nav-top-new-transaction"
         >
           <AttachMoneyIcon /> New
         </Button>
@@ -174,12 +174,12 @@ const NavBar: React.FC<NavBarProps> = ({ drawerOpen, toggleDrawer, notifications
           color="inherit"
           component={RouterLink}
           to="/notifications"
-          data-test="nav-top-notifications-link"
+          data-testid="nav-top-notifications-link"
           size="large"
         >
           <Badge
             badgeContent={allNotifications ? allNotifications.length : undefined}
-            data-test="nav-top-notifications-count"
+            data-testid="nav-top-notifications-count"
             classes={{ badge: classes.customBadge }}
           >
             <NotificationsIcon />

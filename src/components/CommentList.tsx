@@ -10,7 +10,7 @@ export interface CommentsListProps {
 
 const CommentsList: React.FC<CommentsListProps> = ({ comments }) => {
   return (
-    <List data-test="comments-list">
+    <List data-testid="comments-list">
       {comments &&
         comments.map((comment: Comment) => <CommentListItem key={comment.id} comment={comment} />)}
     </List>

@@ -11,7 +11,7 @@ export interface UserListItemProps {
 
 const UserListItem: React.FC<UserListItemProps> = ({ user, setReceiver, index }) => {
   return (
-    <ListItem data-test={`user-list-item-${user.id}`} onClick={() => setReceiver(user)}>
+    <ListItem data-testid={`user-list-item-${user.id}`} onClick={() => setReceiver(user)}>
       <ListItemAvatar>
         <Avatar src={user.avatar} />
       </ListItemAvatar>

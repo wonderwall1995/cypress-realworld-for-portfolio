@@ -14,7 +14,7 @@ const BankAccountList: React.FC<BankAccountListProps> = ({ bankAccounts, deleteB
   return (
     <>
       {bankAccounts?.length > 0 ? (
-        <List data-test="bankaccount-list">
+        <List data-testid="bankaccount-list">
           {bankAccounts.map((bankAccount: BankAccount) => (
             <BankAccountItem
               key={bankAccount.id}

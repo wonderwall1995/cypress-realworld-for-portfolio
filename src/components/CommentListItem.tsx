@@ -9,7 +9,7 @@ export interface CommentListItemProps {
 
 const CommentListItem: React.FC<CommentListItemProps> = ({ comment }) => {
   return (
-    <ListItem data-test={`comment-list-item-${comment.id}`}>
+    <ListItem data-testid={`comment-list-item-${comment.id}`}>
       <ListItemText primary={`${comment.content}`} />
     </ListItem>
   );

@@ -74,7 +74,7 @@ const TransactionInfiniteList: React.FC<TransactionListProps> = ({
       threshold={2}
     >
       {({ onRowsRendered, registerChild }) => (
-        <div data-test="transaction-list" className={classes.transactionList}>
+        <div data-testid="transaction-list" className={classes.transactionList}>
           <List
             rowCount={itemCount}
             ref={registerChild}

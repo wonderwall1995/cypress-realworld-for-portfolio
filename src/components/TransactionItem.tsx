@@ -81,7 +81,7 @@ const TransactionItem: React.FC<TransactionProps> = ({ transaction }) => {
 
   return (
     <StyledListItem
-      data-test={`transaction-item-${transaction.id}`}
+      data-testid={`transaction-item-${transaction.id}`}
       alignItems="flex-start"
       onClick={() => showTransactionDetail(transaction.id)}
     >
@@ -127,7 +127,7 @@ const TransactionItem: React.FC<TransactionProps> = ({ transaction }) => {
                     <LikeIcon className={classes.countIcons} />
                   </Grid>
                   <Grid item>
-                    <Typography data-test="transaction-like-count" className={classes.countText}>
+                    <Typography data-testid="transaction-like-count" className={classes.countText}>
                       {transaction.likes.length}
                     </Typography>
                   </Grid>
@@ -135,7 +135,7 @@ const TransactionItem: React.FC<TransactionProps> = ({ transaction }) => {
                     <CommentIcon className={classes.countIcons} />
                   </Grid>
                   <Grid item>
-                    <Typography data-test="transaction-comment-count" className={classes.countText}>
+                    <Typography data-testid="transaction-comment-count" className={classes.countText}>
                       {transaction.comments.length}
                     </Typography>
                   </Grid>

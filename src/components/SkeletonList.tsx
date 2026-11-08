@@ -18,7 +18,7 @@ const Root = styled("div")(({ theme }) => ({
 
 const ListSkeleton = () => {
   return (
-    <Root className={classes.root} data-test="list-skeleton">
+    <Root className={classes.root} data-testid="list-skeleton">
       <br />
       <Skeleton />
       <Skeleton animation={false} />
