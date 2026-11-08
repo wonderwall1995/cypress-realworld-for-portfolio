@@ -1,7 +1,6 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import eslint from "vite-plugin-eslint";
-import istanbul from "vite-plugin-istanbul";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "VITE");
@@ -17,16 +16,7 @@ export default defineConfig(({ mode }) => {
       outDir: "build",
       sourcemap: true,
     },
-    plugins: [
-      react(),
-      eslint(),
-      istanbul({
-        cypress: true,
-        requireEnv: true,
-        exclude: ["node_modules", "cypress", "dist"],
-        forceBuildInstrument: true,
-      }),
-    ],
+    plugins: [react(), eslint()],
     // to get aws amplify to work with vite
     resolve: {
       alias: [
@@ -39,7 +29,7 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: "jsdom",
       setupFiles: "./src/setup-tests.js",
-      exclude: ["node_modules", "cypress", "dist"],
+      exclude: ["node_modules", "e2e", "dist"],
       fileParallelism: false, // #1666: Run tests sequentially to avoid race conditions with shared database.json file.
     },
   };

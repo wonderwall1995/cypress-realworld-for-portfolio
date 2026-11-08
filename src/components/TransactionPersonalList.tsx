@@ -24,10 +24,7 @@ const TransactionPersonalList: React.FC<TransactionPersonalListProps> = ({
   const { pageData, results } = current.context;
 
   // @ts-ignore
-  if (window.Cypress) {
-    // @ts-ignore
-    window.personalTransactionService = personalTransactionService;
-  }
+  window.personalTransactionService = personalTransactionService;
 
   useEffect(() => {
     send("FETCH", { ...dateRangeFilters, ...amountRangeFilters });

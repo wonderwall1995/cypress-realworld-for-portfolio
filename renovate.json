@@ -22,7 +22,7 @@
   "schedule": ["before 3am on the first day of the month"],
   "packageRules": [
     {
-      "packageNames": ["cypress"],
+      "packageNames": ["@playwright/test"],
       "schedule": ["every weekday"]
     },
     {

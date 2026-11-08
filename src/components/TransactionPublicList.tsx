@@ -24,10 +24,7 @@ const TransactionPublicList: React.FC<TransactionPublicListProps> = ({
   const { pageData, results } = current.context;
 
   // @ts-ignore
-  if (window.Cypress) {
-    // @ts-ignore
-    window.publicTransactionService = publicTransactionService;
-  }
+  window.publicTransactionService = publicTransactionService;
 
   useEffect(() => {
     send("FETCH", { ...dateRangeFilters, ...amountRangeFilters });

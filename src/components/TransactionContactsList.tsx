@@ -24,10 +24,7 @@ const TransactionContactsList: React.FC<TransactionContactListProps> = ({
   const { pageData, results } = current.context;
 
   // @ts-ignore
-  if (window.Cypress) {
-    // @ts-ignore
-    window.contactTransactionService = contactTransactionService;
-  }
+  window.contactTransactionService = contactTransactionService;
 
   useEffect(() => {
     send("FETCH", { ...dateRangeFilters, ...amountRangeFilters });

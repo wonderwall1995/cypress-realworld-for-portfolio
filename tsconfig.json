@@ -16,14 +16,14 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "noFallthroughCasesInSwitch": true,
-    "types": ["cypress"]
+    "types": ["node"]
   },
   "include": [
-    "src/**/*.cy.{js,ts,jsx,tsx}",
     "scripts",
+    "e2e",
+    "playwright.config.ts",
     "backend",
     "src/__tests__",
-    "cypress.d.ts",
     "src/utils/portUtils.ts"
   ]
 }

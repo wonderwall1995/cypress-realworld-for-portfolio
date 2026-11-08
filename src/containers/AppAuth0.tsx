@@ -24,12 +24,9 @@ const Root = styled("div")(({ theme }) => ({
   },
 }));
 
+// Expose authService on window for end-to-end tests
 // @ts-ignore
-if (window.Cypress) {
-  // Expose authService on window for Cypress
-  // @ts-ignore
-  window.authService = authService;
-}
+window.authService = authService;
 
 /* istanbul ignore next */
 const AppAuth0: React.FC = () => {
