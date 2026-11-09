@@ -11,6 +11,12 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: Number(loadEnv(mode, process.cwd(), "PORT").PORT) || 7201,
+      // The browser (or a WebView) only ever talks to this origin; "/api" is forwarded to Express
+      proxy: {
+        "/api": {
+          target: `http://localhost:${env.VITE_BACKEND_PORT || 7202}`,
+        },
+      },
     },
     build: {
       outDir: "build",
