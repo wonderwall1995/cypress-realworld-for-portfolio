@@ -13,6 +13,7 @@ import {
   removeUserFromResults,
 } from "./user-db";
 import { asyncHandler } from "./async-handler";
+import { omitPassword } from "./user-response";
 import { User } from "../src/models/user";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
 import {
@@ -30,7 +31,7 @@ router.get(
   asyncHandler(async (req, res) => {
     /* istanbul ignore next */
     const users = removeUserFromResults(req.user?.id!, await getAllUsers());
-    res.status(200).json({ results: users });
+    res.status(200).json({ results: users.map((user) => omitPassword(user)) });
   })
 );
 
@@ -44,7 +45,7 @@ router.get(
     /* istanbul ignore next */
     const users = removeUserFromResults(req.user?.id!, await searchUsers(q as string));
 
-    res.status(200).json({ results: users });
+    res.status(200).json({ results: users.map((user) => omitPassword(user)) });
   })
 );
 
@@ -58,7 +59,7 @@ router.post(
     const user = await createUser(userDetails);
 
     res.status(201);
-    res.json({ user: user });
+    res.json({ user: omitPassword(user) });
   })
 );
 
@@ -80,7 +81,7 @@ router.get(
     const user = await getUserById(userId);
 
     res.status(200);
-    res.json({ user });
+    res.json({ user: omitPassword(user) });
   })
 );
 
