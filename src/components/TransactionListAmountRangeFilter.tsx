@@ -78,7 +78,10 @@ const TransactionListAmountRangeFilter: React.FC<TransactionListAmountRangeFilte
           sx={{ width: "100%" }}
         >
           <Grid item sx={{ width: "225px" }}>
-            <Typography color="textSecondary" data-testid="transaction-list-filter-amount-range-text">
+            <Typography
+              color="textSecondary"
+              data-testid="transaction-list-filter-amount-range-text"
+            >
               Amount Range: {formatAmountRangeValues(amountRangeValue)}
             </Typography>
           </Grid>

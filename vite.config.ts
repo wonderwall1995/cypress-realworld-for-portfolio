@@ -28,9 +28,10 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       environment: "jsdom",
-      setupFiles: "./src/setup-tests.js",
+      setupFiles: ["./src/setup-tests.js", "./src/__tests__/db-setup/env.ts"],
+      globalSetup: "./src/__tests__/db-setup/global.ts",
       exclude: ["node_modules", "e2e", "dist"],
-      fileParallelism: false, // #1666: Run tests sequentially to avoid race conditions with shared database.json file.
+      fileParallelism: false, // run test files one at a time: they share one test database
     },
   };
 });

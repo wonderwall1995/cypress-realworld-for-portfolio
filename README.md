@@ -43,8 +43,8 @@ This repository is a personal fork of the [Cypress Real World App](https://githu
 
 ## Features
 
-🛠 Built with [React][reactjs], [XState][xstate], [Express][express], [lowdb][lowdb], [Material-UI][material-ui] and [TypeScript][typescript]
-⚡️ Zero database dependencies
+🛠 Built with [React][reactjs], [XState][xstate], [Express][express], [PostgreSQL][postgresql] with [Prisma][prisma], [Material-UI][material-ui] and [TypeScript][typescript]
+🐘 PostgreSQL (Docker) with Prisma migrations
 🚀 Full-stack [Express][express]/[React][reactjs] application with real-world features and tests
 👮‍♂️ Local Authentication
 🔥 Database Seeding with End-to-end Tests
@@ -52,14 +52,11 @@ This repository is a personal fork of the [Cypress Real World App](https://githu
 
 ## Getting Started
 
-The app is a full-stack Express/React application backed by a local JSON database ([lowdb]).
-
-The app is bundled with [example data](./data/database.json) (`data/database.json`) that contains everything you need to start using the app and run tests out-of-the-box.
+The app is a full-stack Express/React application backed by [PostgreSQL][postgresql], accessed with [Prisma][prisma].
 
 > 🚩 **Note**
 >
-> You can login to the app with any of the [example app users](./data/database.json#L2). The default password for all users is `s3cret`.
-> Example users can be seen by running `pnpm list:dev:users`.
+> The database starts empty and there is no sample data. Create your own users with the sign-up page.
 
 ### Prerequisites
 
@@ -87,6 +84,20 @@ cd cypress-realworld-for-portfolio
 cp .env.example .env   # local settings; .env itself is git-ignored
 pnpm install
 pnpm playwright:install
+```
+
+### Start the database
+
+PostgreSQL runs in Docker. Start it (and the web app) with:
+
+```shell
+pnpm docker:up
+```
+
+Then create the tables once:
+
+```shell
+pnpm prisma:migrate
 ```
 
 ### Run the app
@@ -121,15 +132,13 @@ Unit tests run with `pnpm test:unit`.
 
 ## Database
 
-- The local JSON database is located in [data/database.json](./data/database.json) and is managed with [lowdb].
+- The database is PostgreSQL. It runs in Docker (`docker-compose.yml`) and its data is kept in a Docker volume, so it stays when the app restarts.
 
-- The database is [reseeded](./data/database-seed.json) each time the application is started (via `pnpm dev`).
+- The tables are defined in [prisma/schema.prisma](./prisma/schema.prisma) and created by the migrations in [prisma/migrations](./prisma/migrations) (`pnpm prisma:migrate`).
 
-- Updates via the React frontend are sent to the [Express][express] server and handled by a set of [database utilities](backend/database.ts)
+- Updates from the React frontend go to the [Express][express] server, which reads and writes with Prisma. The data access code is in the `backend/*-db.ts` files.
 
-- Generate a new database using `pnpm db:seed`.
-
-- An [empty database seed](./data/empty-seed.json) is provided along with a script (`pnpm start:empty`) to view the application without data.
+- There is no sample data. Unit tests use a separate database (`<name>_test`) that is emptied before each test, so they never touch your development data.
 
 ## Additional NPM Scripts
 
@@ -217,7 +226,8 @@ This project is licensed under the terms of the [MIT license](/LICENSE).
 [reactjs]: https://reactjs.org
 [xstate]: https://xstate.js.org
 [express]: https://expressjs.com
-[lowdb]: https://github.com/typicode/lowdb
+[postgresql]: https://www.postgresql.org/
+[prisma]: https://www.prisma.io/
 [typescript]: https://typescriptlang.org
 [material-ui]: https://material-ui.com
 [okta]: https://okta.com

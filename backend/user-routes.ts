@@ -11,7 +11,8 @@ import {
   getUserByUsername,
   searchUsers,
   removeUserFromResults,
-} from "./database";
+} from "./user-db";
+import { asyncHandler } from "./async-handler";
 import { User } from "../src/models/user";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
 import {
@@ -23,35 +24,49 @@ import {
 const router = express.Router();
 
 // Routes
-router.get("/", ensureAuthenticated, (req, res) => {
-  /* istanbul ignore next */
-  const users = removeUserFromResults(req.user?.id!, getAllUsers());
-  res.status(200).json({ results: users });
-});
+router.get(
+  "/",
+  ensureAuthenticated,
+  asyncHandler(async (req, res) => {
+    /* istanbul ignore next */
+    const users = removeUserFromResults(req.user?.id!, await getAllUsers());
+    res.status(200).json({ results: users });
+  })
+);
 
-router.get("/search", ensureAuthenticated, validateMiddleware([searchValidation]), (req, res) => {
-  const { q } = req.query;
+router.get(
+  "/search",
+  ensureAuthenticated,
+  validateMiddleware([searchValidation]),
+  asyncHandler(async (req, res) => {
+    const { q } = req.query;
 
-  /* istanbul ignore next */
-  const users = removeUserFromResults(req.user?.id!, searchUsers(q as string));
+    /* istanbul ignore next */
+    const users = removeUserFromResults(req.user?.id!, await searchUsers(q as string));
 
-  res.status(200).json({ results: users });
-});
+    res.status(200).json({ results: users });
+  })
+);
 
-router.post("/", userFieldsValidator, validateMiddleware(isUserValidator), (req, res) => {
-  const userDetails: User = req.body;
+router.post(
+  "/",
+  userFieldsValidator,
+  validateMiddleware(isUserValidator),
+  asyncHandler(async (req, res) => {
+    const userDetails: User = req.body;
 
-  const user = createUser(userDetails);
+    const user = await createUser(userDetails);
 
-  res.status(201);
-  res.json({ user: user });
-});
+    res.status(201);
+    res.json({ user: user });
+  })
+);
 
 router.get(
   "/:userId",
   ensureAuthenticated,
   validateMiddleware([shortIdValidation("userId")]),
-  (req, res) => {
+  asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
     // Permission: account owner
@@ -62,36 +77,39 @@ router.get(
       });
     }
 
-    const user = getUserById(userId);
+    const user = await getUserById(userId);
 
     res.status(200);
     res.json({ user });
-  }
+  })
 );
 
-router.get("/profile/:username", (req, res) => {
-  const { username } = req.params;
+router.get(
+  "/profile/:username",
+  asyncHandler(async (req, res) => {
+    const { username } = req.params;
 
-  const user = pick(["firstName", "lastName", "avatar"], getUserByUsername(username));
+    const user = pick(["firstName", "lastName", "avatar"], await getUserByUsername(username));
 
-  res.status(200);
-  res.json({ user });
-});
+    res.status(200);
+    res.json({ user });
+  })
+);
 
 router.patch(
   "/:userId",
   ensureAuthenticated,
   userFieldsValidator,
   validateMiddleware([shortIdValidation("userId"), ...isUserValidator]),
-  (req, res) => {
+  asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
     const edits: User = req.body;
 
-    updateUserById(userId, edits);
+    await updateUserById(userId, edits);
 
     res.sendStatus(204);
-  }
+  })
 );
 
 export default router;

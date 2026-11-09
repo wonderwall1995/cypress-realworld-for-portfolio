@@ -114,8 +114,6 @@
       "groupName": "Misc dev tooling",
       "matchPackageNames": [
         "@faker-js/faker",
-        "json",
-        "lowdb",
         "start-server-and-test",
         "ncp",
         "jwks-rsa",

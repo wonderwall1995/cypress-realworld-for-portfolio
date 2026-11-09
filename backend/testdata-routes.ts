@@ -1,27 +1,43 @@
 ///<reference path="types.ts" />
 
 import express from "express";
-import { getAllForEntity, seedDatabase } from "./database";
+import { getAllForEntity, resetDatabase, TestDataEntity } from "./testdata-db";
+import { asyncHandler } from "./async-handler";
 import { validateMiddleware } from "./helpers";
 import { isValidEntityValidator } from "./validators";
-import { DbSchema } from "../src/models/db-schema";
 const router = express.Router();
 
 // Routes
 
-//POST /testData/seed
-router.post("/seed", (req, res) => {
-  seedDatabase();
-  res.sendStatus(200);
-});
+//POST /testData/reset - empties every table (there is no sample data)
+router.post(
+  "/reset",
+  asyncHandler(async (req, res) => {
+    await resetDatabase();
+    res.sendStatus(200);
+  })
+);
+
+//POST /testData/seed - same as /reset, kept for old test code that called it
+router.post(
+  "/seed",
+  asyncHandler(async (req, res) => {
+    await resetDatabase();
+    res.sendStatus(200);
+  })
+);
 
 //GET /testData/:entity
-router.get("/:entity", validateMiddleware([...isValidEntityValidator]), (req, res) => {
-  const { entity } = req.params;
-  const results = getAllForEntity(entity as keyof DbSchema);
+router.get(
+  "/:entity",
+  validateMiddleware([...isValidEntityValidator]),
+  asyncHandler(async (req, res) => {
+    const { entity } = req.params;
+    const results = await getAllForEntity(entity as TestDataEntity);
 
-  res.status(200);
-  res.json({ results });
-});
+    res.status(200);
+    res.json({ results });
+  })
+);
 
 export default router;

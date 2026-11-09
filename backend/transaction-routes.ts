@@ -10,7 +10,8 @@ import {
   getTransactionByIdForApi,
   getTransactionsForUserForApi,
   getPublicTransactionsByQuery,
-} from "./database";
+} from "./transaction-db";
+import { asyncHandler } from "./async-handler";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
 import {
   sanitizeTransactionStatus,
@@ -35,9 +36,9 @@ router.get(
     sanitizeRequestStatus,
     ...isTransactionQSValidator,
   ]),
-  (req, res) => {
+  asyncHandler(async (req, res) => {
     /* istanbul ignore next */
-    const transactions = getTransactionsForUserForApi(req.user?.id!, req.query);
+    const transactions = await getTransactionsForUserForApi(req.user?.id!, req.query);
 
     const { totalPages, data: paginatedItems } = getPaginatedItems(
       req.query.page as unknown as number,
@@ -55,7 +56,7 @@ router.get(
       },
       results: paginatedItems,
     });
-  }
+  })
 );
 
 //GET /transactions/contacts - scoped user, auth-required
@@ -67,9 +68,9 @@ router.get(
     sanitizeRequestStatus,
     ...isTransactionQSValidator,
   ]),
-  (req, res) => {
+  asyncHandler(async (req, res) => {
     /* istanbul ignore next */
-    const transactions = getTransactionsForUserContacts(req.user?.id!, req.query);
+    const transactions = await getTransactionsForUserContacts(req.user?.id!, req.query);
 
     const { totalPages, data: paginatedItems } = getPaginatedItems(
       req.query.page as unknown as number,
@@ -87,7 +88,7 @@ router.get(
       },
       results: paginatedItems,
     });
-  }
+  })
 );
 
 //GET /transactions/public - auth-required
@@ -95,14 +96,14 @@ router.get(
   "/public",
   ensureAuthenticated,
   validateMiddleware(isTransactionPublicQSValidator),
-  (req, res) => {
+  asyncHandler(async (req, res) => {
     const isFirstPage = (req.query.page as unknown as number) === 1;
 
     /* istanbul ignore next */
     let transactions = !isEmpty(req.query)
-      ? getPublicTransactionsByQuery(req.user?.id!, req.query)
+      ? await getPublicTransactionsByQuery(req.user?.id!, req.query)
       : /* istanbul ignore next */
-        getPublicTransactionsDefaultSort(req.user?.id!);
+        await getPublicTransactionsDefaultSort(req.user?.id!);
 
     const { contactsTransactions, publicTransactions } = transactions;
 
@@ -130,7 +131,7 @@ router.get(
       },
       results: paginatedItems,
     });
-  }
+  })
 );
 
 //POST /transactions - scoped-user
@@ -138,18 +139,18 @@ router.post(
   "/",
   ensureAuthenticated,
   validateMiddleware(isTransactionPayloadValidator),
-  (req, res) => {
+  asyncHandler(async (req, res) => {
     const transactionPayload = req.body;
     const transactionType = transactionPayload.transactionType;
 
     remove("transactionType", transactionPayload);
 
     /* istanbul ignore next */
-    const transaction = createTransaction(req.user?.id!, transactionType, transactionPayload);
+    const transaction = await createTransaction(req.user?.id!, transactionType, transactionPayload);
 
     res.status(200);
     res.json({ transaction });
-  }
+  })
 );
 
 //GET /transactions/:transactionId - scoped-user
@@ -157,14 +158,14 @@ router.get(
   "/:transactionId",
   ensureAuthenticated,
   validateMiddleware([shortIdValidation("transactionId")]),
-  (req, res) => {
+  asyncHandler(async (req, res) => {
     const { transactionId } = req.params;
 
-    const transaction = getTransactionByIdForApi(transactionId);
+    const transaction = await getTransactionByIdForApi(transactionId);
 
     res.status(200);
     res.json({ transaction });
-  }
+  })
 );
 
 //PATCH /transactions/:transactionId - scoped-user
@@ -172,14 +173,14 @@ router.patch(
   "/:transactionId",
   ensureAuthenticated,
   validateMiddleware([shortIdValidation("transactionId"), ...isTransactionPatchValidator]),
-  (req, res) => {
+  asyncHandler(async (req, res) => {
     const { transactionId } = req.params;
 
     /* istanbul ignore next */
-    updateTransactionById(transactionId, req.body);
+    await updateTransactionById(transactionId, req.body);
 
     res.sendStatus(204);
-  }
+  })
 );
 
 export default router;

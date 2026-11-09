@@ -24,17 +24,25 @@ enum BankTransferType {
   deposit
 }
 
+// requested -> completed | failed | canceled
+enum BankTransferStatus {
+  requested
+  completed
+  failed
+  canceled
+}
+
 model User {
-  id                  String       @id
-  uuid                String       @unique
+  id                  String        @id
+  uuid                String        @unique
   firstName           String
   lastName            String
-  username            String       @unique
+  username            String        @unique
   password            String
-  email               String
-  phoneNumber         String
-  avatar              String
-  defaultPrivacyLevel PrivacyLevel
+  email               String?
+  phoneNumber         String?
+  avatar              String?
+  defaultPrivacyLevel PrivacyLevel?
   balance             Int
   createdAt           DateTime
   modifiedAt          DateTime
@@ -132,17 +140,45 @@ model Notification {
   @@map("notifications")
 }
 
+// Virtual deposit / withdrawal: no real money moves, only balances and records change.
 model BankTransfer {
-  id            String           @id
-  uuid          String           @unique
+  id            String             @id
+  uuid          String             @unique
   userId        String
-  source        String
-  amount        Int
+  source        String // bank account id
+  amount        Int // cents, always positive
   type          BankTransferType
-  transactionId String
+  status        BankTransferStatus @default(requested)
+  transactionId String? // only when the transfer is linked to a payment transaction
+  balanceBefore Int? // user balance when the transfer completed
+  balanceAfter  Int?
   createdAt     DateTime
   modifiedAt    DateTime
 
+  logs BankTransferLog[]
+
   @@index([userId])
+  @@index([source])
   @@map("bank_transfers")
+}
+
+// Append-only history: one row per status change. Never updated, never deleted.
+model BankTransferLog {
+  id             String              @id
+  bankTransferId String
+  userId         String
+  bankAccountId  String
+  amount         Int
+  fromStatus     BankTransferStatus? // null for the first row (creation)
+  toStatus       BankTransferStatus
+  balanceBefore  Int?
+  balanceAfter   Int?
+  note           String?
+  createdAt      DateTime            @default(now())
+
+  bankTransfer BankTransfer @relation(fields: [bankTransferId], references: [id], onDelete: Restrict)
+
+  @@index([bankTransferId])
+  @@index([userId, createdAt])
+  @@map("bank_transfer_logs")
 }

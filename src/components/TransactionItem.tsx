@@ -135,7 +135,10 @@ const TransactionItem: React.FC<TransactionProps> = ({ transaction }) => {
                     <CommentIcon className={classes.countIcons} />
                   </Grid>
                   <Grid item>
-                    <Typography data-testid="transaction-comment-count" className={classes.countText}>
+                    <Typography
+                      data-testid="transaction-comment-count"
+                      className={classes.countText}
+                    >
                       {transaction.comments.length}
                     </Typography>
                   </Grid>

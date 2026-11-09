@@ -1,7 +1,9 @@
 ///<reference path="types.ts" />
 
 import express from "express";
-import { getLikesByTransactionId, createLikes } from "./database";
+import { getLikesByTransactionId } from "./like-db";
+import { createLikes } from "./social-db";
+import { asyncHandler } from "./async-handler";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
 import { shortIdValidation } from "./validators";
 const router = express.Router();
@@ -13,13 +15,13 @@ router.get(
   "/:transactionId",
   ensureAuthenticated,
   validateMiddleware([shortIdValidation("transactionId")]),
-  (req, res) => {
+  asyncHandler(async (req, res) => {
     const { transactionId } = req.params;
-    const likes = getLikesByTransactionId(transactionId);
+    const likes = await getLikesByTransactionId(transactionId);
 
     res.status(200);
     res.json({ likes });
-  }
+  })
 );
 
 //POST /likes/:transactionId
@@ -27,13 +29,13 @@ router.post(
   "/:transactionId",
   ensureAuthenticated,
   validateMiddleware([shortIdValidation("transactionId")]),
-  (req, res) => {
+  asyncHandler(async (req, res) => {
     const { transactionId } = req.params;
     /* istanbul ignore next */
-    createLikes(req.user?.id!, transactionId);
+    await createLikes(req.user?.id!, transactionId);
 
     res.sendStatus(200);
-  }
+  })
 );
 
 export default router;

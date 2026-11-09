@@ -1,7 +1,6 @@
 /**
  * Bank accounts stored in PostgreSQL (Prisma).
- * Same behaviour as the old lowdb functions in database.ts, but async.
- * The lowdb versions stay in database.ts until the unit tests are moved over.
+ * Same behaviour as the old JSON-file (lowdb) functions, but async.
  */
 import shortid from "shortid";
 import { v4 } from "uuid";

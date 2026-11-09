@@ -6,7 +6,7 @@ const BASE_URL = `http://localhost:${process.env.PORT || "7201"}`;
 
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: false, // the app shares a single lowdb database.json file
+  fullyParallel: false, // the app shares one PostgreSQL database, so run tests one at a time
   forbidOnly: CI,
   retries: CI ? 2 : 0,
   workers: 1,

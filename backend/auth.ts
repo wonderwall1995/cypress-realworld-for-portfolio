@@ -2,27 +2,31 @@ import bcrypt from "bcryptjs";
 import passport from "passport";
 import express, { Request, Response } from "express";
 import { User } from "../src/models/user";
-import { getUserBy, getUserById } from "./database";
+import { getUserByUsername, getUserById } from "./user-db";
 
 const LocalStrategy = require("passport-local").Strategy;
 const router = express.Router();
 
 // configure passport for local strategy
 passport.use(
-  new LocalStrategy(function (username: string, password: string, done: Function) {
-    const user = getUserBy("username", username);
+  new LocalStrategy(async function (username: string, password: string, done: Function) {
+    try {
+      const user = await getUserByUsername(username);
 
-    const failureMessage = "Incorrect username or password.";
-    if (!user) {
-      return done(null, false, { message: failureMessage });
+      const failureMessage = "Incorrect username or password.";
+      if (!user) {
+        return done(null, false, { message: failureMessage });
+      }
+
+      // validate password
+      if (!bcrypt.compareSync(password, user.password)) {
+        return done(null, false, { message: failureMessage });
+      }
+
+      return done(null, user);
+    } catch (err) {
+      return done(err);
     }
-
-    // validate password
-    if (!bcrypt.compareSync(password, user.password)) {
-      return done(null, false, { message: failureMessage });
-    }
-
-    return done(null, user);
   })
 );
 
@@ -30,9 +34,12 @@ passport.serializeUser(function (user: User, done) {
   done(null, user.id);
 });
 
-passport.deserializeUser(function (id: string, done) {
-  const user = getUserById(id);
-  done(null, user);
+passport.deserializeUser(async function (id: string, done) {
+  try {
+    done(null, await getUserById(id));
+  } catch (err) {
+    done(err);
+  }
 });
 
 // authentication routes

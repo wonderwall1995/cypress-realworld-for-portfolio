@@ -143,7 +143,9 @@ const SignInForm: React.FC<Props> = ({ authService }) => {
                 control={
                   <Field name={"remember"}>
                     {({ field }: FieldProps) => {
-                      return <Checkbox color="primary" data-testid="signin-remember-me" {...field} />;
+                      return (
+                        <Checkbox color="primary" data-testid="signin-remember-me" {...field} />
+                      );
                     }}
                   </Field>
                 }

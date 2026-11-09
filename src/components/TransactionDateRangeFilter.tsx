@@ -142,7 +142,10 @@ const TransactionListDateRangeFilter: React.FC<TransactionListDateRangeFilterPro
           anchor="bottom"
           data-testid="date-range-filter-drawer"
         >
-          <Button data-testid="date-range-filter-drawer-close" onClick={() => handleDateRangeClose()}>
+          <Button
+            data-testid="date-range-filter-drawer-close"
+            onClick={() => handleDateRangeClose()}
+          >
             Close
           </Button>
           <RangeCalendar
