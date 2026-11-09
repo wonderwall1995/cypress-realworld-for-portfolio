@@ -30,6 +30,13 @@ export const userFieldsValidator = oneOf([
   check("defaultPrivacyLevel").exists(),
 ]);
 
+// POST /bankTransfers: move whole dollars between a bank account and the app balance
+export const isBankTransferValidator = [
+  body("bankAccountId").custom(isShortId),
+  body("amount").isInt({ min: 1 }).toInt(),
+  body("type").isIn(["deposit", "withdrawal"]),
+];
+
 export const isBankAccountValidator = [
   body("bankName").isString().trim(),
   body("accountNumber").isString().trim(),

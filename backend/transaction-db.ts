@@ -42,6 +42,7 @@ import {
   isRequestTransaction,
 } from "../src/utils/transactionUtils";
 import { createBankTransfer } from "./banktransfer-db";
+import { HttpError } from "./http-error";
 import { getContactIdsForUser } from "./contact-db";
 import { createPaymentNotification } from "./notification-db";
 
@@ -397,16 +398,6 @@ export const createTransaction = (
 
 // Only these fields can be edited through the API.
 const EDITABLE = ["requestStatus", "status", "requestResolvedAt"] as const;
-
-/** An error that carries the HTTP status the API should answer with (Express reads `status`). */
-class HttpError extends Error {
-  constructor(
-    public status: number,
-    message: string
-  ) {
-    super(message);
-  }
-}
 
 /**
  * Edit a transaction.

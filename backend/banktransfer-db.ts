@@ -99,12 +99,16 @@ export const createBankTransfer = async (
   return toTransfer(row);
 };
 
-export const changeBankTransferStatus = (
+type StatusChangeDetails = { balanceBefore?: number; balanceAfter?: number; note?: string };
+
+/** Same as changeBankTransferStatus, but inside a database transaction the caller already opened. */
+export const applyBankTransferStatusChange = async (
+  tx: DbClient,
   transferId: string,
   toStatus: BankTransferStatus,
-  details: { balanceBefore?: number; balanceAfter?: number; note?: string } = {}
-): Promise<BankTransferWithStatus> =>
-  prisma.$transaction(async (tx) => {
+  details: StatusChangeDetails = {}
+): Promise<BankTransferWithStatus> => {
+  {
     const current = await tx.bankTransfer.findUnique({ where: { id: transferId } });
     if (!current) throw new Error(`bank transfer not found: ${transferId}`);
 
@@ -139,7 +143,22 @@ export const changeBankTransferStatus = (
       },
     });
     return toTransfer(updated);
-  });
+  }
+};
+
+export const changeBankTransferStatus = (
+  transferId: string,
+  toStatus: BankTransferStatus,
+  details: StatusChangeDetails = {}
+): Promise<BankTransferWithStatus> =>
+  prisma.$transaction((tx) => applyBankTransferStatusChange(tx, transferId, toStatus, details));
+
+export const getBankTransferById = async (
+  id: string
+): Promise<BankTransferWithStatus | undefined> => {
+  const row = await prisma.bankTransfer.findUnique({ where: { id } });
+  return row ? toTransfer(row) : undefined;
+};
 
 export const getBankTransfersByUserId = async (
   userId: string

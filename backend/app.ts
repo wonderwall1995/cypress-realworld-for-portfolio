@@ -21,6 +21,7 @@ import likeRoutes from "./like-routes";
 import commentRoutes from "./comment-routes";
 import notificationRoutes from "./notification-routes";
 import bankTransferRoutes from "./banktransfer-routes";
+import { HttpError } from "./http-error";
 import testDataRoutes from "./testdata-routes";
 import { checkAuth0Jwt, verifyOktaToken, checkCognitoJwt, checkGoogleJwt } from "./helpers";
 import resolvers from "./graphql/resolvers";
@@ -112,6 +113,14 @@ app.use("/notifications", notificationRoutes);
 app.use("/bankTransfers", bankTransferRoutes);
 
 app.use(express.static(join(__dirname, "../public")));
+
+// errors that carry an HTTP status (HttpError) are answered as JSON
+app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err instanceof HttpError) {
+    return res.status(err.status).json({ error: err.message });
+  }
+  return next(err);
+});
 
 getBackendPort().then((port) => {
   app.listen(port);
