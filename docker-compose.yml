@@ -21,7 +21,8 @@ services:
       - .:/app
       - app-node-modules:/app/node_modules
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:$${VITE_BACKEND_PORT} >/dev/null || exit 1"]
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:$${VITE_BACKEND_PORT}/api >/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 18

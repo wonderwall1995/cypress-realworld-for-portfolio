@@ -63,38 +63,42 @@ app.use(passport.session());
 
 app.use(paginate.middleware(+process.env.PAGINATION_PAGE_SIZE!));
 
+// every API route lives under /api so the frontend (same origin, behind a proxy) never
+// collides with its own page routes such as /notifications or /bankaccounts
+const api = express.Router();
+
 /* istanbul ignore next */
 if (process.env.NODE_ENV === "test" || process.env.NODE_ENV === "development") {
-  app.use("/testData", testDataRoutes);
+  api.use("/testData", testDataRoutes);
 }
 
-app.use(auth);
+api.use(auth);
 
 /* istanbul ignore if */
 if (process.env.VITE_AUTH0) {
-  app.use(checkAuth0Jwt);
+  api.use(checkAuth0Jwt);
 }
 
 /* istanbul ignore if */
 if (process.env.VITE_OKTA) {
-  app.use(verifyOktaToken);
+  api.use(verifyOktaToken);
 }
 
 /* istanbul ignore if */
 if (process.env.VITE_AWS_COGNITO) {
-  app.use(checkCognitoJwt);
+  api.use(checkCognitoJwt);
 }
 
 /* istanbul ignore if */
 if (process.env.VITE_GOOGLE) {
-  app.use(checkGoogleJwt);
+  api.use(checkGoogleJwt);
 }
 
-app.get("/", (req, res) => {
+api.get("/", (req, res) => {
   res.send("Cypress Realworld App - backend");
 });
-app.use("/graphql", gqlPlaygroundRoutes);
-app.use(
+api.use("/graphql", gqlPlaygroundRoutes);
+api.use(
   "/graphql",
   graphqlHandler({
     schema: schemaWithResolvers,
@@ -103,14 +107,16 @@ app.use(
     },
   })
 );
-app.use("/users", userRoutes);
-app.use("/contacts", contactRoutes);
-app.use("/bankAccounts", bankAccountRoutes);
-app.use("/transactions", transactionRoutes);
-app.use("/likes", likeRoutes);
-app.use("/comments", commentRoutes);
-app.use("/notifications", notificationRoutes);
-app.use("/bankTransfers", bankTransferRoutes);
+api.use("/users", userRoutes);
+api.use("/contacts", contactRoutes);
+api.use("/bankAccounts", bankAccountRoutes);
+api.use("/transactions", transactionRoutes);
+api.use("/likes", likeRoutes);
+api.use("/comments", commentRoutes);
+api.use("/notifications", notificationRoutes);
+api.use("/bankTransfers", bankTransferRoutes);
+
+app.use("/api", api);
 
 app.use(express.static(join(__dirname, "../public")));
 

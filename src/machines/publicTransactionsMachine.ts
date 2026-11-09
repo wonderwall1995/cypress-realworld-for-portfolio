@@ -1,13 +1,13 @@
 import { isEmpty, omit } from "lodash/fp";
 import { dataMachine } from "./dataMachine";
 import { httpClient } from "../utils/asyncUtils";
-import { backendPort } from "../utils/portUtils";
+import { API_BASE } from "../utils/apiUtils";
 
 export const publicTransactionsMachine = dataMachine("publicTransactions").withConfig({
   services: {
     fetchData: async (ctx, event: any) => {
       const payload = omit("type", event);
-      const resp = await httpClient.get(`http://localhost:${backendPort}/transactions/public`, {
+      const resp = await httpClient.get(`${API_BASE}/transactions/public`, {
         params: !isEmpty(payload) ? payload : undefined,
       });
       return resp.data;
