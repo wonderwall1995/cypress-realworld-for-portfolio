@@ -27,7 +27,7 @@ const EmptyList: React.FC<{ entity: string; children?: React.ReactNode }> = ({
       >
         <Grid item data-testid="empty-list-header">
           <Typography component="h2" variant="h6" color="primary" gutterBottom>
-            No {entity}
+            {entity} 내역이 없습니다
           </Typography>
         </Grid>
         <Grid item>

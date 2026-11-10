@@ -97,10 +97,10 @@ const TransactionCreateStepThree: React.FC<TransactionCreateStepThreeProps> = ({
         <Grid container direction="row" justifyContent="center" alignItems="center">
           <Grid item>
             <Typography component="h2" variant="h6" color="primary" gutterBottom>
-              {transactionDetails?.transactionType === "payment" ? "Paid " : "Requested "}
               {transactionDetails?.amount &&
                 formatAmount(parseInt(transactionDetails.amount, 10) * 100)}{" "}
-              for {transactionDetails?.description}
+              {transactionDetails?.transactionType === "payment" ? "결제 완료" : "요청 완료"} (
+              {transactionDetails?.description})
             </Typography>
           </Grid>
         </Grid>
@@ -121,7 +121,7 @@ const TransactionCreateStepThree: React.FC<TransactionCreateStepThreeProps> = ({
               to="/"
               data-testid="new-transaction-return-to-transactions"
             >
-              Return To Transactions
+              거래 목록으로 돌아가기
             </Button>
           </Grid>
           <Grid item>
@@ -135,7 +135,7 @@ const TransactionCreateStepThree: React.FC<TransactionCreateStepThreeProps> = ({
               }}
               data-testid="new-transaction-create-another-transaction"
             >
-              Create Another Transaction
+              다른 거래 만들기
             </Button>
           </Grid>
         </Grid>

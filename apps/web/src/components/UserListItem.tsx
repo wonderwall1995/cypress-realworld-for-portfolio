@@ -28,21 +28,21 @@ const UserListItem: React.FC<UserListItemProps> = ({ user, setReceiver, index })
               spacing={1}
             >
               <Grid item component={"span"}>
-                <b>U: </b>
+                <b>사용자: </b>
                 {user.username}
               </Grid>
               <Grid item component={"span"}>
                 &bull;
               </Grid>
               <Grid item component={"span"}>
-                <b>E: </b>
+                <b>이메일: </b>
                 {user.email}
               </Grid>
               <Grid item component={"span"}>
                 &bull;
               </Grid>
               <Grid item component={"span"}>
-                <b>P: </b>
+                <b>전화: </b>
                 {user.phoneNumber}
               </Grid>
             </Grid>

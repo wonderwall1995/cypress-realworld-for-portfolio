@@ -5,14 +5,29 @@
 import shortid from "shortid";
 import { v4 } from "uuid";
 import prisma from "./prisma";
-import { BankAccount } from "@rwa/shared";
+import { BankAccount, isValidAccountNumber, isValidRoutingNumber } from "@rwa/shared";
+import { HttpError } from "./http-error";
 
 export const getBankAccountsByUserId = (userId: string) =>
   prisma.bankAccount.findMany({ where: { userId }, orderBy: { createdAt: "asc" } });
 
 export const getBankAccountById = (id: string) => prisma.bankAccount.findUnique({ where: { id } });
 
-export const createBankAccountForUser = (userId: string, accountDetails: Partial<BankAccount>) => {
+export const createBankAccountForUser = async (
+  userId: string,
+  accountDetails: Partial<BankAccount>
+) => {
+  // checked here (not only in the REST route) because the web app creates accounts through GraphQL
+  if (typeof accountDetails.bankName !== "string" || accountDetails.bankName.trim() === "") {
+    throw new HttpError(400, "bankName is required");
+  }
+  if (!isValidRoutingNumber(accountDetails.routingNumber)) {
+    throw new HttpError(400, "routingNumber must be exactly 9 digits");
+  }
+  if (!isValidAccountNumber(accountDetails.accountNumber)) {
+    throw new HttpError(400, "accountNumber must be 9 to 12 digits");
+  }
+
   const now = new Date();
   return prisma.bankAccount.create({
     data: {

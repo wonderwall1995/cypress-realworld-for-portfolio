@@ -71,13 +71,13 @@ const TransactionCreateContainer: React.FC<Props> = ({ authService, snackbarServ
     <>
       <Stepper activeStep={activeStep}>
         <Step key={"stepOne"}>
-          <StepLabel>Select Contact</StepLabel>
+          <StepLabel>연락처 선택</StepLabel>
         </Step>
         <Step key={"stepTwo"}>
-          <StepLabel>Payment</StepLabel>
+          <StepLabel>결제</StepLabel>
         </Step>
         <Step key={"stepThree"}>
-          <StepLabel>Complete</StepLabel>
+          <StepLabel>완료</StepLabel>
         </Step>
       </Stepper>
       {createTransactionState.matches("stepOne") && (

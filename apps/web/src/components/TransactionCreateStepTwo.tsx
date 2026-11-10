@@ -4,7 +4,7 @@ import NumberFormat from "react-number-format";
 import { Formik, Form, Field, FieldProps } from "formik";
 import { string, object, number } from "yup";
 import { Paper, Typography, Button, Grid, Container, Avatar, Box, TextField } from "@mui/material";
-import { User } from "@rwa/shared";
+import { MAX_AMOUNT_DOLLARS, User } from "@rwa/shared";
 
 const PREFIX = "TransactionCreateStepTwo";
 
@@ -32,8 +32,13 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
 }));
 
 const validationSchema = object({
-  amount: number().required("Please enter a valid amount"),
-  description: string().required("Please enter a note"),
+  amount: number()
+    .typeError("올바른 금액을 입력하세요")
+    .required("올바른 금액을 입력하세요")
+    .integer("금액은 소수점 없이 정수로 입력하세요")
+    .min(1, "금액은 1달러 이상이어야 합니다")
+    .max(MAX_AMOUNT_DOLLARS, `금액은 ${MAX_AMOUNT_DOLLARS.toLocaleString()}달러 이하여야 합니다`),
+  description: string().required("메모를 입력하세요"),
   senderId: string(),
   receiverId: string(),
 });
@@ -60,6 +65,7 @@ function NumberFormatCustom(props: NumberFormatCustomProps) {
       }}
       thousandSeparator
       isNumericString
+      allowNegative={false}
       prefix="$"
     />
   );
@@ -122,7 +128,7 @@ const TransactionCreateStepTwo: React.FC<TransactionCreateStepTwoProps> = ({
             createTransaction({ transactionType, ...values });
             showSnackbar({
               severity: "success",
-              message: "Transaction Submitted!",
+              message: "거래가 접수되었습니다!",
             });
           }}
         >
@@ -138,7 +144,7 @@ const TransactionCreateStepTwo: React.FC<TransactionCreateStepTwoProps> = ({
                     autoFocus
                     id={"transaction-create-amount-input"}
                     type="text"
-                    placeholder="Amount"
+                    placeholder="금액 (1달러 이상, 정수)"
                     data-testid={"transaction-create-amount-input"}
                     error={(touched || value !== initialValue) && Boolean(error)}
                     helperText={touched || value !== initialValue ? error : ""}
@@ -159,7 +165,7 @@ const TransactionCreateStepTwo: React.FC<TransactionCreateStepTwoProps> = ({
                     required
                     id={"transaction-create-description-input"}
                     type="text"
-                    placeholder="Add a note"
+                    placeholder="메모를 입력하세요"
                     data-testid={"transaction-create-description-input"}
                     error={(touched || value !== initialValue) && Boolean(error)}
                     helperText={touched || value !== initialValue ? error : ""}
@@ -185,7 +191,7 @@ const TransactionCreateStepTwo: React.FC<TransactionCreateStepTwoProps> = ({
                     disabled={!isValid || isSubmitting}
                     onClick={() => setTransactionType("request")}
                   >
-                    Request
+                    요청
                   </Button>
                 </Grid>
                 <Grid item>
@@ -199,7 +205,7 @@ const TransactionCreateStepTwo: React.FC<TransactionCreateStepTwoProps> = ({
                     disabled={!isValid || isSubmitting}
                     onClick={() => setTransactionType("payment")}
                   >
-                    Pay
+                    결제
                   </Button>
                 </Grid>
               </Grid>

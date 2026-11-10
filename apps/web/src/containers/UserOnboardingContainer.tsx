@@ -72,9 +72,9 @@ const UserOnboardingContainer: React.FC<Props> = ({ authService, bankAccountsSer
   return (
     <Dialog data-testid="user-onboarding-dialog" fullScreen={fullScreen} open={dialogIsOpen}>
       <DialogTitle data-testid="user-onboarding-dialog-title">
-        {userOnboardingState.matches("stepOne") && "Get Started with Real World App"}
-        {userOnboardingState.matches("stepTwo") && "Create Bank Account"}
-        {userOnboardingState.matches("stepThree") && "Finished"}
+        {userOnboardingState.matches("stepOne") && "Real World App 시작하기"}
+        {userOnboardingState.matches("stepTwo") && "은행 계좌 만들기"}
+        {userOnboardingState.matches("stepThree") && "완료"}
       </DialogTitle>
       <DialogContent data-testid="user-onboarding-dialog-content">
         <Box display="flex" alignItems="center" justifyContent="center">
@@ -83,10 +83,10 @@ const UserOnboardingContainer: React.FC<Props> = ({ authService, bankAccountsSer
               <NavigatorIllustration />
               <br />
               <DialogContentText style={{ paddingLeft: 20 }}>
-                Real World App requires a Bank Account to perform transactions.
+                거래를 하려면 은행 계좌가 필요합니다.
                 <br />
                 <br />
-                Click <b>Next</b> to begin setup of your Bank Account.
+                <b>다음</b>을 눌러 은행 계좌 설정을 시작하세요.
               </DialogContentText>
             </>
           )}
@@ -102,10 +102,10 @@ const UserOnboardingContainer: React.FC<Props> = ({ authService, bankAccountsSer
               <PersonalFinance />
               <br />
               <DialogContentText style={{ paddingLeft: 20 }}>
-                You're all set!
+                준비가 끝났습니다!
                 <br />
                 <br />
-                We're excited to have you aboard the Real World App!
+                Real World App에 오신 것을 환영합니다!
               </DialogContentText>
             </>
           )}
@@ -120,13 +120,13 @@ const UserOnboardingContainer: React.FC<Props> = ({ authService, bankAccountsSer
               color="secondary"
               data-testid="user-onboarding-logout"
             >
-              Logout
+              로그아웃
             </Button>
           </Grid>
           <Grid item>
             {!userOnboardingState.matches("stepTwo") && (
               <Button onClick={() => nextStep()} color="primary" data-testid="user-onboarding-next">
-                {userOnboardingState.matches("stepThree") ? "Done" : "Next"}
+                {userOnboardingState.matches("stepThree") ? "완료" : "다음"}
               </Button>
             )}
           </Grid>

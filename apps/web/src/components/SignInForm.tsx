@@ -24,10 +24,8 @@ import { AuthMachineContext, AuthMachineEvents, AuthMachineSchema } from "../mac
 import { Alert } from "@mui/material";
 
 const validationSchema = object({
-  username: string().required("Username is required"),
-  password: string()
-    .min(4, "Password must contain at least 4 characters")
-    .required("Enter your password"),
+  username: string().required("사용자 이름을 입력하세요"),
+  password: string().min(4, "비밀번호는 4자 이상이어야 합니다").required("비밀번호를 입력하세요"),
 });
 
 const PREFIX = "SignInForm";
@@ -93,7 +91,7 @@ const SignInForm: React.FC<Props> = ({ authService }) => {
           <RWALogo className={classes.logo} />
         </div>
         <Typography component="h1" variant="h5">
-          Sign in
+          로그인
         </Typography>
         <Formik
           initialValues={initialValues}
@@ -113,7 +111,7 @@ const SignInForm: React.FC<Props> = ({ authService }) => {
                     margin="normal"
                     fullWidth
                     id="username"
-                    label="Username"
+                    label="사용자 이름"
                     type="text"
                     autoFocus
                     data-testid="signin-username"
@@ -129,7 +127,7 @@ const SignInForm: React.FC<Props> = ({ authService }) => {
                     variant="outlined"
                     margin="normal"
                     fullWidth
-                    label="Password"
+                    label="비밀번호"
                     type="password"
                     id="password"
                     data-testid="signin-password"
@@ -149,7 +147,7 @@ const SignInForm: React.FC<Props> = ({ authService }) => {
                     }}
                   </Field>
                 }
-                label="Remember me"
+                label="로그인 상태 유지"
               />
               <Button
                 type="submit"
@@ -160,7 +158,7 @@ const SignInForm: React.FC<Props> = ({ authService }) => {
                 data-testid="signin-submit"
                 disabled={!isValid || isSubmitting}
               >
-                Sign In
+                로그인
               </Button>
               <Grid container>
                 <Grid item xs>
@@ -168,7 +166,7 @@ const SignInForm: React.FC<Props> = ({ authService }) => {
                 </Grid>
                 <Grid item>
                   <Link data-testid="signup" to="/signup">
-                    {"Don't have an account? Sign Up"}
+                    {"계정이 없으신가요? 회원가입"}
                   </Link>
                 </Grid>
               </Grid>

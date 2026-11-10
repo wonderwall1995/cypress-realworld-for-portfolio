@@ -38,7 +38,7 @@ const TransactionDetailsContainer: React.FC<Props> = ({ authService }) => {
     <>
       {transactionDetailState.matches("idle") && (
         <div>
-          Loading...
+          불러오는 중...
           <br />
         </div>
       )}

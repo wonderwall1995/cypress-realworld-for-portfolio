@@ -57,7 +57,7 @@ const TransactionList: React.FC<TransactionListProps> = ({
         />
       )}
       {showEmptyList && (
-        <EmptyList entity="Transactions">
+        <EmptyList entity="거래">
           <Grid
             container
             direction="column"
@@ -78,7 +78,7 @@ const TransactionList: React.FC<TransactionListProps> = ({
                   component={RouterLink}
                   to="/transaction/new"
                 >
-                  Create A Transaction
+                  거래 만들기
                 </Button>
               )}
             </Grid>

@@ -40,6 +40,9 @@ import {
   hasSufficientFunds,
   isPayment,
   isRequestTransaction,
+  isValidAmountDollars,
+  MAX_AMOUNT_DOLLARS,
+  MAX_BALANCE_CENTS,
 } from "@rwa/shared";
 import { canViewTransaction } from "./access";
 import { createBankTransfer } from "./banktransfer-db";
@@ -342,8 +345,14 @@ const debitPayAppBalance = async (tx: DbClient, user: Balanced, transaction: Tra
   await saveBalance(tx, user.id, 0);
 };
 
-const creditPayAppBalance = (tx: DbClient, user: Balanced, transaction: Transaction) =>
-  saveBalance(tx, user.id, getPayAppCreditedAmount(user as User, transaction));
+const creditPayAppBalance = (tx: DbClient, user: Balanced, transaction: Transaction) => {
+  const newBalance = getPayAppCreditedAmount(user as User, transaction);
+  // the balance column is a 32-bit number: refuse instead of failing inside the database
+  if (newBalance > MAX_BALANCE_CENTS) {
+    throw new HttpError(400, "the receiver's balance would be too large");
+  }
+  return saveBalance(tx, user.id, newBalance);
+};
 
 export const createTransaction = (
   userId: User["id"],
@@ -351,6 +360,14 @@ export const createTransaction = (
   transactionDetails: TransactionPayload
 ): Promise<Transaction> =>
   prisma.$transaction(async (tx) => {
+    // a payment or request is a whole number of dollars, 1 or more (never 0 or negative)
+    if (!isValidAmountDollars(transactionDetails.amount)) {
+      throw new HttpError(
+        400,
+        "amount must be a whole number of dollars from 1 to " + MAX_AMOUNT_DOLLARS
+      );
+    }
+
     const sender = await tx.user.findUnique({ where: { id: userId } });
     const receiver = await tx.user.findUnique({ where: { id: transactionDetails.receiverId } });
     if (!sender) throw new Error(`sender not found: ${userId}`);

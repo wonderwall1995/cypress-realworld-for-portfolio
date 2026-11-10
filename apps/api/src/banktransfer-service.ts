@@ -18,16 +18,13 @@ import {
   BankTransferWithStatus,
   createBankTransfer,
 } from "./banktransfer-db";
-import { BankTransferType } from "@rwa/shared";
+import { BankTransferType, MAX_BALANCE_CENTS } from "@rwa/shared";
 
 export interface MoveMoneyInput {
   bankAccountId: string;
   amount: number; // whole dollars, like payments
   type: BankTransferType | "deposit" | "withdrawal";
 }
-
-// The balance column is a 32-bit whole number of cents.
-const MAX_BALANCE_CENTS = 2_147_483_647;
 
 export const moveMoney = (userId: string, input: MoveMoneyInput): Promise<BankTransferWithStatus> =>
   prisma.$transaction(async (tx) => {
