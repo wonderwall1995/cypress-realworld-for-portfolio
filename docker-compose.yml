@@ -1,0 +1,59 @@
+services:
+  app:
+    build: .
+    container_name: rwa-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${PORT:-7201}:${PORT:-7201}"
+      - "${VITE_BACKEND_PORT:-7202}:${VITE_BACKEND_PORT:-7202}"
+    environment:
+      PORT: ${PORT:-7201}
+      VITE_BACKEND_PORT: ${VITE_BACKEND_PORT:-7202}
+      # inside the compose network the database host is the service name
+      DATABASE_URL: postgresql://${POSTGRES_USER:-rwa}:${POSTGRES_PASSWORD:-rwa_local_pw}@postgres:5432/${POSTGRES_DB:-rwa}?schema=public
+      # file watching over a Windows bind mount needs polling
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - .:/app
+      # Every workspace package has its own node_modules. Keep them in named volumes so the
+      # Windows host's node_modules (symlinks to Windows paths) never shows up inside the container.
+      - node-modules-root:/app/node_modules
+      - node-modules-web:/app/apps/web/node_modules
+      - node-modules-api:/app/apps/api/node_modules
+      - node-modules-shared:/app/packages/shared/node_modules
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -qO- http://localhost:$${VITE_BACKEND_PORT}/api >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 20s
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: rwa-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rwa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rwa_local_pw}
+      POSTGRES_DB: ${POSTGRES_DB:-rwa}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - rwa-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rwa} -d ${POSTGRES_DB:-rwa}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  rwa-pgdata:
+  node-modules-root:
+  node-modules-web:
+  node-modules-api:
+  node-modules-shared:
