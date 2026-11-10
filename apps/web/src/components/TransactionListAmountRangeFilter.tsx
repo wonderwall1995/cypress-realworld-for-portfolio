@@ -82,7 +82,7 @@ const TransactionListAmountRangeFilter: React.FC<TransactionListAmountRangeFilte
               color="textSecondary"
               data-testid="transaction-list-filter-amount-range-text"
             >
-              Amount Range: {formatAmountRangeValues(amountRangeValue)}
+              금액 범위: {formatAmountRangeValues(amountRangeValue)}
             </Typography>
           </Grid>
           <Grid item>
@@ -93,7 +93,7 @@ const TransactionListAmountRangeFilter: React.FC<TransactionListAmountRangeFilte
                 resetAmountRange();
               }}
             >
-              Clear
+              초기화
             </Button>
           </Grid>
         </Grid>
@@ -122,7 +122,7 @@ const TransactionListAmountRangeFilter: React.FC<TransactionListAmountRangeFilte
         variant="outlined"
         onClick={handleAmountRangeClick}
         data-testid="transaction-list-filter-amount-range-button"
-        label={`Amount: ${formatAmountRangeValues(amountRangeValue)}`}
+        label={`금액: ${formatAmountRangeValues(amountRangeValue)}`}
         deleteIcon={<ArrowDropDownIcon />}
         onDelete={handleAmountRangeClick}
       />
@@ -156,7 +156,7 @@ const TransactionListAmountRangeFilter: React.FC<TransactionListAmountRangeFilte
             data-testid="amount-range-filter-drawer-close"
             onClick={() => handleAmountRangeClose()}
           >
-            Close
+            닫기
           </Button>
           <AmountRangeFilter />
         </Drawer>

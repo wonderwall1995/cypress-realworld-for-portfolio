@@ -29,9 +29,9 @@ export default function TransactionNavTabs() {
       centered
       data-testid="nav-transaction-tabs"
     >
-      <Tab label="Everyone" component={Link} to="/" data-testid="nav-public-tab" />
-      <Tab label="Friends" component={Link} to="/contacts" data-testid="nav-contacts-tab" />
-      <Tab label="Mine" component={Link} to="/personal" data-testid="nav-personal-tab" />
+      <Tab label="전체" component={Link} to="/" data-testid="nav-public-tab" />
+      <Tab label="친구" component={Link} to="/contacts" data-testid="nav-contacts-tab" />
+      <Tab label="내 거래" component={Link} to="/personal" data-testid="nav-personal-tab" />
     </Tabs>
   );
 }

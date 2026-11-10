@@ -32,12 +32,12 @@ const phoneRegExp =
 const DefaultPrivacyLevelValues = Object.values(DefaultPrivacyLevel);
 
 const validationSchema = object({
-  firstName: string().required("Enter a first name"),
-  lastName: string().required("Enter a last name"),
-  email: string().email("Must contain a valid email address").required("Enter an email address"),
+  firstName: string().required("이름을 입력하세요"),
+  lastName: string().required("성을 입력하세요"),
+  email: string().email("올바른 이메일 주소가 아닙니다").required("이메일 주소를 입력하세요"),
   phoneNumber: string()
-    .matches(phoneRegExp, "Phone number is not valid")
-    .required("Enter a phone number"),
+    .matches(phoneRegExp, "올바른 전화번호가 아닙니다")
+    .required("전화번호를 입력하세요"),
   defaultPrivacyLevel: mixed<DefaultPrivacyLevel>().oneOf(DefaultPrivacyLevelValues),
 });
 
@@ -77,7 +77,7 @@ const UserSettingsForm: React.FC<UserSettingsProps> = ({ userProfile, updateUser
                   required
                   id={"user-settings-firstName-input"}
                   type="text"
-                  placeholder="First Name"
+                  placeholder="이름"
                   inputProps={{ "data-testid": "user-settings-firstName-input" }}
                   error={(touched || value !== initialValue) && Boolean(error)}
                   helperText={touched || value !== initialValue ? error : ""}
@@ -94,7 +94,7 @@ const UserSettingsForm: React.FC<UserSettingsProps> = ({ userProfile, updateUser
                   required
                   id={"user-settings-lastName-input"}
                   type="text"
-                  placeholder="Last Name"
+                  placeholder="성"
                   inputProps={{ "data-testid": "user-settings-lastName-input" }}
                   error={(touched || value !== initialValue) && Boolean(error)}
                   helperText={touched || value !== initialValue ? error : ""}
@@ -111,7 +111,7 @@ const UserSettingsForm: React.FC<UserSettingsProps> = ({ userProfile, updateUser
                   required
                   id={"user-settings-email-input"}
                   type="text"
-                  placeholder="Email"
+                  placeholder="이메일"
                   inputProps={{ "data-testid": "user-settings-email-input" }}
                   error={(touched || value !== initialValue) && Boolean(error)}
                   helperText={touched || value !== initialValue ? error : ""}
@@ -128,7 +128,7 @@ const UserSettingsForm: React.FC<UserSettingsProps> = ({ userProfile, updateUser
                   required
                   id={"user-settings-phoneNumber-input"}
                   type="text"
-                  placeholder="Phone Number"
+                  placeholder="전화번호 (예: 010-1234-5678)"
                   inputProps={{ "data-testid": "user-settings-phoneNumber-input" }}
                   error={(touched || value !== initialValue) && Boolean(error)}
                   helperText={touched || value !== initialValue ? error : ""}
@@ -153,7 +153,7 @@ const UserSettingsForm: React.FC<UserSettingsProps> = ({ userProfile, updateUser
                   data-testid="user-settings-submit"
                   disabled={!isValid || isSubmitting}
                 >
-                  Save
+                  저장
                 </Button>
               </Grid>
             </Grid>

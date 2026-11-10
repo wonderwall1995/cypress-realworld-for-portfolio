@@ -161,7 +161,7 @@ export const authMachine = Machine<AuthMachineContext, AuthMachineSchema, AuthMa
             return data;
           })
           .catch((error) => {
-            throw new Error("Username or password is invalid");
+            throw new Error("사용자 이름 또는 비밀번호가 올바르지 않습니다");
           });
       },
       getOktaUserProfile: /* istanbul ignore next */ (ctx, event: any) => {

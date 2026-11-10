@@ -133,7 +133,7 @@ const NavBar: React.FC<NavBarProps> = ({ drawerOpen, toggleDrawer, notifications
           data-testid="sidenav-toggle"
           edge="start"
           color="inherit"
-          aria-label="open drawer"
+          aria-label="메뉴 열기"
           onClick={() => toggleDrawer()}
           size="large"
         >
@@ -168,7 +168,7 @@ const NavBar: React.FC<NavBarProps> = ({ drawerOpen, toggleDrawer, notifications
           to="/transaction/new"
           data-testid="nav-top-new-transaction"
         >
-          <AttachMoneyIcon /> New
+          <AttachMoneyIcon /> 새 거래
         </Button>
         <IconButton
           color="inherit"

@@ -37,7 +37,7 @@ const TransactionPersonalList: React.FC<TransactionPersonalListProps> = ({
     <>
       <TransactionList
         filterComponent={filterComponent}
-        header="Personal"
+        header="내 거래"
         transactions={results as TransactionResponseItem[]}
         isLoading={current.matches("loading")}
         loadNextPage={loadNextPage}

@@ -71,21 +71,21 @@ const NotificationListItem: React.FC<NotificationListItemProps> = ({
 
   if (isCommentNotification(notification)) {
     listItemIcon = <CommentIcon />;
-    listItemText = `${notification.userFullName} commented on a transaction.`;
+    listItemText = `${notification.userFullName}님이 거래에 댓글을 남겼습니다.`;
   }
 
   if (isLikeNotification(notification)) {
     listItemIcon = <LikeIcon />;
-    listItemText = `${notification.userFullName} liked a transaction.`;
+    listItemText = `${notification.userFullName}님이 거래에 좋아요를 눌렀습니다.`;
   }
 
   if (isPaymentNotification(notification)) {
     if (isPaymentRequestedNotification(notification)) {
       listItemIcon = <PaymentIcon className={classes.red} />;
-      listItemText = `${notification.userFullName} requested payment.`;
+      listItemText = `${notification.userFullName}님이 결제를 요청했습니다.`;
     } else if (isPaymentReceivedNotification(notification)) {
       listItemIcon = <MonetizationOnIcon className={classes.green} />;
-      listItemText = `${notification.userFullName} received payment.`;
+      listItemText = `${notification.userFullName}님이 결제를 받았습니다.`;
     }
   }
 
@@ -95,7 +95,7 @@ const NotificationListItem: React.FC<NotificationListItemProps> = ({
       <ListItemText primary={listItemText} />
       {xsBreakpoint && (
         <IconButton
-          aria-label="mark as read"
+          aria-label="읽음으로 표시"
           color="primary"
           onClick={() => updateNotification({ id: notification.id, isRead: true })}
           data-testid={`notification-mark-read-${notification.id}`}
@@ -111,7 +111,7 @@ const NotificationListItem: React.FC<NotificationListItemProps> = ({
           onClick={() => updateNotification({ id: notification.id, isRead: true })}
           data-testid={`notification-mark-read-${notification.id}`}
         >
-          Dismiss
+          확인
         </Button>
       )}
     </StyledListItem>

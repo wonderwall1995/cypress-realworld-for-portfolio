@@ -130,7 +130,7 @@ export const mainListItems = (
       <ListItemIcon>
         <HomeIcon />
       </ListItemIcon>
-      <ListItemText primary="Home" />
+      <ListItemText primary="홈" />
     </ListItem>
     <ListItem
       button
@@ -143,7 +143,7 @@ export const mainListItems = (
       <ListItemIcon>
         <PersonIcon />
       </ListItemIcon>
-      <ListItemText primary="My Account" />
+      <ListItemText primary="내 계정" />
     </ListItem>
     <ListItem
       button
@@ -156,7 +156,7 @@ export const mainListItems = (
       <ListItemIcon>
         <AccountBalanceIcon />
       </ListItemIcon>
-      <ListItemText primary="Bank Accounts" />
+      <ListItemText primary="은행 계좌" />
     </ListItem>
     <ListItem
       button
@@ -169,7 +169,7 @@ export const mainListItems = (
       <ListItemIcon>
         <NotificationsIcon />
       </ListItemIcon>
-      <ListItemText primary="Notifications" />
+      <ListItemText primary="알림" />
     </ListItem>
   </div>
 );
@@ -180,7 +180,7 @@ export const secondaryListItems = (signOutPending: Function) => (
       <ListItemIcon>
         <LogoutIcon />
       </ListItemIcon>
-      <ListItemText primary="Logout" />
+      <ListItemText primary="로그아웃" />
     </ListItem>
   </div>
 );
@@ -276,7 +276,7 @@ const NavDrawer: React.FC<Props> = ({
                 {currentUser.balance ? formatAmount(currentUser.balance) : formatAmount(0)}
               </Typography>
               <Typography variant="subtitle2" color="inherit" gutterBottom>
-                Account Balance
+                잔액
               </Typography>
             </>
           )}

@@ -65,7 +65,7 @@ const BankAccountsContainer: React.FC<Props> = ({ authService, bankAccountsServi
     return (
       <StyledPaper className={classes.paper}>
         <Typography component="h2" variant="h6" color="primary" gutterBottom>
-          Create Bank Account
+          은행 계좌 만들기
         </Typography>
         <BankAccountForm userId={currentUser?.id} createBankAccount={createBankAccount} />
       </StyledPaper>
@@ -77,7 +77,7 @@ const BankAccountsContainer: React.FC<Props> = ({ authService, bankAccountsServi
       <Grid container direction="row" justifyContent="space-between" alignItems="center">
         <Grid item>
           <Typography component="h2" variant="h6" color="primary" gutterBottom>
-            Bank Accounts
+            은행 계좌
           </Typography>
         </Grid>
         <Grid item>
@@ -89,7 +89,7 @@ const BankAccountsContainer: React.FC<Props> = ({ authService, bankAccountsServi
             to="/bankaccounts/new"
             data-testid="bankaccount-new"
           >
-            Create
+            만들기
           </Button>
         </Grid>
       </Grid>

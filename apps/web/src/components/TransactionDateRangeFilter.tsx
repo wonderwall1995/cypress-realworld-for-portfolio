@@ -71,7 +71,7 @@ const TransactionListDateRangeFilter: React.FC<TransactionListDateRangeFilterPro
   const dateRangeId = dateRangeOpen ? "date-range-popover" : undefined;
 
   const formatButtonDate = (date: Date) => {
-    return formatDate(date, "MMM, d yyyy");
+    return formatDate(date, "yyyy.MM.dd");
   };
 
   const dateRangeLabel = (dateRangeFields: Value) => {
@@ -90,7 +90,7 @@ const TransactionListDateRangeFilter: React.FC<TransactionListDateRangeFilterPro
           variant="outlined"
           onClick={handleDateRangeClick}
           data-testid="transaction-list-filter-date-range-button"
-          label={"Date: ALL"}
+          label={"날짜: 전체"}
           deleteIcon={<ArrowDropDownIcon />}
           onDelete={handleDateRangeClick}
         />
@@ -101,7 +101,7 @@ const TransactionListDateRangeFilter: React.FC<TransactionListDateRangeFilterPro
           variant="outlined"
           onClick={handleDateRangeClick}
           data-testid="transaction-list-filter-date-range-button"
-          label={`Date: ${dateRangeLabel(calendarValue)}`}
+          label={`날짜: ${dateRangeLabel(calendarValue)}`}
           deleteIcon={<CancelIcon data-testid="transaction-list-filter-date-clear-button" />}
           onDelete={() => {
             setCalendarValue(null);
@@ -146,7 +146,7 @@ const TransactionListDateRangeFilter: React.FC<TransactionListDateRangeFilterPro
             data-testid="date-range-filter-drawer-close"
             onClick={() => handleDateRangeClose()}
           >
-            Close
+            닫기
           </Button>
           <RangeCalendar
             onCalendarSelect={onCalendarSelect}
@@ -195,7 +195,7 @@ export function RangeCalendar({
         borderRadius: 8,
       }}
     >
-      <Calendar onChange={handleChange} value={value} selectRange={true} />
+      <Calendar onChange={handleChange} value={value} selectRange={true} locale="ko-KR" />
     </div>
   );
 }

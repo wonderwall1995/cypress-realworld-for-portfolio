@@ -115,7 +115,7 @@ const TransactionDetail: React.FC<TransactionProps> = ({
         gutterBottom
         data-testid="transaction-detail-header"
       >
-        Transaction Detail
+        거래 상세
       </Typography>
       <Grid
         container
@@ -201,7 +201,7 @@ const TransactionDetail: React.FC<TransactionProps> = ({
                       }
                       data-testid={`transaction-accept-request-${transaction.id}`}
                     >
-                      Accept Request
+                      요청 수락
                     </Button>
                     <Button
                       variant="contained"
@@ -215,7 +215,7 @@ const TransactionDetail: React.FC<TransactionProps> = ({
                       }
                       data-testid={`transaction-reject-request-${transaction.id}`}
                     >
-                      Reject Request
+                      요청 거절
                     </Button>
                   </Grid>
                 )}
@@ -232,7 +232,7 @@ const TransactionDetail: React.FC<TransactionProps> = ({
       {transaction.comments.length > 0 && (
         <Paper className={classes.paperComments}>
           <Typography component="h2" variant="h6" color="primary" gutterBottom>
-            <CommentIcon /> Comments
+            <CommentIcon /> 댓글
           </Typography>
           <CommentsList comments={transaction.comments} />
         </Paper>

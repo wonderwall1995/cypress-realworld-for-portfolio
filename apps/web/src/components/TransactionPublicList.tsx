@@ -37,7 +37,7 @@ const TransactionPublicList: React.FC<TransactionPublicListProps> = ({
     <>
       <TransactionList
         filterComponent={filterComponent}
-        header="Public"
+        header="공개"
         transactions={results as TransactionResponseItem[]}
         isLoading={current.matches("loading")}
         loadNextPage={loadNextPage}

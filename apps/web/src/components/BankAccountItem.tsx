@@ -17,7 +17,7 @@ const BankAccountListItem: React.FC<BankAccountListItemProps> = ({
       <Grid container direction="row" justifyContent="space-between" alignItems="flex-start">
         <Grid item>
           <Typography variant="body1" color="primary" gutterBottom>
-            {bankAccount.bankName} {bankAccount.isDeleted ? "(Deleted)" : undefined}
+            {bankAccount.bankName} {bankAccount.isDeleted ? "(삭제됨)" : undefined}
           </Typography>
         </Grid>
         {!bankAccount.isDeleted && (
@@ -31,7 +31,7 @@ const BankAccountListItem: React.FC<BankAccountListItemProps> = ({
                 deleteBankAccount({ id: bankAccount.id });
               }}
             >
-              Delete
+              삭제
             </Button>
           </Grid>
         )}

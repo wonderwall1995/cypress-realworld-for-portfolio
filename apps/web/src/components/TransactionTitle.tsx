@@ -49,6 +49,15 @@ const TransactionTitle: React.FC<{
       >
         {transaction.senderName}
       </Typography>
+      {"님이 "}
+      <Typography
+        data-testid={`transaction-receiver-${transaction.id}`}
+        className={classes.titleName}
+        display="inline"
+        component="span"
+      >
+        {transaction.receiverName}
+      </Typography>
       <Typography
         data-testid={`transaction-action-${transaction.id}`}
         display="inline"
@@ -57,17 +66,9 @@ const TransactionTitle: React.FC<{
       >
         {isRequestTransaction(transaction)
           ? isAcceptedRequestTransaction(transaction)
-            ? " charged "
-            : " requested "
-          : " paid "}
-      </Typography>
-      <Typography
-        data-testid={`transaction-receiver-${transaction.id}`}
-        className={classes.titleName}
-        display="inline"
-        component="span"
-      >
-        {transaction.receiverName}
+            ? "님에게 청구했습니다"
+            : "님에게 요청했습니다"
+          : "님에게 결제했습니다"}
       </Typography>
     </StyledTypography>
   );

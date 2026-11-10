@@ -1,20 +1,24 @@
 import React from "react";
 import { styled } from "@mui/material/styles";
-import { TextField, Button, Grid } from "@mui/material";
+import { Alert, TextField, Button, Grid, Typography } from "@mui/material";
 import { Formik, Form, Field, FieldProps } from "formik";
 import { string, object } from "yup";
-import { BankAccountPayload, User } from "@rwa/shared";
+import {
+  ACCOUNT_NUMBER_PATTERN,
+  BankAccountPayload,
+  ROUTING_NUMBER_PATTERN,
+  User,
+} from "@rwa/shared";
 import { useHistory } from "react-router";
 
 const validationSchema = object({
-  bankName: string().min(5, "Must contain at least 5 characters").required("Enter a bank name"),
+  bankName: string().required("은행 이름을 입력하세요"),
   routingNumber: string()
-    .length(9, "Must contain a valid routing number")
-    .required("Enter a valid bank routing number"),
+    .required("은행 라우팅 번호를 입력하세요")
+    .matches(ROUTING_NUMBER_PATTERN, "라우팅 번호는 숫자 9자리여야 합니다"),
   accountNumber: string()
-    .min(9, "Must contain at least 9 digits")
-    .max(12, "Must contain no more than 12 digits")
-    .required("Enter a valid bank account number"),
+    .required("계좌 번호를 입력하세요")
+    .matches(ACCOUNT_NUMBER_PATTERN, "계좌 번호는 숫자 9~12자리여야 합니다"),
 });
 
 const PREFIX = "BankAccountForm";
@@ -79,6 +83,19 @@ const BankAccountForm: React.FC<BankAccountFormProps> = ({
     >
       {({ isValid, isSubmitting }) => (
         <Form className={classes.form} data-testid="bankaccount-form">
+          <Alert severity="warning" data-testid="bankaccount-demo-warning">
+            진짜 자신의 계좌를 만들진 말아주세요! 이건 데모 웹입니다.
+          </Alert>
+          <Typography
+            variant="caption"
+            color="textSecondary"
+            component="p"
+            data-testid="bankaccount-number-guide"
+            style={{ marginTop: 8 }}
+          >
+            라우팅 번호는 은행을 구분하는 9자리 번호이고, 계좌 번호는 9~12자리입니다. 데모라서
+            임의의 숫자를 입력해도 됩니다.
+          </Typography>
           <Field name="bankName">
             {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
               <TextField
@@ -88,7 +105,7 @@ const BankAccountForm: React.FC<BankAccountFormProps> = ({
                 required
                 id={"bankaccount-bankName-input"}
                 type="text"
-                placeholder="Bank Name"
+                placeholder="은행 이름"
                 data-testid={"bankaccount-bankName-input"}
                 error={(touched || value !== initialValue) && Boolean(error)}
                 helperText={touched || value !== initialValue ? error : ""}
@@ -105,7 +122,7 @@ const BankAccountForm: React.FC<BankAccountFormProps> = ({
                 required
                 id={"bankaccount-routingNumber-input"}
                 type="text"
-                placeholder="Routing Number"
+                placeholder="라우팅 번호 (숫자 9자리)"
                 data-testid={"bankaccount-routingNumber-input"}
                 error={(touched || value !== initialValue) && Boolean(error)}
                 helperText={touched || value !== initialValue ? error : ""}
@@ -122,7 +139,7 @@ const BankAccountForm: React.FC<BankAccountFormProps> = ({
                 required
                 id={"bankaccount-accountNumber-input"}
                 type="text"
-                placeholder="Account Number"
+                placeholder="계좌 번호 (숫자 9~12자리)"
                 data-testid={"bankaccount-accountNumber-input"}
                 error={(touched || value !== initialValue) && Boolean(error)}
                 helperText={touched || value !== initialValue ? error : ""}
@@ -147,7 +164,7 @@ const BankAccountForm: React.FC<BankAccountFormProps> = ({
                 data-testid="bankaccount-submit"
                 disabled={!isValid || isSubmitting}
               >
-                Save
+                저장
               </Button>
             </Grid>
           </Grid>

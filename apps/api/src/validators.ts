@@ -7,6 +7,7 @@ import {
   NotificationsType,
 } from "@rwa/shared";
 import { includes } from "lodash/fp";
+import { ACCOUNT_NUMBER_PATTERN, MAX_AMOUNT_DOLLARS, ROUTING_NUMBER_PATTERN } from "@rwa/shared";
 
 const TransactionStatusValues = Object.values(TransactionStatus);
 const RequestStatusValues = Object.values(TransactionRequestStatus);
@@ -37,9 +38,17 @@ export const isBankTransferValidator = [
 ];
 
 export const isBankAccountValidator = [
-  body("bankName").isString().trim(),
-  body("accountNumber").isString().trim(),
-  body("routingNumber").isString().trim(),
+  body("bankName").isString().trim().notEmpty().withMessage("bankName is required"),
+  body("accountNumber")
+    .isString()
+    .trim()
+    .matches(ACCOUNT_NUMBER_PATTERN)
+    .withMessage("accountNumber must be 9 to 12 digits"),
+  body("routingNumber")
+    .isString()
+    .trim()
+    .matches(ROUTING_NUMBER_PATTERN)
+    .withMessage("routingNumber must be exactly 9 digits"),
 ];
 
 export const isUserValidator = [
@@ -89,7 +98,12 @@ export const isTransactionPayloadValidator = [
   body("source").optional().isString().trim(),
   body("receiverId").isString().trim(),
   body("description").isString().trim(),
-  body("amount").isNumeric().trim().toInt(),
+  // whole dollars, 1 or more, up to what the 32-bit cents column can hold
+  body("amount")
+    .trim()
+    .isInt({ min: 1, max: MAX_AMOUNT_DOLLARS })
+    .withMessage(`amount must be a whole number of dollars from 1 to ${MAX_AMOUNT_DOLLARS}`)
+    .toInt(),
 ];
 
 export const isTransactionPatchValidator = [body("requestStatus").isIn(RequestStatusValues)];

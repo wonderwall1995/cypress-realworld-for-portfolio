@@ -44,15 +44,13 @@ const StyledContainer = styled(Container)(({ theme }) => ({
 })) as typeof Container;
 
 const validationSchema = object({
-  firstName: string().required("First Name is required"),
-  lastName: string().required("Last Name is required"),
-  username: string().required("Username is required"),
-  password: string()
-    .min(4, "Password must contain at least 4 characters")
-    .required("Enter your password"),
+  firstName: string().required("이름을 입력하세요"),
+  lastName: string().required("성을 입력하세요"),
+  username: string().required("사용자 이름을 입력하세요"),
+  password: string().min(4, "비밀번호는 4자 이상이어야 합니다").required("비밀번호를 입력하세요"),
   confirmPassword: string()
-    .required("Confirm your password")
-    .oneOf([ref("password")], "Password does not match"),
+    .required("비밀번호를 한 번 더 입력하세요")
+    .oneOf([ref("password")], "비밀번호가 일치하지 않습니다"),
 });
 
 export interface Props {
@@ -79,7 +77,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
           <RWALogo className={classes.logo} />
         </div>
         <Typography component="h1" variant="h5" data-testid="signup-title">
-          Sign Up
+          회원가입
         </Typography>
         <Formik
           initialValues={initialValues}
@@ -100,7 +98,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     required
                     fullWidth
                     id="firstName"
-                    label="First Name"
+                    label="이름"
                     type="text"
                     autoFocus
                     data-testid="signup-first-name"
@@ -118,7 +116,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     required
                     fullWidth
                     id="lastName"
-                    label="Last Name"
+                    label="성"
                     type="text"
                     data-testid="signup-last-name"
                     error={(touched || value !== initialValue) && Boolean(error)}
@@ -135,7 +133,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     required
                     fullWidth
                     id="username"
-                    label="Username"
+                    label="사용자 이름"
                     type="text"
                     data-testid="signup-username"
                     error={(touched || value !== initialValue) && Boolean(error)}
@@ -151,7 +149,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     margin="normal"
                     required
                     fullWidth
-                    label="Password"
+                    label="비밀번호 (4자 이상)"
                     type="password"
                     id="password"
                     data-testid="signup-password"
@@ -168,7 +166,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     margin="normal"
                     required
                     fullWidth
-                    label="Confirm Password"
+                    label="비밀번호 확인"
                     id="confirmPassword"
                     data-testid="signup-confirmPassword"
                     type="password"
@@ -187,11 +185,11 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                 data-testid="signup-submit"
                 disabled={!isValid || isSubmitting}
               >
-                Sign Up
+                회원가입
               </Button>
               <Grid container>
                 <Grid item>
-                  <Link to="/signin">{"Have an account? Sign In"}</Link>
+                  <Link to="/signin">{"계정이 있으신가요? 로그인"}</Link>
                 </Grid>
               </Grid>
             </Form>
