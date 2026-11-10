@@ -25,7 +25,6 @@ export const userFieldsValidator = oneOf([
   check("firstName").exists(),
   check("lastName").exists(),
   check("password").exists(),
-  check("balance").exists(),
   check("avatar").exists(),
   check("defaultPrivacyLevel").exists(),
 ]);
@@ -50,7 +49,6 @@ export const isUserValidator = [
   check("password").optional({ checkFalsy: true }).isString().trim(),
   check("email").optional({ checkFalsy: true }).isString().trim(),
   check("phoneNumber").optional({ checkFalsy: true }).isString().trim(),
-  check("balance").optional({ checkFalsy: true }).isNumeric().trim(),
   check("avatar").optional({ checkFalsy: true }).isURL().trim(),
   check("defaultPrivacyLevel")
     .optional({ checkFalsy: true })

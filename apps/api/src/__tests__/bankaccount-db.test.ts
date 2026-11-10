@@ -50,10 +50,22 @@ describe("Bank accounts (PostgreSQL)", () => {
   it("soft deletes: the row stays and isDeleted becomes true", async () => {
     const account = await createBankAccountForUser("u1", details);
 
-    await removeBankAccountById(account.id);
+    expect(await removeBankAccountById("u1", account.id)).toBe(true);
 
     const accounts = await getBankAccountsByUserId("u1");
     expect(accounts).toHaveLength(1);
     expect(accounts[0].isDeleted).toBe(true);
+  });
+
+  it("does not delete the account of another user", async () => {
+    const account = await createBankAccountForUser("u1", details);
+
+    expect(await removeBankAccountById("u2", account.id)).toBe(false);
+
+    expect((await getBankAccountById(account.id))!.isDeleted).toBe(false);
+  });
+
+  it("returns false for an account that does not exist", async () => {
+    expect(await removeBankAccountById("u1", "nope")).toBe(false);
   });
 });

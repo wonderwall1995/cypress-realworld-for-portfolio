@@ -5,8 +5,8 @@ const Mutation = {
     return createBankAccountForUser(ctx.user.id, args);
   },
   deleteBankAccount: async (obj: any, args: any, ctx: any) => {
-    await removeBankAccountById(args.id);
-    return true;
+    // false when the account does not exist or belongs to someone else
+    return removeBankAccountById(ctx.user.id, args.id);
   },
 };
 

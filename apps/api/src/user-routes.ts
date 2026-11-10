@@ -13,7 +13,8 @@ import {
   removeUserFromResults,
 } from "./user-db";
 import { asyncHandler } from "./async-handler";
-import { omitPassword } from "./user-response";
+import { omitPassword, toOtherUserResponse } from "./user-response";
+import { HttpError } from "./http-error";
 import { User } from "@rwa/shared";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
 import {
@@ -31,7 +32,7 @@ router.get(
   asyncHandler(async (req, res) => {
     /* istanbul ignore next */
     const users = removeUserFromResults(req.user?.id!, await getAllUsers());
-    res.status(200).json({ results: users.map((user) => omitPassword(user)) });
+    res.status(200).json({ results: users.map((user) => toOtherUserResponse(user)) });
   })
 );
 
@@ -45,7 +46,7 @@ router.get(
     /* istanbul ignore next */
     const users = removeUserFromResults(req.user?.id!, await searchUsers(q as string));
 
-    res.status(200).json({ results: users.map((user) => omitPassword(user)) });
+    res.status(200).json({ results: users.map((user) => toOtherUserResponse(user)) });
   })
 );
 
@@ -56,7 +57,8 @@ router.post(
   asyncHandler(async (req, res) => {
     const userDetails: User = req.body;
 
-    const user = await createUser(userDetails);
+    // A new member always starts with a balance of 0. The client cannot choose it.
+    const user = await createUser({ ...userDetails, balance: 0 });
 
     res.status(201);
     res.json({ user: omitPassword(user) });
@@ -105,7 +107,16 @@ router.patch(
   asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
-    const edits: User = req.body;
+    // A member can only edit their own account.
+    if (userId !== req.user?.id) {
+      throw new HttpError(403, "you can only edit your own account");
+    }
+
+    // Only profile fields. The balance changes only through payments and bank transfers.
+    const edits: Partial<User> = pick(
+      ["firstName", "lastName", "email", "phoneNumber", "avatar", "defaultPrivacyLevel"],
+      req.body
+    );
 
     await updateUserById(userId, edits);
 

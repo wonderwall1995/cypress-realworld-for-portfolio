@@ -76,9 +76,18 @@ describe("Contacts (PostgreSQL)", () => {
     const b = await newUser(2);
     const contact = await createContactForUser(a.id, b.id);
 
-    await removeContactById(contact.id);
-    await removeContactById("does-not-exist");
+    expect(await removeContactById(a.id, contact.id)).toBe(true);
+    expect(await removeContactById(a.id, "does-not-exist")).toBe(false);
 
     expect(await getContactsByUserId(a.id)).toHaveLength(0);
+  });
+
+  it("does not delete the contact of another user", async () => {
+    const [a, b, c] = [await newUser(1), await newUser(2), await newUser(3)];
+    const contact = await createContactForUser(a.id, b.id);
+
+    expect(await removeContactById(c.id, contact.id)).toBe(false);
+
+    expect(await getContactsByUserId(a.id)).toHaveLength(1);
   });
 });

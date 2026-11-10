@@ -12,3 +12,17 @@ export const omitPassword = <T extends { password?: unknown }>(
   const { password: _password, ...safeUser } = user;
   return safeUser;
 };
+
+/**
+ * What one member may see of another member (user list and search).
+ * Same as omitPassword, and the balance is left out too: only the owner sees a balance.
+ */
+export const toOtherUserResponse = <T extends { password?: unknown; balance?: unknown }>(
+  user: T | undefined
+): Omit<T, "password" | "balance"> | undefined => {
+  if (!user) {
+    return undefined;
+  }
+  const { password: _password, balance: _balance, ...otherView } = user;
+  return otherView;
+};

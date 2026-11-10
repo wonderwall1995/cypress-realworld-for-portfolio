@@ -31,7 +31,9 @@ export const createContactForUser = (userId: string, contactUserId: string): Pro
   });
 };
 
-// Removing an id that does not exist does nothing.
-export const removeContactById = async (contactId: string): Promise<void> => {
-  await prisma.contact.deleteMany({ where: { id: contactId } });
+// Only the owner can remove a contact. Returns true when a row was removed.
+// An id that does not exist, or one that belongs to someone else, does nothing and returns false.
+export const removeContactById = async (userId: string, contactId: string): Promise<boolean> => {
+  const { count } = await prisma.contact.deleteMany({ where: { id: contactId, userId } });
+  return count > 0;
 };

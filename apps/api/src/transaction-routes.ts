@@ -5,6 +5,7 @@ import { remove, isEmpty, slice, concat } from "lodash/fp";
 import {
   getTransactionsForUserContacts,
   createTransaction,
+  getTransactionById,
   updateTransactionById,
   getPublicTransactionsDefaultSort,
   getTransactionByIdForApi,
@@ -12,6 +13,8 @@ import {
   getPublicTransactionsByQuery,
 } from "./transaction-db";
 import { asyncHandler } from "./async-handler";
+import { assertCanAnswerRequest } from "./access";
+import { getViewableTransaction } from "./transaction-access";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
 import {
   sanitizeTransactionStatus,
@@ -161,6 +164,8 @@ router.get(
   asyncHandler(async (req, res) => {
     const { transactionId } = req.params;
 
+    // 404 when the transaction does not exist or the member may not see it
+    await getViewableTransaction(req.user?.id, transactionId);
     const transaction = await getTransactionByIdForApi(transactionId);
 
     res.status(200);
@@ -175,6 +180,9 @@ router.patch(
   validateMiddleware([shortIdValidation("transactionId"), ...isTransactionPatchValidator]),
   asyncHandler(async (req, res) => {
     const { transactionId } = req.params;
+
+    // only the member who was asked to pay can accept or reject a request
+    assertCanAnswerRequest(req.user?.id, await getTransactionById(transactionId));
 
     /* istanbul ignore next */
     await updateTransactionById(transactionId, req.body);

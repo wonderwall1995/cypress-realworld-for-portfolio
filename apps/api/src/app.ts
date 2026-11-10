@@ -27,6 +27,7 @@ import testDataRoutes from "./testdata-routes";
 import { checkAuth0Jwt, verifyOktaToken, checkCognitoJwt, checkGoogleJwt } from "./helpers";
 import resolvers from "./graphql/resolvers";
 import { frontendPort, getBackendPort } from "./port-utils";
+import { getSessionSecret } from "./session-secret";
 
 const corsOption = {
   origin: `http://localhost:${frontendPort}`,
@@ -51,7 +52,7 @@ app.use(bodyParser.json());
 
 app.use(
   session({
-    secret: "session secret",
+    secret: getSessionSecret(),
     resave: false,
     saveUninitialized: false,
     unset: "destroy",

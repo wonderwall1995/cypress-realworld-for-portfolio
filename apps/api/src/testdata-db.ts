@@ -1,5 +1,6 @@
 /**
- * Helpers for the /testData routes (only mounted when NODE_ENV is "test").
+ * Helpers for the /testData routes (only mounted when NODE_ENV is "test" or "development").
+ * They need no login. Do not run the server in these modes on a shared network or a public host.
  * They let an end-to-end test start from an empty database and look at what is stored.
  * There is no sample data: tests create the data they need through the API.
  */
