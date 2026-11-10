@@ -11,8 +11,7 @@
  */
 import shortid from "shortid";
 import { v4 } from "uuid";
-import { filter, inRange, uniqBy } from "lodash/fp";
-import { isWithinInterval } from "date-fns";
+import { filter, uniqBy } from "lodash/fp";
 import type { Transaction as TransactionRow } from "@prisma/client";
 import prisma, { DbClient } from "./prisma";
 import {
@@ -22,6 +21,7 @@ import {
   PaymentNotificationStatus,
   Transaction,
   TransactionPayload,
+  TransactionAmountFilterPayload,
   TransactionQueryPayload,
   TransactionRequestStatus,
   TransactionResponseItem,
@@ -36,6 +36,7 @@ import {
   getQueryWithoutFilterFields,
   getTransferAmount,
   hasAmountQueryFields,
+  matchesDirectionAmountFilter,
   hasDateQueryFields,
   hasSufficientFunds,
   isPayment,
@@ -102,32 +103,26 @@ export const getTransactionsByUserId = async (userId: string): Promise<Transacti
 
 // ---------------------------------------------------------------- filters (same rules as before)
 
-export const transactionsWithinAmountRange = (
-  amountMin: number,
-  amountMax: number,
-  transactions: Transaction[]
-): Transaction[] => {
-  if (!amountMin || !amountMax) return transactions;
-  return filter(
-    (transaction: Transaction) => inRange(amountMin, amountMax, transaction.amount),
-    transactions
-  );
-};
-
-export const transactionsWithinDateRange = (
-  dateRangeStart: string,
-  dateRangeEnd: string,
-  transactions: Transaction[]
-): Transaction[] => {
-  if (!dateRangeStart || !dateRangeEnd) return transactions;
-  return filter(
-    (transaction: Transaction) =>
-      isWithinInterval(new Date(transaction.createdAt), {
-        start: new Date(dateRangeStart),
-        end: new Date(dateRangeEnd),
-      }),
-    transactions
-  );
+/**
+ * Transactions created inside the date range, both ends included.
+ * One side may be missing: only a start = from that moment on, only an end = up to that moment.
+ * A start after the end is refused.
+ */
+export const transactionsWithinDateRange = <T extends Transaction>(
+  dateRangeStart: string | undefined,
+  dateRangeEnd: string | undefined,
+  transactions: T[]
+): T[] => {
+  const from = dateRangeStart ? new Date(dateRangeStart).getTime() : undefined;
+  const to = dateRangeEnd ? new Date(dateRangeEnd).getTime() : undefined;
+  if (from === undefined && to === undefined) return transactions;
+  if (from !== undefined && to !== undefined && from > to) {
+    throw new HttpError(400, "dateRangeStart must not be after dateRangeEnd");
+  }
+  return filter((transaction: T) => {
+    const created = new Date(transaction.createdAt).getTime();
+    return (from === undefined || created >= from) && (to === undefined || created <= to);
+  }, transactions);
 };
 
 const STATUS_VALUES = Object.values(TransactionStatus) as string[];
@@ -154,23 +149,56 @@ const equalFilters = (query?: object): Record<string, string> | null => {
   return out;
 };
 
-const applyRangeFilters = (transactions: Transaction[], query?: object): Transaction[] => {
-  if (query && (hasDateQueryFields(query as any) || hasAmountQueryFields(query as any))) {
+const applyDateFilter = <T extends Transaction>(transactions: T[], query?: object): T[] => {
+  if (query && hasDateQueryFields(query as any)) {
     const { dateRangeStart, dateRangeEnd } = getDateQueryFields(query as any);
-    const { amountMin, amountMax } = getAmountQueryFields(query as any);
-    return transactionsWithinAmountRange(
-      amountMin!,
-      amountMax!,
-      transactionsWithinDateRange(dateRangeStart!, dateRangeEnd!, transactions)
-    );
+    return transactionsWithinDateRange(dateRangeStart, dateRangeEnd, transactions);
   }
   return transactions;
 };
 
-/** Transactions where the user is the receiver or the sender, without duplicates. */
+/**
+ * Deposit / withdrawal filter, always from the point of view of `viewerId` (the signed-in user).
+ * (See matchesDirectionAmountFilter for the rules; a minimum above its maximum is refused.)
+ */
+const readAmountFilter = (query?: object): TransactionAmountFilterPayload | undefined => {
+  if (!query || !hasAmountQueryFields(query as any)) return undefined;
+  const raw = getAmountQueryFields(query as any) as Record<string, unknown>;
+  const filter: Record<string, number> = {};
+  for (const key of ["depositMin", "depositMax", "withdrawalMin", "withdrawalMax"]) {
+    if (raw[key] !== undefined && raw[key] !== "") filter[key] = Number(raw[key]);
+  }
+  for (const [min, max] of [
+    ["depositMin", "depositMax"],
+    ["withdrawalMin", "withdrawalMax"],
+  ]) {
+    if (filter[min] !== undefined && filter[max] !== undefined && filter[min] > filter[max]) {
+      throw new HttpError(400, `${min} must not be above ${max}`);
+    }
+  }
+  return filter as TransactionAmountFilterPayload;
+};
+
+const applyAmountFilter = <T extends Transaction>(
+  transactions: T[],
+  viewerId: string,
+  query?: object
+): T[] => {
+  const filter = readAmountFilter(query);
+  return filter
+    ? transactions.filter((t) => matchesDirectionAmountFilter(t, viewerId, filter))
+    : transactions;
+};
+
+/**
+ * Transactions where the user is the receiver or the sender, without duplicates.
+ * `applyAmount` is false when the list is only a building block of another list
+ * (the Friends tab asks for each friend's list, but the amount filter belongs to the signed-in user).
+ */
 export const getTransactionsForUserByObj = async (
   userId: string,
-  query?: object
+  query?: object,
+  applyAmount = true
 ): Promise<Transaction[]> => {
   const filters = equalFilters(query);
   if (filters === null) return [];
@@ -185,7 +213,8 @@ export const getTransactionsForUserByObj = async (
   });
 
   const found = uniqBy("id", [...asReceiver, ...asSender].map(toTransaction));
-  return applyRangeFilters(found, query);
+  const inDateRange = applyDateFilter(found, query);
+  return applyAmount ? applyAmountFilter(inDateRange, userId, query) : inDateRange;
 };
 
 // ---------------------------------------------------------------- API response shape
@@ -248,9 +277,10 @@ export const getTransactionByIdForApi = async (
 
 export const getTransactionsForUserForApi = async (
   userId: string,
-  query?: object
+  query?: object,
+  applyAmount = true
 ): Promise<TransactionResponseItem[]> =>
-  formatTransactionsForApiResponse(await getTransactionsForUserByObj(userId, query));
+  formatTransactionsForApiResponse(await getTransactionsForUserByObj(userId, query, applyAmount));
 
 // ---------------------------------------------------------------- feeds
 
@@ -266,9 +296,13 @@ export const getTransactionsForUserContacts = async (
   const contactIds = await getContactIdsForUser(userId);
   const lists: TransactionResponseItem[][] = [];
   for (const contactId of contactIds) {
-    lists.push(await getTransactionsForUserForApi(contactId, query));
+    // the date filter is applied per friend; the amount filter belongs to the signed-in user, so it comes after
+    lists.push(await getTransactionsForUserForApi(contactId, query, false));
   }
-  return uniqBy("id", lists.flat()).filter((t) => canViewTransaction(userId, t, contactIds));
+  const visible = uniqBy("id", lists.flat()).filter((t) =>
+    canViewTransaction(userId, t, contactIds)
+  );
+  return applyAmountFilter(visible, userId, query);
 };
 
 const getNonContactPublicTransactionsForApi = async (
@@ -293,17 +327,15 @@ export const getPublicTransactionsByQuery = async (
   query: TransactionQueryPayload
 ) => {
   if (query && (hasDateQueryFields(query) || hasAmountQueryFields(query))) {
-    const { dateRangeStart, dateRangeEnd } = getDateQueryFields(query);
-    const { amountMin, amountMax } = getAmountQueryFields(query);
     const publicTransactions = await getNonContactPublicTransactionsForApi(userId);
 
     return {
       contactsTransactions: await getTransactionsForUserContacts(userId, query),
-      publicTransactions: transactionsWithinAmountRange(
-        amountMin!,
-        amountMax!,
-        transactionsWithinDateRange(dateRangeStart!, dateRangeEnd!, publicTransactions as any)
-      ) as TransactionResponseItem[],
+      publicTransactions: applyAmountFilter(
+        applyDateFilter(publicTransactions, query),
+        userId,
+        query
+      ),
     };
   }
   return getPublicTransactionsDefaultSort(userId);

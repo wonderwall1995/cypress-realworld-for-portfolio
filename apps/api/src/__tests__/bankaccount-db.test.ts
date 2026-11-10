@@ -9,7 +9,7 @@ import {
 } from "../bankaccount-db";
 import { resetDatabase } from "./db-setup/reset";
 
-const details = { bankName: "Test Bank", accountNumber: "123456789", routingNumber: "987654321" };
+const details = { bankName: "Test Bank", accountNumber: "123456789" };
 
 describe("Bank accounts (PostgreSQL)", () => {
   beforeEach(async () => {
@@ -25,7 +25,7 @@ describe("Bank accounts (PostgreSQL)", () => {
 
     expect(account.userId).toBe("u1");
     expect(account.bankName).toBe("Test Bank");
-    expect(account.isDeleted).toBe(false);
+    expect(account.visible).toBe(true);
     expect(account.createdAt).toBeInstanceOf(Date);
   });
 
@@ -47,14 +47,13 @@ describe("Bank accounts (PostgreSQL)", () => {
     expect(await getBankAccountById("nope")).toBeNull();
   });
 
-  it("soft deletes: the row stays and isDeleted becomes true", async () => {
+  it("soft deletes: the row stays with visible=false, and the list hides it", async () => {
     const account = await createBankAccountForUser("u1", details);
 
     expect(await removeBankAccountById("u1", account.id)).toBe(true);
 
-    const accounts = await getBankAccountsByUserId("u1");
-    expect(accounts).toHaveLength(1);
-    expect(accounts[0].isDeleted).toBe(true);
+    expect(await getBankAccountsByUserId("u1")).toHaveLength(0);
+    expect((await getBankAccountById(account.id))!.visible).toBe(false);
   });
 
   it("does not delete the account of another user", async () => {
@@ -62,7 +61,7 @@ describe("Bank accounts (PostgreSQL)", () => {
 
     expect(await removeBankAccountById("u2", account.id)).toBe(false);
 
-    expect((await getBankAccountById(account.id))!.isDeleted).toBe(false);
+    expect((await getBankAccountById(account.id))!.visible).toBe(true);
   });
 
   it("returns false for an account that does not exist", async () => {

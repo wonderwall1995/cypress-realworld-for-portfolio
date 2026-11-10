@@ -7,7 +7,7 @@ import { getBankTransferLogs, getBankTransfersByUserId } from "../banktransfer-d
 import { moveMoney } from "../banktransfer-service";
 import { resetDatabase } from "./db-setup/reset";
 
-const bank = { bankName: "Demo Bank", accountNumber: "123456789", routingNumber: "987654321" };
+const bank = { bankName: "Demo Bank", accountNumber: "123456789" };
 
 const setup = async (balanceCents = 0) => {
   const user = await createUser({

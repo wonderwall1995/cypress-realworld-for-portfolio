@@ -1,5 +1,5 @@
 import React from "react";
-import { Tabs, Tab } from "@mui/material";
+import { Tabs, Tab, TabsActions } from "@mui/material";
 import { Link, useRouteMatch } from "react-router-dom";
 
 export default function TransactionNavTabs() {
@@ -20,8 +20,23 @@ export default function TransactionNavTabs() {
     setValue(newValue);
   };
 
+  // The underline under the selected tab is measured only when the window is resized.
+  // Hiding or showing the sidebar changes the width of this area without a window resize,
+  // so measure again every time this area changes size (also during the slide animation).
+  const tabsActions = React.useRef<TabsActions | null>(null);
+  const tabsRoot = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => {
+    const root = tabsRoot.current;
+    if (!root || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => tabsActions.current?.updateIndicator());
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <Tabs
+      ref={tabsRoot}
+      action={tabsActions}
       value={value}
       onChange={handleChange}
       indicatorColor="secondary"

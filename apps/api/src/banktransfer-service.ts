@@ -38,7 +38,7 @@ export const moveMoney = (userId: string, input: MoveMoneyInput): Promise<BankTr
     const account = await tx.bankAccount.findUnique({ where: { id: input.bankAccountId } });
     if (!account) throw new HttpError(404, "bank account not found");
     if (account.userId !== userId) throw new HttpError(403, "this is not your bank account");
-    if (account.isDeleted) throw new HttpError(400, "this bank account was deleted");
+    if (!account.visible) throw new HttpError(400, "this bank account was deleted");
 
     // Lock the user's row until the end of the transaction, so two requests at the same
     // time cannot both read the same balance (for example, two withdrawals overdrawing it).

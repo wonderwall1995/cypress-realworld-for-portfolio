@@ -75,8 +75,11 @@ export type TransactionUpdateActionPayload = Pick<Transaction, "id" | "requestSt
 type TransactionQueryBase = {
   dateRangeStart?: string;
   dateRangeEnd?: string;
-  amountMin?: number;
-  amountMax?: number;
+  // deposit / withdrawal amount filters, in cents (see transactionFilters.ts)
+  depositMin?: number;
+  depositMax?: number;
+  withdrawalMin?: number;
+  withdrawalMax?: number;
   status?: TransactionStatus;
   limit?: number;
   page?: number;
@@ -88,8 +91,8 @@ export type TransactionDateRangePayload = Partial<
   Pick<TransactionQueryPayload, "dateRangeStart" | "dateRangeEnd">
 >;
 
-export type TransactionAmountRangePayload = Partial<
-  Pick<TransactionQueryPayload, "amountMin" | "amountMax">
+export type TransactionAmountFilterPayload = Partial<
+  Pick<TransactionQueryPayload, "depositMin" | "depositMax" | "withdrawalMin" | "withdrawalMax">
 >;
 
 export type TransactionPaginationPayload = Partial<Pick<TransactionQueryPayload, "page" | "limit">>;
@@ -104,7 +107,3 @@ export type TransactionPagination = {
   hasNextPages: boolean;
   totalPages: number;
 };
-
-export type Range<T> = [T, T];
-export type ValuePiece = Date | null;
-export type Value = ValuePiece | Range<ValuePiece>;

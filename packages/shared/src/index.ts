@@ -2,3 +2,4 @@
 export * from "./models";
 export * from "./transactionUtils";
 export * from "./limits";
+export * from "./transactionFilters";

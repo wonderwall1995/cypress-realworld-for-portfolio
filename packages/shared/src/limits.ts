@@ -14,12 +14,15 @@ export const MAX_AMOUNT_DOLLARS = 21_474_836;
 export const isValidAmountDollars = (value: unknown): value is number =>
   typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= MAX_AMOUNT_DOLLARS;
 
-// Bank numbers stay text (they can start with 0, for example 021000021) but only digits are allowed.
-export const ROUTING_NUMBER_PATTERN = /^\d{9}$/;
+// Bank numbers stay text (they can start with 0) but only digits are allowed.
 export const ACCOUNT_NUMBER_PATTERN = /^\d{9,12}$/;
-
-export const isValidRoutingNumber = (value: unknown): value is string =>
-  typeof value === "string" && ROUTING_NUMBER_PATTERN.test(value);
 
 export const isValidAccountNumber = (value: unknown): value is string =>
   typeof value === "string" && ACCOUNT_NUMBER_PATTERN.test(value);
+
+// Phone number: digits, spaces, hyphens and parentheses, an optional leading "+".
+// 7 to 20 characters, starts and ends with a digit (examples: 010-1234-5678, +82 10-1234-5678, (02) 123-4567).
+export const PHONE_NUMBER_PATTERN = /^\+?\d[\d\s()-]{5,18}\d$/;
+
+export const isValidPhoneNumber = (value: unknown): value is string =>
+  typeof value === "string" && PHONE_NUMBER_PATTERN.test(value);

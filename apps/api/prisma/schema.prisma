@@ -68,8 +68,7 @@ model BankAccount {
   userId        String
   bankName      String
   accountNumber String
-  routingNumber String
-  isDeleted     Boolean
+  visible       Boolean
   createdAt     DateTime
   modifiedAt    DateTime
 

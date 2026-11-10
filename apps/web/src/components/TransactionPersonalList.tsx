@@ -4,7 +4,7 @@ import {
   TransactionPagination,
   TransactionResponseItem,
   TransactionDateRangePayload,
-  TransactionAmountRangePayload,
+  TransactionAmountFilterPayload,
 } from "@rwa/shared";
 import TransactionList from "./TransactionList";
 import { personalTransactionsMachine } from "../machines/personalTransactionsMachine";
@@ -12,7 +12,7 @@ import { personalTransactionsMachine } from "../machines/personalTransactionsMac
 export interface TransactionPersonalListProps {
   filterComponent: ReactNode;
   dateRangeFilters: TransactionDateRangePayload;
-  amountRangeFilters: TransactionAmountRangePayload;
+  amountRangeFilters: TransactionAmountFilterPayload;
 }
 
 const TransactionPersonalList: React.FC<TransactionPersonalListProps> = ({

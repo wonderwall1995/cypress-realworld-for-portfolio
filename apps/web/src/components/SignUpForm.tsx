@@ -8,8 +8,8 @@ import { Formik, Form, Field, FieldProps } from "formik";
 import { string, object, ref } from "yup";
 
 import RWALogo from "./SvgRwaLogo";
-import Footer from "./Footer";
-import { SignUpPayload } from "@rwa/shared";
+import SourceCredit from "./SourceCredit";
+import { PHONE_NUMBER_PATTERN, SignUpPayload } from "@rwa/shared";
 import { AuthMachineContext, AuthMachineEvents, AuthMachineSchema } from "../machines/authMachine";
 
 const PREFIX = "SignUpForm";
@@ -48,6 +48,9 @@ const validationSchema = object({
   lastName: string().required("성을 입력하세요"),
   username: string().required("사용자 이름을 입력하세요"),
   password: string().min(4, "비밀번호는 4자 이상이어야 합니다").required("비밀번호를 입력하세요"),
+  phoneNumber: string()
+    .required("연락처를 입력하세요")
+    .matches(PHONE_NUMBER_PATTERN, "올바른 연락처가 아닙니다 (예: 010-1234-5678)"),
   confirmPassword: string()
     .required("비밀번호를 한 번 더 입력하세요")
     .oneOf([ref("password")], "비밀번호가 일치하지 않습니다"),
@@ -63,6 +66,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
     firstName: "",
     lastName: "",
     username: "",
+    phoneNumber: "",
     password: "",
     confirmPassword: "",
   };
@@ -75,6 +79,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
       <div className={classes.paper}>
         <div>
           <RWALogo className={classes.logo} />
+          <SourceCredit />
         </div>
         <Typography component="h1" variant="h5" data-testid="signup-title">
           회원가입
@@ -142,6 +147,25 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                   />
                 )}
               </Field>
+              <Field name="phoneNumber">
+                {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
+                  <TextField
+                    variant="outlined"
+                    margin="normal"
+                    required
+                    fullWidth
+                    id="phoneNumber"
+                    label="연락처"
+                    type="text"
+                    placeholder="데모 웹입니다. 진짜 연락처는 넣지 마세요!"
+                    InputLabelProps={{ shrink: true }}
+                    data-testid="signup-phone-number"
+                    error={(touched || value !== initialValue) && Boolean(error)}
+                    helperText={touched || value !== initialValue ? error : ""}
+                    {...field}
+                  />
+                )}
+              </Field>
               <Field name="password">
                 {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
                   <TextField
@@ -196,9 +220,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
           )}
         </Formik>
       </div>
-      <Box mt={8}>
-        <Footer />
-      </Box>
+      <Box mt={8}></Box>
     </StyledContainer>
   );
 };

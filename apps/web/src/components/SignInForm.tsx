@@ -18,7 +18,7 @@ import { Formik, Form, Field, FieldProps } from "formik";
 import { string, object } from "yup";
 
 import RWALogo from "./SvgRwaLogo";
-import Footer from "./Footer";
+import SourceCredit from "./SourceCredit";
 import { SignInPayload } from "@rwa/shared";
 import { AuthMachineContext, AuthMachineEvents, AuthMachineSchema } from "../machines/authMachine";
 import { Alert } from "@mui/material";
@@ -89,6 +89,7 @@ const SignInForm: React.FC<Props> = ({ authService }) => {
         )}
         <div>
           <RWALogo className={classes.logo} />
+          <SourceCredit />
         </div>
         <Typography component="h1" variant="h5">
           로그인
@@ -174,9 +175,7 @@ const SignInForm: React.FC<Props> = ({ authService }) => {
           )}
         </Formik>
       </div>
-      <Box mt={8}>
-        <Footer />
-      </Box>
+      <Box mt={8}></Box>
     </StyledContainer>
   );
 };

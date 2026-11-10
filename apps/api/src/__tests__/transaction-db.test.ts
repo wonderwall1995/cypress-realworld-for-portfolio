@@ -263,18 +263,6 @@ describe("Transactions (PostgreSQL)", () => {
       expect(await getTransactionsForUserByObj(a.id, { status: "invalid" })).toEqual([]);
     });
 
-    it("filters by amount range (cents)", async () => {
-      const a = await makeUser(1, 100000);
-      const b = await makeUser(2, 100000);
-      await createTransaction(a.id, "payment", details(b.id, 5)); // 500
-      const mid = await createTransaction(a.id, "payment", details(b.id, 20)); // 2000
-      await createTransaction(a.id, "payment", details(b.id, 90)); // 9000
-
-      const list = await getTransactionsForUserByObj(a.id, { amountMin: 1000, amountMax: 5000 });
-
-      expect(list.map((t) => t.id)).toEqual([mid.id]);
-    });
-
     it("filters by date range", async () => {
       const a = await makeUser(1, 100000);
       const b = await makeUser(2, 100000);
@@ -350,21 +338,6 @@ describe("Transactions (PostgreSQL)", () => {
       expect(publicTransactions.map((t) => t.id)).toEqual([strangerTx.id]);
       expect(publicTransactions.map((t) => t.id)).not.toContain(privateTx.id);
       expect((await getAllPublicTransactions()).length).toBe(2);
-    });
-
-    it("applies the amount range to the public feed too", async () => {
-      const me = await makeUser(1, 100000);
-      const s1 = await makeUser(2, 100000);
-      const s2 = await makeUser(3, 100000);
-      await createTransaction(s1.id, "payment", details(s2.id, 5));
-      const mid = await createTransaction(s1.id, "payment", details(s2.id, 20));
-
-      const result = await getPublicTransactionsByQuery(me.id, {
-        amountMin: 1000,
-        amountMax: 5000,
-      } as any);
-
-      expect(result.publicTransactions.map((t) => t.id)).toEqual([mid.id]);
     });
 
     it("returns empty lists when there are no contacts", async () => {

@@ -22,6 +22,7 @@ import {
   searchValidation,
   userFieldsValidator,
   isUserValidator,
+  isSignUpValidator,
 } from "./validators";
 const router = express.Router();
 
@@ -53,7 +54,7 @@ router.get(
 router.post(
   "/",
   userFieldsValidator,
-  validateMiddleware(isUserValidator),
+  validateMiddleware([...isUserValidator, ...isSignUpValidator]),
   asyncHandler(async (req, res) => {
     const userDetails: User = req.body;
 

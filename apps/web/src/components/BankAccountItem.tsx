@@ -17,10 +17,17 @@ const BankAccountListItem: React.FC<BankAccountListItemProps> = ({
       <Grid container direction="row" justifyContent="space-between" alignItems="flex-start">
         <Grid item>
           <Typography variant="body1" color="primary" gutterBottom>
-            {bankAccount.bankName} {bankAccount.isDeleted ? "(삭제됨)" : undefined}
+            {bankAccount.bankName}
+          </Typography>
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            data-testid={`bankaccount-account-number-${bankAccount.id}`}
+          >
+            계좌 번호: {bankAccount.accountNumber}
           </Typography>
         </Grid>
-        {!bankAccount.isDeleted && (
+        {bankAccount.visible && (
           <Grid item>
             <Button
               variant="contained"

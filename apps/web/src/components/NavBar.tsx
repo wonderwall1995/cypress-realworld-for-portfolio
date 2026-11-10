@@ -11,28 +11,33 @@ import {
 import { useActor } from "@xstate/react";
 import {
   AppBar,
+  Box,
   Toolbar,
   Typography,
   IconButton,
+  SvgIcon,
   Badge,
-  Button,
   useTheme,
   useMediaQuery,
   Link,
 } from "@mui/material";
-import {
-  Menu as MenuIcon,
-  Notifications as NotificationsIcon,
-  AttachMoney as AttachMoneyIcon,
-} from "@mui/icons-material";
+import { Notifications as NotificationsIcon } from "@mui/icons-material";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 
 import { DataContext, DataEvents, DataSchema } from "../machines/dataMachine";
 import TransactionNavTabs from "./TransactionNavTabs";
 import RWALogo from "./SvgRwaLogo";
 import RWALogoIcon from "./SvgRwaIconLogo";
+import SourceCredit from "./SourceCredit";
 
 const drawerWidth = 240;
+
+// A big filled triangle: "<" when the sidebar is open (click hides it), ">" when it is hidden.
+const TriangleIcon = ({ direction }: { direction: "left" | "right" }) => (
+  <SvgIcon data-testid="drawer-icon" sx={{ fontSize: 32 }} viewBox="0 0 24 24">
+    <path d={direction === "left" ? "M17 4 L6 12 L17 20 Z" : "M7 4 L18 12 L7 20 Z"} />
+  </SvgIcon>
+);
 
 const PREFIX = "NavBar";
 
@@ -43,8 +48,8 @@ const classes = {
   menuButtonHidden: `${PREFIX}-menuButtonHidden`,
   title: `${PREFIX}-title`,
   logo: `${PREFIX}-logo`,
-  newTransactionButton: `${PREFIX}-newTransactionButton`,
   customBadge: `${PREFIX}-customBadge`,
+  zeroBadge: `${PREFIX}-zeroBadge`,
 };
 
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
@@ -75,6 +80,8 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
   [`& .${classes.title}`]: {
     flexGrow: 1,
     textAlign: "center",
+    paddingTop: 4,
+    paddingBottom: 4,
   },
 
   [`& .${classes.logo}`]: {
@@ -82,22 +89,14 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
     verticalAlign: "bottom",
   },
 
-  [`& .${classes.newTransactionButton}`]: {
-    fontSize: 16,
-    backgroundColor: "#00C853",
-    paddingTop: 5,
-    paddingBottom: 5,
-    paddingRight: 20,
-    fontWeight: "bold",
-    "&:hover": {
-      backgroundColor: "#4CAF50",
-      borderColor: "#00C853",
-      boxShadow: "none",
-    },
-  },
-
   [`& .${classes.customBadge}`]: {
     backgroundColor: "red",
+    color: "white",
+  },
+
+  // nothing new: show 0 quietly instead of a red dot
+  [`& .${classes.zeroBadge}`]: {
+    backgroundColor: "rgba(255,255,255,0.3)",
     color: "white",
   },
 }));
@@ -121,6 +120,7 @@ const NavBar: React.FC<NavBarProps> = ({ drawerOpen, toggleDrawer, notifications
   const [notificationsState] = useActor(notificationsService);
 
   const allNotifications = notificationsState?.context?.results;
+  const unreadCount = allNotifications ? allNotifications.length : 0;
   const xsBreakpoint = useMediaQuery(theme.breakpoints.only("xs"));
 
   return (
@@ -133,43 +133,36 @@ const NavBar: React.FC<NavBarProps> = ({ drawerOpen, toggleDrawer, notifications
           data-testid="sidenav-toggle"
           edge="start"
           color="inherit"
-          aria-label="메뉴 열기"
+          aria-label={drawerOpen ? "메뉴 닫기" : "메뉴 열기"}
           onClick={() => toggleDrawer()}
-          size="large"
+          sx={{ border: "2px solid currentColor", borderRadius: "8px", padding: "2px" }}
         >
-          <MenuIcon data-testid="drawer-icon" />
+          <TriangleIcon direction={drawerOpen ? "left" : "right"} />
         </IconButton>
-        <Typography
-          component="h1"
-          variant="h6"
-          color="inherit"
-          noWrap
-          className={classes.title}
-          data-testid="app-name-logo"
-        >
-          <Link
-            to="/"
-            style={{ color: "#fff", textDecoration: "none" }}
-            component={RouterLink}
-            underline="hover"
+        <Box className={classes.title}>
+          <Typography
+            component="h1"
+            variant="h6"
+            color="inherit"
+            noWrap
+            data-testid="app-name-logo"
           >
-            {xsBreakpoint ? (
-              <RWALogoIcon className={classes.logo} />
-            ) : (
-              <RWALogo className={classes.logo} />
-            )}
-          </Link>
-        </Typography>
-        <Button
-          className={classes.newTransactionButton}
-          variant="contained"
-          color="inherit"
-          component={RouterLink}
-          to="/transaction/new"
-          data-testid="nav-top-new-transaction"
-        >
-          <AttachMoneyIcon /> 새 거래
-        </Button>
+            <Link
+              to="/"
+              data-testid="nav-bar-home-link"
+              style={{ color: "#fff", textDecoration: "none" }}
+              component={RouterLink}
+              underline="hover"
+            >
+              {xsBreakpoint ? (
+                <RWALogoIcon className={classes.logo} />
+              ) : (
+                <RWALogo className={classes.logo} />
+              )}
+            </Link>
+          </Typography>
+          <SourceCredit light />
+        </Box>
         <IconButton
           color="inherit"
           component={RouterLink}
@@ -178,9 +171,11 @@ const NavBar: React.FC<NavBarProps> = ({ drawerOpen, toggleDrawer, notifications
           size="large"
         >
           <Badge
-            badgeContent={allNotifications ? allNotifications.length : undefined}
+            badgeContent={unreadCount}
+            max={99}
+            showZero
             data-testid="nav-top-notifications-count"
-            classes={{ badge: classes.customBadge }}
+            classes={{ badge: unreadCount > 0 ? classes.customBadge : classes.zeroBadge }}
           >
             <NotificationsIcon />
           </Badge>

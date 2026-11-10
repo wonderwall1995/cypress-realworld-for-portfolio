@@ -4,7 +4,6 @@ import { validationResult } from "express-validator";
 import {
   isValidAccountNumber,
   isValidAmountDollars,
-  isValidRoutingNumber,
   MAX_AMOUNT_DOLLARS,
   MAX_BALANCE_CENTS,
   TransactionPayload,
@@ -48,13 +47,6 @@ describe("shared number rules", () => {
   it("the largest amount in cents still fits the 32-bit balance column", () => {
     expect(MAX_AMOUNT_DOLLARS * 100).toBeLessThanOrEqual(MAX_BALANCE_CENTS);
     expect((MAX_AMOUNT_DOLLARS + 1) * 100).toBeGreaterThan(MAX_BALANCE_CENTS);
-  });
-
-  it("routing number: exactly 9 digits, a leading zero is fine", () => {
-    for (const ok of ["123456789", "021000021"]) expect(isValidRoutingNumber(ok)).toBe(true);
-    for (const bad of ["12345678", "1234567890", "12345678a", "123 456 789", "", 123456789]) {
-      expect(isValidRoutingNumber(bad)).toBe(false);
-    }
   });
 
   it("account number: 9 to 12 digits", () => {
@@ -118,12 +110,10 @@ describe("route validators (the server entrance)", () => {
   });
 
   it("bank account: numbers must be digits of the right length, bank name must be filled in", async () => {
-    const good = { bankName: "데모은행", routingNumber: "021000021", accountNumber: "123456789" };
+    const good = { bankName: "데모은행", accountNumber: "123456789" };
     expect((await rejectedFields(isBankAccountValidator as any[], good)).fields).toEqual([]);
 
     const cases: [string, Record<string, unknown>, string][] = [
-      ["routing letters", { ...good, routingNumber: "12345678a" }, "routingNumber"],
-      ["routing 8 digits", { ...good, routingNumber: "12345678" }, "routingNumber"],
       ["account letters", { ...good, accountNumber: "abcdefghi" }, "accountNumber"],
       ["account 8 digits", { ...good, accountNumber: "12345678" }, "accountNumber"],
       ["account 13 digits", { ...good, accountNumber: "1".repeat(13) }, "accountNumber"],
@@ -219,21 +209,18 @@ describe("services (the check inside, used by every caller)", () => {
   describe("creating a bank account", () => {
     const details = {
       bankName: "Demo Bank",
-      routingNumber: "021000021",
+
       accountNumber: "123456789",
     };
 
     it("keeps numbers that start with 0 exactly as typed", async () => {
       const a = await createBankAccountForUser("u1", { ...details, accountNumber: "000123456789" });
 
-      expect(a.routingNumber).toBe("021000021");
       expect(a.accountNumber).toBe("000123456789");
     });
 
     it("refuses non-digit, wrong-length numbers and an empty bank name (400), and saves nothing", async () => {
       const bad = [
-        { ...details, routingNumber: "12345678a" },
-        { ...details, routingNumber: "12345678" },
         { ...details, accountNumber: "abcdefghi" },
         { ...details, accountNumber: "12345678" },
         { ...details, accountNumber: "1".repeat(13) },

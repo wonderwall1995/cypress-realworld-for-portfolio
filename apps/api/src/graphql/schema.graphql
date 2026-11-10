@@ -3,7 +3,7 @@ type Query {
 }
 
 type Mutation {
-  createBankAccount(bankName: String!, accountNumber: String!, routingNumber: String!): BankAccount
+  createBankAccount(bankName: String!, accountNumber: String!): BankAccount
   deleteBankAccount(id: ID!): Boolean
 }
 
@@ -13,8 +13,7 @@ type BankAccount {
   userId: String
   bankName: String
   accountNumber: String
-  routingNumber: String
-  isDeleted: Boolean
+  visible: Boolean
   createdAt: String
   modifiedAt: String
 }
