@@ -9,6 +9,7 @@ import {
   removeBankAccountById,
 } from "./bankaccount-db";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
+import { HttpError } from "./http-error";
 import { shortIdValidation, isBankAccountValidator } from "./validators";
 const router = express.Router();
 
@@ -35,10 +36,13 @@ router.get(
     try {
       const { bankAccountId } = req.params;
 
-      const account = await getBankAccountById(bankAccountId);
+      const found = await getBankAccountById(bankAccountId);
+
+      // someone else's account looks the same as one that does not exist
+      const account = found && found.userId === req.user?.id ? found : undefined;
 
       res.status(200);
-      res.json({ account: account ?? undefined });
+      res.json({ account });
     } catch (err) {
       next(err);
     }
@@ -71,10 +75,12 @@ router.delete(
     try {
       const { bankAccountId } = req.params;
 
-      const account = await removeBankAccountById(bankAccountId);
+      // someone else's account looks the same as one that does not exist
+      const removed = await removeBankAccountById(req.user?.id!, bankAccountId);
+      if (!removed) throw new HttpError(404, "bank account not found");
 
       res.status(200);
-      res.json({ account });
+      res.json({});
     } catch (err) {
       next(err);
     }

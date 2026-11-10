@@ -372,5 +372,56 @@ describe("Transactions (PostgreSQL)", () => {
 
       expect(await getTransactionsForUserContacts(me.id)).toEqual([]);
     });
+
+    it("keeps a contact's private transactions out of both feeds, but shows the other levels", async () => {
+      const me = await makeUser(1, 100000);
+      const friend = await makeUser(2, 100000);
+      const other = await makeUser(3, 100000);
+      await createContactForUser(me.id, friend.id);
+
+      const priv = await createTransaction(friend.id, "payment", details(other.id, 1, "private"));
+      const withContacts = await createTransaction(
+        friend.id,
+        "payment",
+        details(other.id, 2, "contacts")
+      );
+      const pub = await createTransaction(friend.id, "payment", details(other.id, 3, "public"));
+
+      const friends = (await getTransactionsForUserContacts(me.id)).map((t) => t.id);
+      const everyone = await getPublicTransactionsDefaultSort(me.id);
+
+      expect(friends).toEqual(expect.arrayContaining([withContacts.id, pub.id]));
+      expect(friends).not.toContain(priv.id);
+      expect(everyone.contactsTransactions.map((t) => t.id)).not.toContain(priv.id);
+      expect(everyone.publicTransactions.map((t) => t.id)).not.toContain(priv.id);
+    });
+
+    it("still shows a private transaction to the member who is in it", async () => {
+      const me = await makeUser(1, 100000);
+      const friend = await makeUser(2, 100000);
+      await createContactForUser(me.id, friend.id);
+
+      const priv = await createTransaction(friend.id, "payment", details(me.id, 1, "private"));
+
+      // I am the receiver, so it is mine to see (also through the friend's list)
+      expect((await getTransactionsForUserContacts(me.id)).map((t) => t.id)).toContain(priv.id);
+      expect((await getTransactionsForUserForApi(me.id)).map((t) => t.id)).toContain(priv.id);
+    });
+  });
+
+  describe("list scope", () => {
+    it("ignores receiverId and senderId in the query: the list is always about the given user", async () => {
+      const me = await makeUser(1, 100000);
+      const a = await makeUser(2, 100000);
+      const b = await makeUser(3, 100000);
+      await createTransaction(a.id, "payment", details(b.id, 5, "private"));
+
+      const result = await getTransactionsForUserForApi(me.id, {
+        receiverId: b.id,
+        senderId: a.id,
+      });
+
+      expect(result).toEqual([]);
+    });
   });
 });

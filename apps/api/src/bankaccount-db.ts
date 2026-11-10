@@ -29,10 +29,16 @@ export const createBankAccountForUser = (userId: string, accountDetails: Partial
   });
 };
 
-// soft delete: the row stays, isDeleted becomes true
-export const removeBankAccountById = async (bankAccountId: string) => {
-  await prisma.bankAccount.updateMany({
-    where: { id: bankAccountId },
+// soft delete: the row stays, isDeleted becomes true.
+// Only the owner can delete an account. Returns true when an account was found and marked.
+// An id that does not exist, or one that belongs to someone else, changes nothing and returns false.
+export const removeBankAccountById = async (
+  userId: string,
+  bankAccountId: string
+): Promise<boolean> => {
+  const { count } = await prisma.bankAccount.updateMany({
+    where: { id: bankAccountId, userId },
     data: { isDeleted: true, modifiedAt: new Date() },
   });
+  return count > 0;
 };

@@ -41,6 +41,7 @@ import {
   isPayment,
   isRequestTransaction,
 } from "@rwa/shared";
+import { canViewTransaction } from "./access";
 import { createBankTransfer } from "./banktransfer-db";
 import { HttpError } from "./http-error";
 import { getContactIdsForUser } from "./contact-db";
@@ -130,8 +131,9 @@ const STATUS_VALUES = Object.values(TransactionStatus) as string[];
 const PRIVACY_VALUES = ["public", "private", "contacts"];
 
 /**
- * "Equal" filters from the query (status, requestStatus, privacyLevel, receiverId, senderId).
- * The query's receiverId / senderId replace the signed-in user's id, as in the old code.
+ * "Equal" filters from the query (status, requestStatus, privacyLevel).
+ * receiverId and senderId are NOT accepted here: the list is always about the given user.
+ * (The old code let them replace the user's id, so a member could list someone else's transactions.)
  * Returns null when a value can never match (the old code returned an empty list then).
  */
 const equalFilters = (query?: object): Record<string, string> | null => {
@@ -139,7 +141,7 @@ const equalFilters = (query?: object): Record<string, string> | null => {
     query ? getQueryWithoutFilterFields(query as TransactionQueryPayload) : {}
   ) as Record<string, unknown>;
   const out: Record<string, string> = {};
-  for (const key of ["status", "requestStatus", "privacyLevel", "receiverId", "senderId"]) {
+  for (const key of ["status", "requestStatus", "privacyLevel"]) {
     const value = fields[key];
     if (value === undefined || value === "") continue;
     if (key === "status" && !STATUS_VALUES.includes(String(value))) return null;
@@ -249,7 +251,11 @@ export const getTransactionsForUserForApi = async (
 
 // ---------------------------------------------------------------- feeds
 
-/** Transactions of the user's contacts: each contact's list (newest first), joined, no duplicates. */
+/**
+ * Transactions of the user's contacts: each contact's list (newest first), joined, no duplicates.
+ * A contact's private transactions are left out (see canViewTransaction). Both the Friends tab
+ * and the contact part of the Everyone tab use this function.
+ */
 export const getTransactionsForUserContacts = async (
   userId: string,
   query?: object
@@ -259,7 +265,7 @@ export const getTransactionsForUserContacts = async (
   for (const contactId of contactIds) {
     lists.push(await getTransactionsForUserForApi(contactId, query));
   }
-  return uniqBy("id", lists.flat());
+  return uniqBy("id", lists.flat()).filter((t) => canViewTransaction(userId, t, contactIds));
 };
 
 const getNonContactPublicTransactionsForApi = async (

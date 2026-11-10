@@ -4,16 +4,22 @@ import express from "express";
 
 import { getContactsByUsername, removeContactById, createContactForUser } from "./contact-db";
 import { asyncHandler } from "./async-handler";
+import { HttpError } from "./http-error";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
 import { shortIdValidation } from "./validators";
 const router = express.Router();
 
 // Routes
-//GET /contacts/:username
+//GET /contacts/:username (scoped-user) - a member can only list their own contacts
 router.get(
   "/:username",
+  ensureAuthenticated,
   asyncHandler(async (req, res) => {
     const { username } = req.params;
+
+    if (username !== req.user?.username) {
+      throw new HttpError(403, "you can only see your own contacts");
+    }
 
     const contacts = await getContactsByUsername(username);
 
@@ -44,10 +50,12 @@ router.delete(
   asyncHandler(async (req, res) => {
     const { contactId } = req.params;
 
-    const contacts = await removeContactById(contactId);
+    // someone else's contact looks the same as one that does not exist
+    const removed = await removeContactById(req.user?.id!, contactId);
+    if (!removed) throw new HttpError(404, "contact not found");
 
     res.status(200);
-    res.json({ contacts });
+    res.json({});
   })
 );
 

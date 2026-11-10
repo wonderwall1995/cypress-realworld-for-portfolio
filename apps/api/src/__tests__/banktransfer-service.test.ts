@@ -162,7 +162,7 @@ describe("Virtual deposit / withdrawal (PostgreSQL)", () => {
 
     it("a deleted bank account (400)", async () => {
       const { user, account } = await setup(500);
-      await removeBankAccountById(account.id);
+      await removeBankAccountById(user.id, account.id);
 
       await expect(
         moveMoney(user.id, { bankAccountId: account.id, amount: 5, type: "deposit" })
