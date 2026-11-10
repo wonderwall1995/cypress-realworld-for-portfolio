@@ -104,7 +104,7 @@ export const receiverIsCurrentUser = (currentUser: User, transaction: Transactio
   isEqual(get("id", currentUser), get("receiverId", transaction));
 
 export const formatFullName = (user: User) =>
-  flow(pick(["firstName", "lastName"]), values, join(" "))(user);
+  flow(pick(["lastName", "firstName"]), values, join(" "))(user);
 
 export const isCommentNotification = (
   notification: NotificationType

@@ -220,7 +220,7 @@ export const getTransactionsForUserByObj = async (
 // ---------------------------------------------------------------- API response shape
 
 const fullName = (user?: { firstName: string; lastName: string }) =>
-  user ? `${user.firstName} ${user.lastName}` : "";
+  user ? `${user.lastName} ${user.firstName}` : "";
 
 /** Adds names, avatars, likes and comments. Three queries for the whole list. */
 export const formatTransactionsForApiResponse = async (

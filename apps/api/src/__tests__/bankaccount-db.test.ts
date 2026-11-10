@@ -26,6 +26,7 @@ describe("Bank accounts (PostgreSQL)", () => {
     expect(account.userId).toBe("u1");
     expect(account.bankName).toBe("Test Bank");
     expect(account.visible).toBe(true);
+    expect(account.balance).toBe(0);
     expect(account.createdAt).toBeInstanceOf(Date);
   });
 

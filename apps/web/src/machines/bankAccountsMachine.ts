@@ -13,6 +13,7 @@ const listBankAccountQuery = gql`
       bankName
       accountNumber
       visible
+      balance
       createdAt
       modifiedAt
     }
@@ -34,6 +35,7 @@ const createBankAccountMutation = gql`
       bankName
       accountNumber
       visible
+      balance
       createdAt
     }
   }

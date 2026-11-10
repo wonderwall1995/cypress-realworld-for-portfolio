@@ -294,8 +294,8 @@ describe("Transactions (PostgreSQL)", () => {
       const list = await getTransactionsForUserForApi(a.id);
 
       expect(list.map((t) => t.id)).toEqual([second.id, first.id]);
-      expect(list[0].senderName).toBe("First1 Last1");
-      expect(list[0].receiverName).toBe("First2 Last2");
+      expect(list[0].senderName).toBe("Last1 First1");
+      expect(list[0].receiverName).toBe("Last2 First2");
       expect(list[0].senderAvatar).toBe("https://avatar/a.svg");
       expect(list[0].receiverAvatar).toBeUndefined();
       expect(list[0].likes).toEqual([]);
@@ -307,7 +307,7 @@ describe("Transactions (PostgreSQL)", () => {
       const b = await makeUser(2);
       const tx = await createTransaction(a.id, "payment", details(b.id, 5));
 
-      expect((await getTransactionByIdForApi(tx.id))!.senderName).toBe("First1 Last1");
+      expect((await getTransactionByIdForApi(tx.id))!.senderName).toBe("Last1 First1");
       expect(await getTransactionByIdForApi("nope")).toBeUndefined();
     });
   });

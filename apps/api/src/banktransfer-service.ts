@@ -1,9 +1,11 @@
 /**
- * Virtual deposit / withdrawal between one of the user's bank accounts and the app balance.
- * No real bank is involved: the value is only moved from one place to the other.
+ * Virtual deposit / withdrawal. No real bank is involved.
  *
- *   deposit    bank account -> app balance (balance goes up)
- *   withdrawal app balance -> bank account (balance goes down, never below 0)
+ *   deposit    money enters one of the user's bank accounts: bank_accounts.balance goes up.
+ *              The app balance (users.balance) does not change.
+ *              The transfer's balanceBefore / balanceAfter are the BANK ACCOUNT balance.
+ *   withdrawal app balance -> bank account (app balance goes down, never below 0).
+ *              The transfer's balanceBefore / balanceAfter are the APP balance.
  *
  * Everything for one request happens in ONE database transaction:
  *   1. the transfer is created as "requested"   (history row 1)
@@ -40,15 +42,19 @@ export const moveMoney = (userId: string, input: MoveMoneyInput): Promise<BankTr
     if (account.userId !== userId) throw new HttpError(403, "this is not your bank account");
     if (!account.visible) throw new HttpError(400, "this bank account was deleted");
 
-    // Lock the user's row until the end of the transaction, so two requests at the same
-    // time cannot both read the same balance (for example, two withdrawals overdrawing it).
-    const rows = await tx.$queryRaw<{ balance: number }[]>`
-      SELECT "balance" FROM "users" WHERE "id" = ${userId} FOR UPDATE`;
-    if (rows.length === 0) throw new HttpError(404, "user not found");
+    // Lock the row whose balance changes until the end of the transaction, so two requests at
+    // the same time cannot both read the same balance (for example, two withdrawals overdrawing it).
+    const deposit = input.type === "deposit";
+    const rows = deposit
+      ? await tx.$queryRaw<{ balance: number }[]>`
+          SELECT "balance" FROM "bank_accounts" WHERE "id" = ${account.id} FOR UPDATE`
+      : await tx.$queryRaw<{ balance: number }[]>`
+          SELECT "balance" FROM "users" WHERE "id" = ${userId} FOR UPDATE`;
+    if (rows.length === 0)
+      throw new HttpError(404, deposit ? "bank account not found" : "user not found");
 
     const before = rows[0].balance;
     const cents = input.amount * 100;
-    const deposit = input.type === "deposit";
     const after = deposit ? before + cents : before - cents;
 
     if (!deposit && after < 0) throw new HttpError(400, "not enough balance");
@@ -66,10 +72,17 @@ export const moveMoney = (userId: string, input: MoveMoneyInput): Promise<BankTr
       tx
     );
 
-    await tx.user.update({
-      where: { id: userId },
-      data: { balance: after, modifiedAt: new Date() },
-    });
+    if (deposit) {
+      await tx.bankAccount.update({
+        where: { id: account.id },
+        data: { balance: after, modifiedAt: new Date() },
+      });
+    } else {
+      await tx.user.update({
+        where: { id: userId },
+        data: { balance: after, modifiedAt: new Date() },
+      });
+    }
 
     return applyBankTransferStatusChange(tx, transfer.id, "completed", {
       balanceBefore: before,

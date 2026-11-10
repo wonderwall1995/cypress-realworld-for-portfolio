@@ -95,11 +95,11 @@ describe("Likes, comments and notifications (PostgreSQL)", () => {
       // newest first: comment, like, then the original request notification
       expect(list).toHaveLength(3);
       expect(list[0]).toHaveProperty("commentId");
-      expect(list[0].userFullName).toBe("First3 Last3"); // who commented
+      expect(list[0].userFullName).toBe("Last3 First3"); // who commented
       expect(list[1]).toHaveProperty("likeId");
-      expect(list[1].userFullName).toBe("First3 Last3"); // who liked
+      expect(list[1].userFullName).toBe("Last3 First3"); // who liked
       expect(list[2]).toHaveProperty("status", "requested");
-      expect(list[2].userFullName).toBe("First1 Last1"); // sender of the request
+      expect(list[2].userFullName).toBe("Last1 First1"); // sender of the request
     });
 
     it("shows the receiver's own name for a received payment", async () => {
@@ -108,7 +108,7 @@ describe("Likes, comments and notifications (PostgreSQL)", () => {
 
       const list = await getUnreadNotificationsForApi(receiver.id);
 
-      expect(list[0].userFullName).toBe("First2 Last2");
+      expect(list[0].userFullName).toBe("Last2 First2");
     });
 
     it("returns an empty list when there is nothing to show", async () => {

@@ -80,7 +80,7 @@ const TransactionCreateStepThree: React.FC<TransactionCreateStepThreeProps> = ({
               </Grid>
               <Grid item>
                 <Typography component="h2" variant="h6" color="primary" gutterBottom>
-                  {receiver.firstName} {receiver.lastName}
+                  {receiver.lastName} {receiver.firstName}
                 </Typography>
               </Grid>
             </Grid>

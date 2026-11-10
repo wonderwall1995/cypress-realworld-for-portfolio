@@ -95,24 +95,6 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
         >
           {({ isValid, isSubmitting, dirty }) => (
             <Form className={classes.form}>
-              <Field name="firstName">
-                {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
-                  <TextField
-                    variant="outlined"
-                    margin="normal"
-                    required
-                    fullWidth
-                    id="firstName"
-                    label="이름"
-                    type="text"
-                    autoFocus
-                    data-testid="signup-first-name"
-                    error={(touched || value !== initialValue) && Boolean(error)}
-                    helperText={touched || value !== initialValue ? error : ""}
-                    {...field}
-                  />
-                )}
-              </Field>
               <Field name="lastName">
                 {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
                   <TextField
@@ -123,7 +105,25 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     id="lastName"
                     label="성"
                     type="text"
+                    autoFocus
                     data-testid="signup-last-name"
+                    error={(touched || value !== initialValue) && Boolean(error)}
+                    helperText={touched || value !== initialValue ? error : ""}
+                    {...field}
+                  />
+                )}
+              </Field>
+              <Field name="firstName">
+                {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
+                  <TextField
+                    variant="outlined"
+                    margin="normal"
+                    required
+                    fullWidth
+                    id="firstName"
+                    label="이름"
+                    type="text"
+                    data-testid="signup-first-name"
                     error={(touched || value !== initialValue) && Boolean(error)}
                     helperText={touched || value !== initialValue ? error : ""}
                     {...field}

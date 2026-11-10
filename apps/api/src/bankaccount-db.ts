@@ -34,6 +34,7 @@ export const createBankAccountForUser = async (
       bankName: accountDetails.bankName!,
       accountNumber: accountDetails.accountNumber!,
       visible: true,
+      balance: 0,
       createdAt: now,
       modifiedAt: now,
     },

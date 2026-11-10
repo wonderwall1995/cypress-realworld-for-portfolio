@@ -4,7 +4,7 @@
 
 - 속성: `data-testid` (Playwright `getByTestId()` 기본 속성)
 - `${...}`가 들어간 id는 동적 값입니다. 접두사로 찾으세요. 예: `[data-testid^="transaction-item-"]`
-- 합계: 파일 35개, test id 112개 (동적 31개)
+- 합계: 파일 36개, test id 123개 (동적 33개)
 - id가 없는 상호작용 요소: 0개 (맨 아래 참고)
 
 ## 사용 예시
@@ -36,7 +36,8 @@ await page.getByTestId("sidenav-signout").click();
 | --- | ---------------------------------------------- | --------------------- | ------------ | ------------------- | --------- | -------------------- |
 | 16  | `bankaccount-list-item-${bankAccount.id}`      | 동적 (bankAccount.id) | `ListItem`   | BankAccountListItem | attribute | -                    |
 | 22  | `bankaccount-account-number-${bankAccount.id}` | 동적 (bankAccount.id) | `Typography` | BankAccountListItem | attribute | text="계좌 번호:"    |
-| 32  | `bankaccount-delete`                           | 정적                  | `Button`     | BankAccountListItem | attribute | onClick, text="삭제" |
+| 29  | `bankaccount-balance-${bankAccount.id}`        | 동적 (bankAccount.id) | `Typography` | BankAccountListItem | attribute | text="잔액:"         |
+| 39  | `bankaccount-delete`                           | 정적                  | `Button`     | BankAccountListItem | attribute | onClick, text="삭제" |
 
 ## src/components/BankAccountList.tsx
 
@@ -61,6 +62,20 @@ await page.getByTestId("sidenav-signout").click();
 | 줄  | test id                           | 종류              | 요소       | 컴포넌트        | 연결 방식 | UI 특징 |
 | --- | --------------------------------- | ----------------- | ---------- | --------------- | --------- | ------- |
 | 12  | `comment-list-item-${comment.id}` | 동적 (comment.id) | `ListItem` | CommentListItem | attribute | -       |
+
+## src/components/DepositDialog.tsx
+
+| 줄  | test id                          | 종류        | 요소        | 컴포넌트      | 연결 방식  | UI 특징                                                                         |
+| --- | -------------------------------- | ----------- | ----------- | ------------- | ---------- | ------------------------------------------------------------------------------- |
+| 81  | `deposit-dialog`                 | 정적        | `Dialog`    | DepositDialog | attribute  | -                                                                               |
+| 85  | `deposit-no-account`             | 정적        | `Alert`     | DepositDialog | attribute  | text="입금하려면 먼저 은행 계좌가 있어야 합니다."                               |
+| 90  | `deposit-account-select`         | 정적        | `TextField` | DepositDialog | inputProps | onChange                                                                        |
+| 102 | `deposit-account-${a.id}`        | 동적 (a.id) | `MenuItem`  | DepositDialog | attribute  | text="· ·"                                                                      |
+| 107 | `deposit-amount-input`           | 정적        | `TextField` | DepositDialog | inputProps | onChange                                                                        |
+| 121 | `deposit-error`                  | 정적        | `Alert`     | DepositDialog | attribute  | -                                                                               |
+| 127 | `deposit-cancel-button`          | 정적        | `Button`    | DepositDialog | attribute  | onClick, text="취소"                                                            |
+| 131 | `deposit-go-bankaccounts-button` | 정적        | `Button`    | DepositDialog | attribute  | onClick, to=/bankaccounts/new, component=${RouterLink}, text="은행 계좌 만들기" |
+| 141 | `deposit-submit-button`          | 정적        | `Button`    | DepositDialog | attribute  | onClick, text="입금"                                                            |
 
 ## src/components/EmptyList.tsx
 
@@ -88,16 +103,17 @@ await page.getByTestId("sidenav-signout").click();
 
 ## src/components/NavDrawer.tsx
 
-| 줄  | test id                   | 종류               | 요소           | 컴포넌트  | 연결 방식 | UI 특징                                                               |
-| --- | ------------------------- | ------------------ | -------------- | --------- | --------- | --------------------------------------------------------------------- |
-| 190 | `sidenav`                 | 정적               | `StyledDrawer` | NavDrawer | attribute | -                                                                     |
-| 211 | `sidenav-user-full-name`  | 정적               | `Typography`   | NavDrawer | attribute | -                                                                     |
-| 218 | `sidenav-username`        | 정적               | `Typography`   | NavDrawer | attribute | text="@"                                                              |
-| 225 | `sidenav-balance-box`     | 정적               | `Box`          | NavDrawer | attribute | -                                                                     |
-| 229 | `sidenav-user-balance`    | 정적               | `Typography`   | NavDrawer | attribute | -                                                                     |
-| 243 | `${item.testId}`          | 동적 (item.testId) | `ListItem`     | NavDrawer | attribute | onClick, to=${item.to}, component=${RouterLink}, button               |
-| 260 | `sidenav-new-transaction` | 정적               | `Button`       | NavDrawer | attribute | onClick, to=/transaction/new, component=${RouterLink}, text="새 거래" |
-| 273 | `sidenav-signout`         | 정적               | `ListItem`     | NavDrawer | attribute | onClick, button                                                       |
+| 줄  | test id                  | 종류               | 요소           | 컴포넌트  | 연결 방식 | UI 특징                                                            |
+| --- | ------------------------ | ------------------ | -------------- | --------- | --------- | ------------------------------------------------------------------ |
+| 190 | `sidenav`                | 정적               | `StyledDrawer` | NavDrawer | attribute | -                                                                  |
+| 211 | `sidenav-user-full-name` | 정적               | `Typography`   | NavDrawer | attribute | -                                                                  |
+| 218 | `sidenav-username`       | 정적               | `Typography`   | NavDrawer | attribute | text="@"                                                           |
+| 225 | `sidenav-balance-box`    | 정적               | `Box`          | NavDrawer | attribute | -                                                                  |
+| 229 | `sidenav-user-balance`   | 정적               | `Typography`   | NavDrawer | attribute | -                                                                  |
+| 238 | `sidenav-deposit`        | 정적               | `Button`       | NavDrawer | attribute | onClick, text="입금"                                               |
+| 251 | `sidenav-transfer`       | 정적               | `Button`       | NavDrawer | attribute | onClick, to=/transaction/new, component=${RouterLink}, text="이체" |
+| 269 | `${item.testId}`         | 동적 (item.testId) | `ListItem`     | NavDrawer | attribute | onClick, to=${item.to}, component=${RouterLink}, button            |
+| 288 | `sidenav-signout`        | 정적               | `ListItem`     | NavDrawer | attribute | onClick, button                                                    |
 
 ## src/components/NotificationList.tsx
 
@@ -129,8 +145,8 @@ await page.getByTestId("sidenav-signout").click();
 | 줄  | test id                  | 종류 | 요소         | 컴포넌트   | 연결 방식 | UI 특징                       |
 | --- | ------------------------ | ---- | ------------ | ---------- | --------- | ----------------------------- |
 | 84  | `signup-title`           | 정적 | `Typography` | SignUpForm | attribute | component=h1, text="회원가입" |
-| 100 | `signup-first-name`      | 정적 | `TextField`  | SignUpForm | attribute | type=text                     |
-| 118 | `signup-last-name`       | 정적 | `TextField`  | SignUpForm | attribute | type=text                     |
+| 100 | `signup-last-name`       | 정적 | `TextField`  | SignUpForm | attribute | type=text                     |
+| 118 | `signup-first-name`      | 정적 | `TextField`  | SignUpForm | attribute | type=text                     |
 | 135 | `signup-username`        | 정적 | `TextField`  | SignUpForm | attribute | type=text                     |
 | 152 | `signup-phone-number`    | 정적 | `TextField`  | SignUpForm | attribute | type=text                     |
 | 171 | `signup-password`        | 정적 | `TextField`  | SignUpForm | attribute | type=password                 |
@@ -272,8 +288,8 @@ await page.getByTestId("sidenav-signout").click();
 | 줄  | test id                           | 종류 | 요소        | 컴포넌트         | 연결 방식  | UI 특징                  |
 | --- | --------------------------------- | ---- | ----------- | ---------------- | ---------- | ------------------------ |
 | 67  | `user-settings-form`              | 정적 | `Form`      | UserSettingsForm | attribute  | -                        |
-| 70  | `user-settings-firstName-input`   | 정적 | `TextField` | UserSettingsForm | inputProps | type=text                |
-| 87  | `user-settings-lastName-input`    | 정적 | `TextField` | UserSettingsForm | inputProps | type=text                |
+| 70  | `user-settings-lastName-input`    | 정적 | `TextField` | UserSettingsForm | inputProps | type=text                |
+| 87  | `user-settings-firstName-input`   | 정적 | `TextField` | UserSettingsForm | inputProps | type=text                |
 | 104 | `user-settings-email-input`       | 정적 | `TextField` | UserSettingsForm | inputProps | type=text                |
 | 121 | `user-settings-phoneNumber-input` | 정적 | `TextField` | UserSettingsForm | inputProps | type=text                |
 | 144 | `user-settings-submit`            | 정적 | `Button`    | UserSettingsForm | attribute  | type=submit, text="저장" |
@@ -288,7 +304,7 @@ await page.getByTestId("sidenav-signout").click();
 
 | 줄  | test id           | 종류 | 요소     | 컴포넌트              | 연결 방식 | UI 특징                                                      |
 | --- | ----------------- | ---- | -------- | --------------------- | --------- | ------------------------------------------------------------ |
-| 84  | `bankaccount-new` | 정적 | `Button` | BankAccountsContainer | attribute | to=/bankaccounts/new, component=${RouterLink}, text="만들기" |
+| 89  | `bankaccount-new` | 정적 | `Button` | BankAccountsContainer | attribute | to=/bankaccounts/new, component=${RouterLink}, text="만들기" |
 
 ## src/containers/UserOnboardingContainer.tsx
 

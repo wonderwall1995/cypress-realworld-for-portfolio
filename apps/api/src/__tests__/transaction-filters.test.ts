@@ -188,7 +188,7 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
       });
 
       expect(ids(list)).toEqual(ids([w.out100]));
-      expect(list[0].senderName).toBe("Me Test");
+      expect(list[0].senderName).toBe("Test Me");
     });
   });
 

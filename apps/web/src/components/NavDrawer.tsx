@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { styled } from "@mui/material/styles";
 import { head } from "lodash/fp";
 import { Interpreter } from "xstate";
@@ -24,10 +24,12 @@ import {
   Person as PersonIcon,
   ExitToApp as LogoutIcon,
   AccountBalance as AccountBalanceIcon,
-  AttachMoney as AttachMoneyIcon,
+  SouthWest as DepositIcon,
+  NorthEast as TransferIcon,
 } from "@mui/icons-material";
 
 import { formatAmount } from "@rwa/shared";
+import DepositDialog from "./DepositDialog";
 import { AuthMachineContext, AuthMachineEvents } from "../machines/authMachine";
 
 const PREFIX = "NavDrawer";
@@ -41,7 +43,7 @@ const classes = {
   balanceBox: `${PREFIX}-balanceBox`,
   amount: `${PREFIX}-amount`,
   menuItem: `${PREFIX}-menuItem`,
-  newTransactionButton: `${PREFIX}-newTransactionButton`,
+  balanceButtons: `${PREFIX}-balanceButtons`,
   bottomNav: `${PREFIX}-bottomNav`,
 };
 
@@ -120,17 +122,14 @@ const StyledDrawer = styled(Drawer)(({ theme }) => ({
     },
   },
 
-  [`& .${classes.newTransactionButton}`]: {
-    margin: theme.spacing(0, 2, 1),
-    width: `calc(100% - ${theme.spacing(4)})`,
-    borderRadius: 24,
-    fontSize: 16,
-    fontWeight: "bold",
-    backgroundColor: "#00C853",
-    color: "#fff",
-    "&:hover": {
-      backgroundColor: "#4CAF50",
-      boxShadow: "none",
+  [`& .${classes.balanceButtons}`]: {
+    display: "flex",
+    gap: theme.spacing(1),
+    marginTop: theme.spacing(1),
+    "& .MuiButton-root": {
+      flex: 1,
+      borderRadius: 20,
+      fontWeight: "bold",
     },
   },
 
@@ -155,6 +154,7 @@ const NavDrawer: React.FC<Props> = ({
   const theme = useTheme();
   const location = useLocation();
   const [authState, sendAuth] = useActor(authService);
+  const [depositOpen, setDepositOpen] = useState(false);
   const showTemporaryDrawer = useMediaQuery(theme.breakpoints.only("xs"));
 
   const currentUser = authState?.context?.user;
@@ -204,7 +204,7 @@ const NavDrawer: React.FC<Props> = ({
           <Box display="flex" alignItems="center">
             <Avatar
               className={classes.avatar}
-              alt={`${currentUser.firstName} ${currentUser.lastName}`}
+              alt={`${currentUser.lastName} ${currentUser.firstName}`}
               src={currentUser.avatar}
             />
             <Box>
@@ -213,7 +213,7 @@ const NavDrawer: React.FC<Props> = ({
                 color="textPrimary"
                 data-testid="sidenav-user-full-name"
               >
-                {currentUser.firstName} {head(currentUser.lastName)}
+                {currentUser.lastName} {head(currentUser.firstName)}
               </Typography>
               <Typography variant="subtitle2" color="inherit" data-testid="sidenav-username">
                 @{currentUser.username}
@@ -234,6 +234,32 @@ const NavDrawer: React.FC<Props> = ({
             >
               {currentUser.balance ? formatAmount(currentUser.balance) : formatAmount(0)}
             </Typography>
+            <Box className={classes.balanceButtons}>
+              <Button
+                variant="contained"
+                color="success"
+                size="small"
+                startIcon={<DepositIcon />}
+                onClick={() => {
+                  afterChoice();
+                  setDepositOpen(true);
+                }}
+                data-testid="sidenav-deposit"
+              >
+                입금
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<TransferIcon />}
+                component={RouterLink}
+                to="/transaction/new"
+                onClick={afterChoice}
+                data-testid="sidenav-transfer"
+              >
+                이체
+              </Button>
+            </Box>
           </Box>
         )}
       </Box>
@@ -255,19 +281,8 @@ const NavDrawer: React.FC<Props> = ({
           </ListItem>
         ))}
       </List>
-      {/* New transaction and Logout stay pinned to the bottom of the sidebar, like a footer */}
+      {/* Logout stays pinned to the bottom of the sidebar, like a footer */}
       <div className={classes.bottomNav}>
-        <Button
-          className={classes.newTransactionButton}
-          variant="contained"
-          color="inherit"
-          component={RouterLink}
-          to="/transaction/new"
-          onClick={afterChoice}
-          data-testid="sidenav-new-transaction"
-        >
-          <AttachMoneyIcon /> 새 거래
-        </Button>
         <Divider />
         <List>
           <ListItem button onClick={() => signOut()} data-testid="sidenav-signout">
@@ -278,6 +293,7 @@ const NavDrawer: React.FC<Props> = ({
           </ListItem>
         </List>
       </div>
+      <DepositDialog open={depositOpen} onClose={() => setDepositOpen(false)} />
     </StyledDrawer>
   );
 };

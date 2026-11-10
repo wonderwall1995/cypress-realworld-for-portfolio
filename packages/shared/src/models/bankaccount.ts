@@ -5,6 +5,7 @@ export interface BankAccount {
   bankName: string;
   accountNumber: string;
   visible: boolean;
+  balance: number; // cents
   createdAt: Date;
   modifiedAt: Date;
 }

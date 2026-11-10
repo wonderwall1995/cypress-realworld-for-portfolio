@@ -108,7 +108,7 @@ const TransactionCreateStepTwo: React.FC<TransactionCreateStepTwoProps> = ({
           </Grid>
           <Grid item>
             <Typography component="h2" variant="h6" color="primary" gutterBottom>
-              {receiver.firstName} {receiver.lastName}
+              {receiver.lastName} {receiver.firstName}
               {transactionType}
             </Typography>
           </Grid>

@@ -22,6 +22,8 @@ const setup = async (balanceCents = 0) => {
 };
 
 const balanceOf = async (id: string) => (await getUserById(id))!.balance;
+const accountBalance = async (id: string) =>
+  (await prisma.bankAccount.findUniqueOrThrow({ where: { id } })).balance;
 
 describe("Virtual deposit / withdrawal (PostgreSQL)", () => {
   beforeEach(async () => {
@@ -33,7 +35,7 @@ describe("Virtual deposit / withdrawal (PostgreSQL)", () => {
   });
 
   describe("deposit", () => {
-    it("adds the amount (whole dollars) to the app balance and completes right away", async () => {
+    it("adds the amount (whole dollars) to the BANK ACCOUNT balance, not the app balance", async () => {
       const { user, account } = await setup(500);
 
       const transfer = await moveMoney(user.id, {
@@ -46,9 +48,34 @@ describe("Virtual deposit / withdrawal (PostgreSQL)", () => {
       expect(transfer.type).toBe("deposit");
       expect(transfer.amount).toBe(1200);
       expect(transfer.source).toBe(account.id);
-      expect(transfer.balanceBefore).toBe(500);
-      expect(transfer.balanceAfter).toBe(1700);
-      expect(await balanceOf(user.id)).toBe(1700);
+      expect(transfer.balanceBefore).toBe(0); // bank account balance before
+      expect(transfer.balanceAfter).toBe(1200);
+      expect(await accountBalance(account.id)).toBe(1200);
+      expect(await balanceOf(user.id)).toBe(500); // app balance untouched
+
+      await moveMoney(user.id, { bankAccountId: account.id, amount: 3, type: "deposit" });
+      expect(await accountBalance(account.id)).toBe(1500);
+    });
+
+    it("only the chosen account grows", async () => {
+      const { user, account } = await setup();
+      const second = await createBankAccountForUser(user.id, bank);
+
+      await moveMoney(user.id, { bankAccountId: second.id, amount: 7, type: "deposit" });
+
+      expect(await accountBalance(second.id)).toBe(700);
+      expect(await accountBalance(account.id)).toBe(0);
+    });
+
+    it("two deposits at the same time are both counted", async () => {
+      const { user, account } = await setup();
+
+      await Promise.all([
+        moveMoney(user.id, { bankAccountId: account.id, amount: 10, type: "deposit" }),
+        moveMoney(user.id, { bankAccountId: account.id, amount: 20, type: "deposit" }),
+      ]);
+
+      expect(await accountBalance(account.id)).toBe(3000);
     });
 
     it("leaves a two-row history: requested, then completed with the balances", async () => {
@@ -67,7 +94,7 @@ describe("Virtual deposit / withdrawal (PostgreSQL)", () => {
       ]);
       expect(logs.every((l) => l.userId === user.id && l.bankAccountId === account.id)).toBe(true);
       expect(logs.every((l) => l.amount === 500)).toBe(true);
-      expect(logs[1].balanceBefore).toBe(0);
+      expect(logs[1].balanceBefore).toBe(0); // bank account balance
       expect(logs[1].balanceAfter).toBe(500);
     });
 
@@ -190,13 +217,18 @@ describe("Virtual deposit / withdrawal (PostgreSQL)", () => {
       await expectNothingSaved(user.id, 500);
     });
 
-    it("a deposit that would push the balance past the database limit (400)", async () => {
-      const { user, account } = await setup(2_147_483_000);
+    it("a deposit that would push the account balance past the database limit (400)", async () => {
+      const { user, account } = await setup(500);
+      await prisma.bankAccount.update({
+        where: { id: account.id },
+        data: { balance: 2_147_483_000 },
+      });
 
       await expect(
         moveMoney(user.id, { bankAccountId: account.id, amount: 100, type: "deposit" })
       ).rejects.toMatchObject({ status: 400 });
-      await expectNothingSaved(user.id, 2_147_483_000);
+      await expectNothingSaved(user.id, 500);
+      expect(await accountBalance(account.id)).toBe(2_147_483_000);
     });
   });
 });

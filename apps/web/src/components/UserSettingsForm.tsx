@@ -65,23 +65,6 @@ const UserSettingsForm: React.FC<UserSettingsProps> = ({ userProfile, updateUser
       {({ isValid, isSubmitting }) => (
         <MarginHonoringDiv>
           <Form data-testid="user-settings-form">
-            <Field name="firstName">
-              {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
-                <TextField
-                  variant="outlined"
-                  margin="dense"
-                  fullWidth
-                  required
-                  id={"user-settings-firstName-input"}
-                  type="text"
-                  placeholder="이름"
-                  inputProps={{ "data-testid": "user-settings-firstName-input" }}
-                  error={(touched || value !== initialValue) && Boolean(error)}
-                  helperText={touched || value !== initialValue ? error : ""}
-                  {...field}
-                />
-              )}
-            </Field>
             <Field name="lastName">
               {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
                 <TextField
@@ -93,6 +76,23 @@ const UserSettingsForm: React.FC<UserSettingsProps> = ({ userProfile, updateUser
                   type="text"
                   placeholder="성"
                   inputProps={{ "data-testid": "user-settings-lastName-input" }}
+                  error={(touched || value !== initialValue) && Boolean(error)}
+                  helperText={touched || value !== initialValue ? error : ""}
+                  {...field}
+                />
+              )}
+            </Field>
+            <Field name="firstName">
+              {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
+                <TextField
+                  variant="outlined"
+                  margin="dense"
+                  fullWidth
+                  required
+                  id={"user-settings-firstName-input"}
+                  type="text"
+                  placeholder="이름"
+                  inputProps={{ "data-testid": "user-settings-firstName-input" }}
                   error={(touched || value !== initialValue) && Boolean(error)}
                   helperText={touched || value !== initialValue ? error : ""}
                   {...field}

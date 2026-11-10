@@ -14,6 +14,7 @@ type BankAccount {
   bankName: String
   accountNumber: String
   visible: Boolean
+  balance: Int
   createdAt: String
   modifiedAt: String
 }

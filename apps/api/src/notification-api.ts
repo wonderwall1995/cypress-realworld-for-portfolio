@@ -42,7 +42,7 @@ export const formatNotificationsForApiResponse = async (
   const users = await prisma.user.findMany({ where: { id: { in: userIds } } });
   const nameOf = (id?: string) => {
     const user = users.find((u) => u.id === id);
-    return user ? `${user.firstName} ${user.lastName}` : "";
+    return user ? `${user.lastName} ${user.firstName}` : "";
   };
 
   return notifications.map((notification) => {

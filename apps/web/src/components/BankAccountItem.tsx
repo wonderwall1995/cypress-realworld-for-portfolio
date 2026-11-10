@@ -1,7 +1,7 @@
 import React from "react";
 
 import { Grid, Typography, Button, ListItem } from "@mui/material";
-import { BankAccount } from "@rwa/shared";
+import { BankAccount, formatAmount } from "@rwa/shared";
 
 export interface BankAccountListItemProps {
   bankAccount: BankAccount;
@@ -25,6 +25,13 @@ const BankAccountListItem: React.FC<BankAccountListItemProps> = ({
             data-testid={`bankaccount-account-number-${bankAccount.id}`}
           >
             계좌 번호: {bankAccount.accountNumber}
+          </Typography>
+          <Typography
+            variant="body2"
+            color="textPrimary"
+            data-testid={`bankaccount-balance-${bankAccount.id}`}
+          >
+            잔액: {formatAmount(bankAccount.balance ?? 0)}
           </Typography>
         </Grid>
         {bankAccount.visible && (

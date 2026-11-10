@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { BANK_ACCOUNTS_CHANGED } from "../utils/bankAccountEvents";
 import { styled } from "@mui/material/styles";
 import { useActor } from "@xstate/react";
 import {
@@ -59,6 +60,10 @@ const BankAccountsContainer: React.FC<Props> = ({ authService, bankAccountsServi
 
   useEffect(() => {
     sendBankAccounts("FETCH");
+    // the deposit pop-up in the sidebar says when an account's balance changed
+    const refetch = () => sendBankAccounts("FETCH");
+    window.addEventListener(BANK_ACCOUNTS_CHANGED, refetch);
+    return () => window.removeEventListener(BANK_ACCOUNTS_CHANGED, refetch);
   }, [sendBankAccounts]);
 
   if (match.url === "/bankaccounts/new" && currentUser?.id) {

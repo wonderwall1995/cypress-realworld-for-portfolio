@@ -138,7 +138,7 @@ describe("Users (PostgreSQL)", () => {
   it("builds the full name used in the transaction feed", async () => {
     const user = await createUser(signUp(1));
 
-    expect(await getFullNameForUser(user.id)).toBe("First1 Last1");
+    expect(await getFullNameForUser(user.id)).toBe("Last1 First1");
     expect(await getFullNameForUser("nope")).toBe("");
   });
 });
