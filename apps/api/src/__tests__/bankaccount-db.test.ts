@@ -1,0 +1,59 @@
+// @vitest-environment node
+import { describe, expect, it, beforeEach, afterAll } from "vitest";
+import prisma from "../prisma";
+import {
+  createBankAccountForUser,
+  getBankAccountById,
+  getBankAccountsByUserId,
+  removeBankAccountById,
+} from "../bankaccount-db";
+import { resetDatabase } from "./db-setup/reset";
+
+const details = { bankName: "Test Bank", accountNumber: "123456789", routingNumber: "987654321" };
+
+describe("Bank accounts (PostgreSQL)", () => {
+  beforeEach(async () => {
+    await resetDatabase(prisma);
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  it("creates an account for a user", async () => {
+    const account = await createBankAccountForUser("u1", details);
+
+    expect(account.userId).toBe("u1");
+    expect(account.bankName).toBe("Test Bank");
+    expect(account.isDeleted).toBe(false);
+    expect(account.createdAt).toBeInstanceOf(Date);
+  });
+
+  it("lists the accounts of one user", async () => {
+    await createBankAccountForUser("u1", details);
+    await createBankAccountForUser("u1", { ...details, bankName: "Second" });
+    await createBankAccountForUser("u2", details);
+
+    const accounts = await getBankAccountsByUserId("u1");
+
+    expect(accounts).toHaveLength(2);
+    expect(accounts.every((a) => a.userId === "u1")).toBe(true);
+  });
+
+  it("gets an account by id, or null when missing", async () => {
+    const account = await createBankAccountForUser("u1", details);
+
+    expect((await getBankAccountById(account.id))!.accountNumber).toBe("123456789");
+    expect(await getBankAccountById("nope")).toBeNull();
+  });
+
+  it("soft deletes: the row stays and isDeleted becomes true", async () => {
+    const account = await createBankAccountForUser("u1", details);
+
+    await removeBankAccountById(account.id);
+
+    const accounts = await getBankAccountsByUserId("u1");
+    expect(accounts).toHaveLength(1);
+    expect(accounts[0].isDeleted).toBe(true);
+  });
+});

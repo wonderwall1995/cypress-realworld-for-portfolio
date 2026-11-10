@@ -123,10 +123,10 @@ pnpm test:report   # open the last HTML report
 
 ## Tests
 
-| Type | Location                           |
-| ---- | ---------------------------------- |
-| e2e  | [e2e](./e2e) (Playwright)          |
-| unit | [`src/__tests__`](./src/__tests__) |
+| Type | Location                                                                                                                 |
+| ---- | ------------------------------------------------------------------------------------------------------------------------ |
+| e2e  | [e2e](./e2e) (Playwright)                                                                                                |
+| unit | [`apps/api/src/__tests__`](./apps/api/src/__tests__), [`packages/shared/src/__tests__`](./packages/shared/src/__tests__) |
 
 Unit tests run with `pnpm test:unit`.
 
@@ -134,9 +134,9 @@ Unit tests run with `pnpm test:unit`.
 
 - The database is PostgreSQL. It runs in Docker (`docker-compose.yml`) and its data is kept in a Docker volume, so it stays when the app restarts.
 
-- The tables are defined in [prisma/schema.prisma](./prisma/schema.prisma) and created by the migrations in [prisma/migrations](./prisma/migrations) (`pnpm prisma:migrate`).
+- The tables are defined in [apps/api/prisma/schema.prisma](./apps/api/prisma/schema.prisma) and created by the migrations in [apps/api/prisma/migrations](./apps/api/prisma/migrations) (`pnpm prisma:migrate`).
 
-- Updates from the React frontend go to the [Express][express] server, which reads and writes with Prisma. The data access code is in the `backend/*-db.ts` files.
+- Updates from the React frontend go to the [Express][express] server, which reads and writes with Prisma. The data access code is in the `apps/api/src/*-db.ts` files.
 
 - There is no sample data. Unit tests use a separate database (`<name>_test`) that is emptied before each test, so they never touch your development data.
 
@@ -173,7 +173,7 @@ The app contains different entry points for each provider. There is a separate *
 
 Prerequisites include an Auth0 account and a Tenant configured for use with a SPA. Environment variables from Auth0 are to be placed in the [.env](./.env). For more details see [Auth0 Application Setup](http://on.cypress.io/auth0#Auth0-Application-Setup) and [Setting Auth0 app credentials in Cypress](http://on.cypress.io/auth0#Setting-Auth0-app-credentials-in-Cypress).
 
-To start the application with Auth0, replace the current **src/index.tsx** file with the **src/index.auth0.tsx** file and start the application with `pnpm dev:auth0`.
+To start the application with Auth0, replace the current **apps/web/src/index.tsx** file with the **apps/web/src/index.auth0.tsx** file and start the application with `pnpm dev:auth0`.
 
 ### Okta
 
@@ -181,7 +181,7 @@ A [guide has been written with detail around adapting the RWA](http://on.cypress
 
 Prerequisites include an [Okta][okta] account and [application configured for use with a SPA][oktacreateapp]. Environment variables from [Okta][okta] are to be placed in the [.env](./.env).
 
-To start the application with Okta, replace the current **src/index.tsx** file with the **src/index.okta.tsx** file and start the application with `pnpm dev:okta`.
+To start the application with Okta, replace the current **apps/web/src/index.tsx** file with the **apps/web/src/index.okta.tsx** file and start the application with `pnpm dev:okta`.
 
 ### Amazon Cognito
 
@@ -205,9 +205,9 @@ Prerequisites include an [Amazon Cognito][cognito] account. Environment variable
 The test knobs are in a few places:
 
 - The `.env` file has `VITE_AUTH_TOKEN_NAME` and vars beginning `AWS_COGNITO`. Be careful not to commit any secrets.
-- Both `scripts/mock-aws-exports.js` and `scripts/mock-aws-exports-es5.js` must have the same data; only their export statements differ. These files can be edited manually or exported from the amplify CLI.
+- Both `apps/web/scripts/mock-aws-exports.js` and `apps/web/scripts/mock-aws-exports-es5.js` must have the same data; only their export statements differ. These files can be edited manually or exported from the amplify CLI.
 
-To start the application with Cognito, replace the current **src/index.tsx** file with the **src/index.cognito.tsx** file and start the application with `pnpm dev:cognito`.
+To start the application with Cognito, replace the current **apps/web/src/index.tsx** file with the **apps/web/src/index.cognito.tsx** file and start the application with `pnpm dev:cognito`.
 
 ### Google
 
@@ -215,7 +215,7 @@ A [guide has been written with detail around adapting the RWA](https://docs.cypr
 
 Prerequisites include an [Google][google] account. Environment variables from [Google][google] are to be placed in the [.env](./.env).
 
-To start the application with Google, replace the current **src/index.tsx** file with the **src/index.google.tsx** file and start the application with `pnpm dev:google`.
+To start the application with Google, replace the current **apps/web/src/index.tsx** file with the **apps/web/src/index.google.tsx** file and start the application with `pnpm dev:google`.
 
 ## License
 
