@@ -19,7 +19,12 @@ services:
       WATCHPACK_POLLING: "true"
     volumes:
       - .:/app
-      - app-node-modules:/app/node_modules
+      # Every workspace package has its own node_modules. Keep them in named volumes so the
+      # Windows host's node_modules (symlinks to Windows paths) never shows up inside the container.
+      - node-modules-root:/app/node_modules
+      - node-modules-web:/app/apps/web/node_modules
+      - node-modules-api:/app/apps/api/node_modules
+      - node-modules-shared:/app/packages/shared/node_modules
     healthcheck:
       test:
         ["CMD-SHELL", "wget -qO- http://localhost:$${VITE_BACKEND_PORT}/api >/dev/null || exit 1"]
@@ -48,4 +53,7 @@ services:
 
 volumes:
   rwa-pgdata:
-  app-node-modules:
+  node-modules-root:
+  node-modules-web:
+  node-modules-api:
+  node-modules-shared:
