@@ -120,8 +120,8 @@ describe("Transaction Utils", () => {
   test("gets query with and without amount range fields", () => {
     expect(
       getQueryWithoutAmountFields({
-        amountMin: 5,
-        amountMax: 10,
+        depositMin: 5,
+        depositMax: 10,
         status: TransactionStatus.incomplete,
       })
     ).toMatchObject({ status: "incomplete" });
@@ -134,8 +134,8 @@ describe("Transaction Utils", () => {
 
   test("gets query with and without date and amount range fields", () => {
     const query = {
-      amountMin: 5,
-      amountMax: 10,
+      depositMin: 5,
+      depositMax: 10,
       requestStatus: "pending",
       dateRangeStart: "2019-12-01T06:00:00.000Z",
       dateRangeEnd: "2019-12-05T06:00:00.000Z",

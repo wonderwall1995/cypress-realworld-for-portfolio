@@ -1,7 +1,7 @@
 import React from "react";
 import { useMachine } from "@xstate/react";
 import { Switch, Route } from "react-router";
-import { TransactionDateRangePayload, TransactionAmountRangePayload } from "@rwa/shared";
+import { TransactionDateRangePayload, TransactionAmountFilterPayload } from "@rwa/shared";
 import TransactionListFilters from "../components/TransactionListFilters";
 import TransactionContactsList from "../components/TransactionContactsList";
 import { transactionFiltersMachine } from "../machines/transactionFiltersMachine";
@@ -23,7 +23,7 @@ const TransactionsContainer: React.FC = () => {
   const Filters = (
     <TransactionListFilters
       dateRangeFilters={dateRangeFilters as TransactionDateRangePayload}
-      amountRangeFilters={amountRangeFilters as TransactionAmountRangePayload}
+      amountRangeFilters={amountRangeFilters as TransactionAmountFilterPayload}
       sendFilterEvent={sendFilterEvent}
     />
   );
@@ -34,21 +34,21 @@ const TransactionsContainer: React.FC = () => {
         <TransactionContactsList
           filterComponent={Filters}
           dateRangeFilters={dateRangeFilters as TransactionDateRangePayload}
-          amountRangeFilters={amountRangeFilters as TransactionAmountRangePayload}
+          amountRangeFilters={amountRangeFilters as TransactionAmountFilterPayload}
         />
       </Route>
       <Route exact path="/personal">
         <TransactionPersonalList
           filterComponent={Filters}
           dateRangeFilters={dateRangeFilters as TransactionDateRangePayload}
-          amountRangeFilters={amountRangeFilters as TransactionAmountRangePayload}
+          amountRangeFilters={amountRangeFilters as TransactionAmountFilterPayload}
         />
       </Route>
       <Route exact path="/(public)?">
         <TransactionPublicList
           filterComponent={Filters}
           dateRangeFilters={dateRangeFilters as TransactionDateRangePayload}
-          amountRangeFilters={amountRangeFilters as TransactionAmountRangePayload}
+          amountRangeFilters={amountRangeFilters as TransactionAmountFilterPayload}
         />
       </Route>
     </Switch>

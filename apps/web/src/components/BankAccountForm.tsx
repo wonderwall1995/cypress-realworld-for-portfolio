@@ -3,19 +3,11 @@ import { styled } from "@mui/material/styles";
 import { Alert, TextField, Button, Grid, Typography } from "@mui/material";
 import { Formik, Form, Field, FieldProps } from "formik";
 import { string, object } from "yup";
-import {
-  ACCOUNT_NUMBER_PATTERN,
-  BankAccountPayload,
-  ROUTING_NUMBER_PATTERN,
-  User,
-} from "@rwa/shared";
+import { ACCOUNT_NUMBER_PATTERN, BankAccountPayload, User } from "@rwa/shared";
 import { useHistory } from "react-router";
 
 const validationSchema = object({
   bankName: string().required("은행 이름을 입력하세요"),
-  routingNumber: string()
-    .required("은행 라우팅 번호를 입력하세요")
-    .matches(ROUTING_NUMBER_PATTERN, "라우팅 번호는 숫자 9자리여야 합니다"),
   accountNumber: string()
     .required("계좌 번호를 입력하세요")
     .matches(ACCOUNT_NUMBER_PATTERN, "계좌 번호는 숫자 9~12자리여야 합니다"),
@@ -64,7 +56,6 @@ const BankAccountForm: React.FC<BankAccountFormProps> = ({
     userId,
     bankName: "",
     accountNumber: "",
-    routingNumber: "",
   };
 
   return (
@@ -93,8 +84,7 @@ const BankAccountForm: React.FC<BankAccountFormProps> = ({
             data-testid="bankaccount-number-guide"
             style={{ marginTop: 8 }}
           >
-            라우팅 번호는 은행을 구분하는 9자리 번호이고, 계좌 번호는 9~12자리입니다. 데모라서
-            임의의 숫자를 입력해도 됩니다.
+            계좌 번호는 9~12자리 숫자입니다. 데모라서 임의의 숫자를 입력해도 됩니다.
           </Typography>
           <Field name="bankName">
             {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
@@ -107,23 +97,6 @@ const BankAccountForm: React.FC<BankAccountFormProps> = ({
                 type="text"
                 placeholder="은행 이름"
                 data-testid={"bankaccount-bankName-input"}
-                error={(touched || value !== initialValue) && Boolean(error)}
-                helperText={touched || value !== initialValue ? error : ""}
-                {...field}
-              />
-            )}
-          </Field>
-          <Field name="routingNumber">
-            {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
-              <TextField
-                variant="outlined"
-                margin="dense"
-                fullWidth
-                required
-                id={"bankaccount-routingNumber-input"}
-                type="text"
-                placeholder="라우팅 번호 (숫자 9자리)"
-                data-testid={"bankaccount-routingNumber-input"}
                 error={(touched || value !== initialValue) && Boolean(error)}
                 helperText={touched || value !== initialValue ? error : ""}
                 {...field}

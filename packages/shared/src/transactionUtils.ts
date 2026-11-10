@@ -7,10 +7,9 @@ import {
   TransactionResponseItem,
   TransactionQueryPayload,
   TransactionDateRangePayload,
-  TransactionAmountRangePayload,
+  TransactionAmountFilterPayload,
   LikeNotification,
   CommentNotification,
-  ValuePiece,
 } from "./models";
 import { faker } from "@faker-js/faker";
 import { dinero, toDecimal, add, subtract, isPositive, toSnapshot, USD } from "dinero.js";
@@ -105,7 +104,7 @@ export const receiverIsCurrentUser = (currentUser: User, transaction: Transactio
   isEqual(get("id", currentUser), get("receiverId", transaction));
 
 export const formatFullName = (user: User) =>
-  flow(pick(["firstName", "lastName"]), values, join(" "))(user);
+  flow(pick(["lastName", "firstName"]), values, join(" "))(user);
 
 export const isCommentNotification = (
   notification: NotificationType
@@ -136,8 +135,11 @@ export const currentUserLikesTransaction = (
     negate(isEmpty)
   )(transaction.likes);
 
+// a date range may have only one side ("from this day" or "up to this day")
 export const hasDateQueryFields = (query: TransactionQueryPayload | TransactionDateRangePayload) =>
-  has("dateRangeStart", query) && has("dateRangeEnd", query);
+  [(query as any)?.dateRangeStart, (query as any)?.dateRangeEnd].some(
+    (value) => value !== undefined && value !== null && value !== ""
+  );
 
 export const getDateQueryFields = (query: TransactionDateRangePayload) =>
   pick(["dateRangeStart", "dateRangeEnd"], query);
@@ -145,19 +147,21 @@ export const getDateQueryFields = (query: TransactionDateRangePayload) =>
 export const omitDateQueryFields = (query: TransactionQueryPayload) =>
   omit(["dateRangeStart", "dateRangeEnd"], query);
 
-export const hasAmountQueryFields = (
-  query: TransactionQueryPayload | TransactionAmountRangePayload
-) => has("amountMin", query) && has("amountMax", query);
+const AMOUNT_FILTER_KEYS = ["depositMin", "depositMax", "withdrawalMin", "withdrawalMax"];
 
-export const getAmountQueryFields = (query: TransactionAmountRangePayload) =>
-  pick(["amountMin", "amountMax"], query);
+export const hasAmountQueryFields = (
+  query: TransactionQueryPayload | TransactionAmountFilterPayload
+) => AMOUNT_FILTER_KEYS.some((key) => (query as any)?.[key] !== undefined);
+
+export const getAmountQueryFields = (query: TransactionAmountFilterPayload) =>
+  pick(AMOUNT_FILTER_KEYS, query);
 
 export const omitAmountQueryFields = (query: TransactionQueryPayload) =>
-  omit(["amountMin", "amountMax"], query);
+  omit(AMOUNT_FILTER_KEYS, query);
 
 /* istanbul ignore next */
 export const hasPaginationQueryFields = (
-  query: TransactionQueryPayload | TransactionAmountRangePayload
+  query: TransactionQueryPayload | TransactionAmountFilterPayload
 ) => has("page", query) && has("limit", query);
 
 export const omitPaginationQueryFields = (query: TransactionQueryPayload) =>
@@ -173,23 +177,6 @@ export const getQueryWithoutAmountFields = (query: TransactionQueryPayload) =>
 
 export const getQueryWithoutFilterFields = (query: TransactionQueryPayload) =>
   flow(omitAmountQueryFields, omitDateQueryFields, omitPaginationQueryFields)(query);
-
-/* istanbul ignore next */
-export const padAmountWithZeros = (number: number) => Math.ceil(number * 1000);
-
-/* istanbul ignore next */
-export const amountRangeValueText = (value: number) =>
-  flow(padAmountWithZeros, formatAmount)(value);
-
-/* istanbul ignore next */
-export const amountRangeValueTextLabel = (value: number) =>
-  /* istanbul ignore next */
-  flow(padAmountWithZeros, formatAmountSlider)(value);
-
-/* istanbul ignore next */
-export const formatAmountRangeValues = (amountRangeValues: number[]) =>
-  /* istanbul ignore next */
-  flow(map(padAmountWithZeros), map(formatAmountSlider), join(" - "))(amountRangeValues);
 
 export const getPaginatedItems = (page: number, limit: number, items: any) => {
   const offset = (page - 1) * limit;
@@ -230,22 +217,6 @@ export function isoStringToLocalDateFull(isoString: string): Date {
 
 export function localDateToIsoString(date: Date): string {
   return fromZonedTime(date, timezone).toISOString();
-}
-
-export function localDateToUTCISOString(localDate: ValuePiece) {
-  if (!(localDate instanceof Date)) return new Date().toISOString();
-  const utcDate = new Date(
-    Date.UTC(
-      localDate.getFullYear(),
-      localDate.getMonth(),
-      localDate.getDate(),
-      localDate.getHours(),
-      localDate.getMinutes(),
-      localDate.getSeconds(),
-      localDate.getMilliseconds()
-    )
-  );
-  return utcDate.toISOString();
 }
 
 // Custom UTC functions per:

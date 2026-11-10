@@ -4,7 +4,7 @@ import {
   TransactionPagination,
   TransactionResponseItem,
   TransactionDateRangePayload,
-  TransactionAmountRangePayload,
+  TransactionAmountFilterPayload,
 } from "@rwa/shared";
 import TransactionList from "./TransactionList";
 import { publicTransactionsMachine } from "../machines/publicTransactionsMachine";
@@ -12,7 +12,7 @@ import { publicTransactionsMachine } from "../machines/publicTransactionsMachine
 export interface TransactionPublicListProps {
   filterComponent: ReactNode;
   dateRangeFilters: TransactionDateRangePayload;
-  amountRangeFilters: TransactionAmountRangePayload;
+  amountRangeFilters: TransactionAmountFilterPayload;
 }
 
 const TransactionPublicList: React.FC<TransactionPublicListProps> = ({

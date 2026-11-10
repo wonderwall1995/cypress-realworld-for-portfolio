@@ -4,13 +4,10 @@ export interface BankAccount {
   userId: string;
   bankName: string;
   accountNumber: string;
-  routingNumber: string;
-  isDeleted: boolean;
+  visible: boolean;
+  balance: number; // cents
   createdAt: Date;
   modifiedAt: Date;
 }
 
-export type BankAccountPayload = Pick<
-  BankAccount,
-  "userId" | "bankName" | "accountNumber" | "routingNumber"
->;
+export type BankAccountPayload = Pick<BankAccount, "userId" | "bankName" | "accountNumber">;

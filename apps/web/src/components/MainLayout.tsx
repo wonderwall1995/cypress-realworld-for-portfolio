@@ -10,7 +10,6 @@ import {
 } from "xstate";
 import { Container, Grid, useMediaQuery, useTheme } from "@mui/material";
 
-import Footer from "./Footer";
 import NavBar from "./NavBar";
 import NavDrawer from "./NavDrawer";
 import { DataContext, DataEvents, DataSchema } from "../machines/dataMachine";
@@ -116,9 +115,6 @@ const MainLayout: React.FC<Props> = ({ children, notificationsService, authServi
             </Grid>
           </Grid>
         </Container>
-        <footer>
-          <Footer />
-        </footer>
       </main>
     </Root>
   );

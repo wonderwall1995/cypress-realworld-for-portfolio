@@ -22,19 +22,18 @@ type DateFilterEvent = {
   dateRangeStart: string;
   dateRangeEnd: string;
 };
+// deposit / withdrawal filter, in cents. A group that is not given does not filter.
 type AmountFilterEvent = {
   type: "AMOUNT_FILTER";
-  amountMin: string;
-  amountMax: string;
+  depositMin?: number;
+  depositMax?: number;
+  withdrawalMin?: number;
+  withdrawalMax?: number;
 };
 type DateResetEvent = { type: "DATE_RESET" };
 type AmountResetEvent = { type: "AMOUNT_RESET" };
 type FilterEvents =
-  | { type: "NONE" }
-  | DateFilterEvent
-  | AmountFilterEvent
-  | DateResetEvent
-  | AmountResetEvent;
+  { type: "NONE" } | DateFilterEvent | AmountFilterEvent | DateResetEvent | AmountResetEvent;
 
 export interface FilterContext {}
 
@@ -57,6 +56,7 @@ export const transactionFiltersMachine = Machine<FilterContext, FilterSchema, Fi
             entry: "setDateRange",
             on: {
               DATE_RESET: "none",
+              DATE_FILTER: "filter",
             },
           },
         },
@@ -92,12 +92,16 @@ export const transactionFiltersMachine = Machine<FilterContext, FilterSchema, Fi
         dateRangeEnd: undefined,
       })),
       setAmountRange: assign((ctx: FilterContext, event: any) => ({
-        amountMin: event.amountMin,
-        amountMax: event.amountMax,
+        depositMin: event.depositMin,
+        depositMax: event.depositMax,
+        withdrawalMin: event.withdrawalMin,
+        withdrawalMax: event.withdrawalMax,
       })),
       resetAmountRange: assign((ctx: FilterContext, event: any) => ({
-        amountMin: undefined,
-        amountMax: undefined,
+        depositMin: undefined,
+        depositMax: undefined,
+        withdrawalMin: undefined,
+        withdrawalMax: undefined,
       })),
     },
   }

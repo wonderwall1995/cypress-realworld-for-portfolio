@@ -144,6 +144,10 @@ function readId(node: t.Node | null | undefined): { id: string; variables: strin
     return { id, variables };
   }
   if (t.isIdentifier(node)) return { id: "${" + node.name + "}", variables: [node.name] };
+  if (t.isMemberExpression(node) || t.isOptionalMemberExpression(node)) {
+    const code = exprText(node);
+    return { id: "${" + code + "}", variables: [code] };
+  }
   return null;
 }
 
@@ -235,6 +239,7 @@ function resolveLocalImport(fromFile: string, source: string): string | null {
 
 function originOf(element: string, imports: Map<string, string>): Origin | "skip" {
   const root = element.split(".")[0];
+  if (element === "Fragment" || element === "React.Fragment") return "skip"; // not a screen element
   if (/^[a-z]/.test(root)) return "native";
   if (NON_UI_NAMES.test(root)) return "skip";
   const source = imports.get(root);
@@ -444,9 +449,12 @@ function scan(): void {
           const source = imports.get(element.split(".")[0]);
           candidates.push({
             ...base,
+            // imported from another file, or declared in this same file (then this file's ids count)
             delegate: source?.startsWith(".")
               ? (resolveLocalImport(file, source) ?? undefined)
-              : undefined,
+              : source === undefined
+                ? rel
+                : undefined,
             proposal: null,
             dynamic: false,
             reason:

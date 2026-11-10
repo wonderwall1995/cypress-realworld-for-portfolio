@@ -12,8 +12,8 @@ const listBankAccountQuery = gql`
       userId
       bankName
       accountNumber
-      routingNumber
-      isDeleted
+      visible
+      balance
       createdAt
       modifiedAt
     }
@@ -27,19 +27,15 @@ const deleteBankAccountMutation = gql`
 `;
 
 const createBankAccountMutation = gql`
-  mutation CreateBankAccount($bankName: String!, $accountNumber: String!, $routingNumber: String!) {
-    createBankAccount(
-      bankName: $bankName
-      accountNumber: $accountNumber
-      routingNumber: $routingNumber
-    ) {
+  mutation CreateBankAccount($bankName: String!, $accountNumber: String!) {
+    createBankAccount(bankName: $bankName, accountNumber: $accountNumber) {
       id
       uuid
       userId
       bankName
       accountNumber
-      routingNumber
-      isDeleted
+      visible
+      balance
       createdAt
     }
   }

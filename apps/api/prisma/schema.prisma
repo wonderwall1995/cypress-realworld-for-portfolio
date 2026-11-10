@@ -68,8 +68,8 @@ model BankAccount {
   userId        String
   bankName      String
   accountNumber String
-  routingNumber String
-  isDeleted     Boolean
+  visible       Boolean
+  balance       Int      @default(0) // cents, money held in this bank account
   createdAt     DateTime
   modifiedAt    DateTime
 

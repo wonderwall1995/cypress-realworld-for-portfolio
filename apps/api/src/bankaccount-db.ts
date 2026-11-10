@@ -5,11 +5,11 @@
 import shortid from "shortid";
 import { v4 } from "uuid";
 import prisma from "./prisma";
-import { BankAccount, isValidAccountNumber, isValidRoutingNumber } from "@rwa/shared";
+import { BankAccount, isValidAccountNumber } from "@rwa/shared";
 import { HttpError } from "./http-error";
 
 export const getBankAccountsByUserId = (userId: string) =>
-  prisma.bankAccount.findMany({ where: { userId }, orderBy: { createdAt: "asc" } });
+  prisma.bankAccount.findMany({ where: { userId, visible: true }, orderBy: { createdAt: "asc" } });
 
 export const getBankAccountById = (id: string) => prisma.bankAccount.findUnique({ where: { id } });
 
@@ -20,9 +20,6 @@ export const createBankAccountForUser = async (
   // checked here (not only in the REST route) because the web app creates accounts through GraphQL
   if (typeof accountDetails.bankName !== "string" || accountDetails.bankName.trim() === "") {
     throw new HttpError(400, "bankName is required");
-  }
-  if (!isValidRoutingNumber(accountDetails.routingNumber)) {
-    throw new HttpError(400, "routingNumber must be exactly 9 digits");
   }
   if (!isValidAccountNumber(accountDetails.accountNumber)) {
     throw new HttpError(400, "accountNumber must be 9 to 12 digits");
@@ -36,15 +33,15 @@ export const createBankAccountForUser = async (
       userId,
       bankName: accountDetails.bankName!,
       accountNumber: accountDetails.accountNumber!,
-      routingNumber: accountDetails.routingNumber!,
-      isDeleted: false,
+      visible: true,
+      balance: 0,
       createdAt: now,
       modifiedAt: now,
     },
   });
 };
 
-// soft delete: the row stays, isDeleted becomes true.
+// soft delete: the row stays, visible becomes false (the list no longer returns it).
 // Only the owner can delete an account. Returns true when an account was found and marked.
 // An id that does not exist, or one that belongs to someone else, changes nothing and returns false.
 export const removeBankAccountById = async (
@@ -53,7 +50,7 @@ export const removeBankAccountById = async (
 ): Promise<boolean> => {
   const { count } = await prisma.bankAccount.updateMany({
     where: { id: bankAccountId, userId },
-    data: { isDeleted: true, modifiedAt: new Date() },
+    data: { visible: false, modifiedAt: new Date() },
   });
   return count > 0;
 };

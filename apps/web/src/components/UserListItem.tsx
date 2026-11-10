@@ -16,7 +16,7 @@ const UserListItem: React.FC<UserListItemProps> = ({ user, setReceiver, index })
         <Avatar src={user.avatar} />
       </ListItemAvatar>
       <ListItemText
-        primary={`${user.firstName} ${user.lastName}`}
+        primary={`${user.lastName} ${user.firstName}`}
         secondary={
           <span>
             <Grid

@@ -7,7 +7,12 @@ import {
   NotificationsType,
 } from "@rwa/shared";
 import { includes } from "lodash/fp";
-import { ACCOUNT_NUMBER_PATTERN, MAX_AMOUNT_DOLLARS, ROUTING_NUMBER_PATTERN } from "@rwa/shared";
+import {
+  ACCOUNT_NUMBER_PATTERN,
+  MAX_AMOUNT_DOLLARS,
+  MAX_BALANCE_CENTS,
+  PHONE_NUMBER_PATTERN,
+} from "@rwa/shared";
 
 const TransactionStatusValues = Object.values(TransactionStatus);
 const RequestStatusValues = Object.values(TransactionRequestStatus);
@@ -44,11 +49,6 @@ export const isBankAccountValidator = [
     .trim()
     .matches(ACCOUNT_NUMBER_PATTERN)
     .withMessage("accountNumber must be 9 to 12 digits"),
-  body("routingNumber")
-    .isString()
-    .trim()
-    .matches(ROUTING_NUMBER_PATTERN)
-    .withMessage("routingNumber must be exactly 9 digits"),
 ];
 
 export const isUserValidator = [
@@ -57,11 +57,25 @@ export const isUserValidator = [
   check("username").optional({ checkFalsy: true }).isString().trim(),
   check("password").optional({ checkFalsy: true }).isString().trim(),
   check("email").optional({ checkFalsy: true }).isString().trim(),
-  check("phoneNumber").optional({ checkFalsy: true }).isString().trim(),
+  check("phoneNumber")
+    .optional({ checkFalsy: true })
+    .isString()
+    .trim()
+    .matches(PHONE_NUMBER_PATTERN)
+    .withMessage("phoneNumber must be a valid phone number"),
   check("avatar").optional({ checkFalsy: true }).isURL().trim(),
   check("defaultPrivacyLevel")
     .optional({ checkFalsy: true })
     .isIn(["public", "private", "contacts"]),
+];
+
+// Extra rule for sign-up only: a phone number is required (settings can still change it later).
+export const isSignUpValidator = [
+  body("phoneNumber")
+    .isString()
+    .trim()
+    .matches(PHONE_NUMBER_PATTERN)
+    .withMessage("phoneNumber is required and must be a valid phone number"),
 ];
 
 export const sanitizeTransactionStatus = sanitizeQuery("status").customSanitizer((value) => {
@@ -81,6 +95,54 @@ export const sanitizeRequestStatus = sanitizeQuery("requestStatus").customSaniti
   return;
 });
 
+// Filters of the transaction lists (all optional):
+//  - deposit / withdrawal amounts, in cents; a minimum above its maximum is refused (equal is fine)
+//  - a date range; either side may be missing, a start after the end is refused (the same day is fine)
+const centsQuery = (name: string) =>
+  query(name)
+    .optional({ checkFalsy: true })
+    .isInt({ min: 0, max: MAX_BALANCE_CENTS })
+    .withMessage(`${name} must be a whole number of cents from 0`)
+    .toInt();
+
+const minNotAboveMax = (minName: string, maxName: string) =>
+  query(maxName)
+    .optional({ checkFalsy: true })
+    .custom((max, { req }) => {
+      const min = (req.query as any)[minName];
+      if (min !== undefined && min !== "" && Number(min) > Number(max)) {
+        throw new Error(`${minName} must not be above ${maxName}`);
+      }
+      return true;
+    });
+
+const isDateValue = (value: unknown) =>
+  typeof value === "string" && !Number.isNaN(Date.parse(value));
+
+export const transactionFilterValidators = [
+  centsQuery("depositMin"),
+  centsQuery("depositMax"),
+  centsQuery("withdrawalMin"),
+  centsQuery("withdrawalMax"),
+  minNotAboveMax("depositMin", "depositMax"),
+  minNotAboveMax("withdrawalMin", "withdrawalMax"),
+  query("dateRangeStart")
+    .optional({ checkFalsy: true })
+    .custom(isDateValue)
+    .withMessage("dateRangeStart must be a date"),
+  query("dateRangeEnd")
+    .optional({ checkFalsy: true })
+    .custom(isDateValue)
+    .withMessage("dateRangeEnd must be a date")
+    .custom((end, { req }) => {
+      const start = (req.query as any).dateRangeStart;
+      if (start && Date.parse(start) > Date.parse(end)) {
+        throw new Error("dateRangeStart must not be after dateRangeEnd");
+      }
+      return true;
+    }),
+];
+
 export const isTransactionQSValidator = [
   query("status").isIn(TransactionStatusValues).optional().trim(),
   query("requestStatus").optional({ checkFalsy: true }).isIn(RequestStatusValues).trim(),
@@ -88,8 +150,7 @@ export const isTransactionQSValidator = [
   query("senderId").optional({ checkFalsy: true }).isString().trim(),
   query("rangeStartTs").optional({ checkFalsy: true }).isString().trim(),
   query("rangeEndTs").optional({ checkFalsy: true }).isString().trim(),
-  query("amountMax").optional({ checkFalsy: true }).isNumeric().trim(),
-  query("amountMin").optional({ checkFalsy: true }).isNumeric().trim(),
+  ...transactionFilterValidators,
 ];
 
 export const isTransactionPayloadValidator = [
@@ -110,6 +171,7 @@ export const isTransactionPatchValidator = [body("requestStatus").isIn(RequestSt
 
 export const isTransactionPublicQSValidator = [
   query("order").optional({ checkFalsy: true }).isIn(["default"]),
+  ...transactionFilterValidators,
 ];
 
 export const isCommentValidator = body("content").isString().trim();

@@ -1,14 +1,16 @@
-import React from "react";
+import React, { useContext } from "react";
 import { styled } from "@mui/material/styles";
 import { Typography } from "@mui/material";
 import { TransactionResponseItem } from "@rwa/shared";
-import { isRequestTransaction, formatAmount } from "@rwa/shared";
+import { formatAmount, getMoneyDirection, isMoneySettled } from "@rwa/shared";
+import { CurrentUserIdContext } from "../utils/currentUserContext";
 
 const PREFIX = "TransactionAmount";
 
 const classes = {
   amountPositive: `${PREFIX}-amountPositive`,
   amountNegative: `${PREFIX}-amountNegative`,
+  amountNeutral: `${PREFIX}-amountNeutral`,
 };
 
 const StyledTypography = styled(Typography)(({ theme }) => ({
@@ -27,22 +29,49 @@ const StyledTypography = styled(Typography)(({ theme }) => ({
     },
     color: "red",
   },
+
+  // not mine, or money did not move yet (a pending request)
+  [`&.${classes.amountNeutral}`]: {
+    fontSize: 24,
+    [theme.breakpoints.down("md")]: {
+      fontSize: theme.typography.body1.fontSize,
+    },
+    color: "rgba(0, 0, 0, 0.54)",
+  },
 })) as typeof Typography;
 
+/**
+ * The amount as the signed-in user sees it:
+ *   money I received  -> green  +$30   (deposit)
+ *   money I paid      -> red    -$30   (withdrawal)
+ *   a pending request -> grey, with the sign it will have once it is accepted
+ *   someone else's transaction -> grey, no sign
+ */
 const TransactionAmount: React.FC<{
   transaction: TransactionResponseItem;
 }> = ({ transaction }) => {
+  const userId = useContext(CurrentUserIdContext);
+  const direction = userId ? getMoneyDirection(transaction, userId) : null;
+  const settled = isMoneySettled(transaction);
+
+  const className =
+    direction && settled
+      ? direction === "in"
+        ? classes.amountPositive
+        : classes.amountNegative
+      : classes.amountNeutral;
+  const sign = direction === "in" ? "+" : direction === "out" ? "-" : "";
+
   return (
     <StyledTypography
       data-testid={`transaction-amount-${transaction.id}`}
-      className={
-        isRequestTransaction(transaction) ? classes.amountPositive : classes.amountNegative
-      }
+      data-direction={direction ?? "none"}
+      className={className}
       display="inline"
       component="span"
       color="primary"
     >
-      {isRequestTransaction(transaction) ? "+" : "-"}
+      {sign}
       {transaction.amount && formatAmount(transaction.amount)}
     </StyledTypography>
   );

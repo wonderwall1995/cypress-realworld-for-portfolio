@@ -3,7 +3,7 @@ import { styled } from "@mui/material/styles";
 import { TextField, Button, Grid } from "@mui/material";
 import { Formik, Form, Field, FieldProps } from "formik";
 import { string, object, mixed } from "yup";
-import { User, DefaultPrivacyLevel, UserSettingsPayload } from "@rwa/shared";
+import { User, DefaultPrivacyLevel, UserSettingsPayload, PHONE_NUMBER_PATTERN } from "@rwa/shared";
 
 const PREFIX = "UserSettingsForm";
 
@@ -26,9 +26,6 @@ const MarginHonoringDiv = styled("div")(({ theme }) => ({
   marginTop: theme.spacing(1),
 }));
 
-const phoneRegExp =
-  /^((\\+[1-9]{1,4}[ \\-]*)|(\\([0-9]{2,3}\\)[ \\-]*)|([0-9]{2,4})[ \\-]*)*?[0-9]{3,4}?[ \\-]*[0-9]{3,4}?$/;
-
 const DefaultPrivacyLevelValues = Object.values(DefaultPrivacyLevel);
 
 const validationSchema = object({
@@ -36,7 +33,7 @@ const validationSchema = object({
   lastName: string().required("성을 입력하세요"),
   email: string().email("올바른 이메일 주소가 아닙니다").required("이메일 주소를 입력하세요"),
   phoneNumber: string()
-    .matches(phoneRegExp, "올바른 전화번호가 아닙니다")
+    .matches(PHONE_NUMBER_PATTERN, "올바른 전화번호가 아닙니다 (예: 010-1234-5678)")
     .required("전화번호를 입력하세요"),
   defaultPrivacyLevel: mixed<DefaultPrivacyLevel>().oneOf(DefaultPrivacyLevelValues),
 });
@@ -68,23 +65,6 @@ const UserSettingsForm: React.FC<UserSettingsProps> = ({ userProfile, updateUser
       {({ isValid, isSubmitting }) => (
         <MarginHonoringDiv>
           <Form data-testid="user-settings-form">
-            <Field name="firstName">
-              {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
-                <TextField
-                  variant="outlined"
-                  margin="dense"
-                  fullWidth
-                  required
-                  id={"user-settings-firstName-input"}
-                  type="text"
-                  placeholder="이름"
-                  inputProps={{ "data-testid": "user-settings-firstName-input" }}
-                  error={(touched || value !== initialValue) && Boolean(error)}
-                  helperText={touched || value !== initialValue ? error : ""}
-                  {...field}
-                />
-              )}
-            </Field>
             <Field name="lastName">
               {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
                 <TextField
@@ -96,6 +76,23 @@ const UserSettingsForm: React.FC<UserSettingsProps> = ({ userProfile, updateUser
                   type="text"
                   placeholder="성"
                   inputProps={{ "data-testid": "user-settings-lastName-input" }}
+                  error={(touched || value !== initialValue) && Boolean(error)}
+                  helperText={touched || value !== initialValue ? error : ""}
+                  {...field}
+                />
+              )}
+            </Field>
+            <Field name="firstName">
+              {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
+                <TextField
+                  variant="outlined"
+                  margin="dense"
+                  fullWidth
+                  required
+                  id={"user-settings-firstName-input"}
+                  type="text"
+                  placeholder="이름"
+                  inputProps={{ "data-testid": "user-settings-firstName-input" }}
                   error={(touched || value !== initialValue) && Boolean(error)}
                   helperText={touched || value !== initialValue ? error : ""}
                   {...field}
