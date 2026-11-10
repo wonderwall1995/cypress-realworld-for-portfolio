@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PrivacyLevel {
+  public
+  private
+  contacts
+}
+
+enum TransactionStatus {
+  pending
+  incomplete
+  complete
+}
+
+enum BankTransferType {
+  withdrawal
+  deposit
+}
+
+// requested -> completed | failed | canceled
+enum BankTransferStatus {
+  requested
+  completed
+  failed
+  canceled
+}
+
+model User {
+  id                  String        @id
+  uuid                String        @unique
+  firstName           String
+  lastName            String
+  username            String        @unique
+  password            String
+  email               String?
+  phoneNumber         String?
+  avatar              String?
+  defaultPrivacyLevel PrivacyLevel?
+  balance             Int
+  createdAt           DateTime
+  modifiedAt          DateTime
+
+  @@map("users")
+}
+
+model Contact {
+  id            String   @id
+  uuid          String   @unique
+  userId        String
+  contactUserId String
+  createdAt     DateTime
+  modifiedAt    DateTime
+
+  @@index([userId])
+  @@map("contacts")
+}
+
+model BankAccount {
+  id            String   @id
+  uuid          String   @unique
+  userId        String
+  bankName      String
+  accountNumber String
+  routingNumber String
+  isDeleted     Boolean
+  createdAt     DateTime
+  modifiedAt    DateTime
+
+  @@index([userId])
+  @@map("bank_accounts")
+}
+
+model Transaction {
+  id                  String            @id
+  uuid                String            @unique
+  source              String
+  amount              Int
+  description         String
+  privacyLevel        PrivacyLevel
+  receiverId          String
+  senderId            String
+  balanceAtCompletion Int?
+  status              TransactionStatus
+  requestStatus       String
+  requestResolvedAt   String
+  createdAt           DateTime
+  modifiedAt          DateTime
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@map("transactions")
+}
+
+model Like {
+  id            String   @id
+  uuid          String   @unique
+  userId        String
+  transactionId String
+  createdAt     DateTime
+  modifiedAt    DateTime
+
+  @@index([transactionId])
+  @@map("likes")
+}
+
+model Comment {
+  id            String   @id
+  uuid          String   @unique
+  content       String
+  userId        String
+  transactionId String
+  createdAt     DateTime
+  modifiedAt    DateTime
+
+  @@index([transactionId])
+  @@map("comments")
+}
+
+// payment / like / comment notifications share one table
+model Notification {
+  id            String   @id
+  uuid          String   @unique
+  userId        String
+  transactionId String
+  isRead        Boolean
+  status        String? // payment notifications
+  likeId        String? // like notifications
+  commentId     String? // comment notifications
+  createdAt     DateTime
+  modifiedAt    DateTime
+
+  @@index([userId])
+  @@map("notifications")
+}
+
+// Virtual deposit / withdrawal: no real money moves, only balances and records change.
+model BankTransfer {
+  id            String             @id
+  uuid          String             @unique
+  userId        String
+  source        String // bank account id
+  amount        Int // cents, always positive
+  type          BankTransferType
+  status        BankTransferStatus @default(requested)
+  transactionId String? // only when the transfer is linked to a payment transaction
+  balanceBefore Int? // user balance when the transfer completed
+  balanceAfter  Int?
+  createdAt     DateTime
+  modifiedAt    DateTime
+
+  logs BankTransferLog[]
+
+  @@index([userId])
+  @@index([source])
+  @@map("bank_transfers")
+}
+
+// Append-only history: one row per status change. Never updated, never deleted.
+model BankTransferLog {
+  id             String              @id
+  bankTransferId String
+  userId         String
+  bankAccountId  String
+  amount         Int
+  fromStatus     BankTransferStatus? // null for the first row (creation)
+  toStatus       BankTransferStatus
+  balanceBefore  Int?
+  balanceAfter   Int?
+  note           String?
+  createdAt      DateTime            @default(now())
+
+  bankTransfer BankTransfer @relation(fields: [bankTransferId], references: [id], onDelete: Restrict)
+
+  @@index([bankTransferId])
+  @@index([userId, createdAt])
+  @@map("bank_transfer_logs")
+}

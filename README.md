@@ -23,32 +23,28 @@ A payment application used as a portfolio project for <strong>end-to-end testing
 
 ## License Compliance
 
-This repository is a personal fork of the [Cypress Real World App](https://github.com/cypress-io/cypress-realworld-app), originally created by Cypress.io and distributed under the [MIT License](LICENSE).
+This repository is a personal fork of the [Cypress Real World App](https://github.com/cypress-io/cypress-realworld-app) by Cypress.io, distributed under the [MIT License](LICENSE).
 
-I am using this project **solely for non-commercial purposes**, namely personal learning and as part of my portfolio to demonstrate my test automation skills. In accordance with the terms of the MIT License:
-
-- The original copyright notice and the MIT License text (see [LICENSE](LICENSE)) are retained in this repository and in all copies or substantial portions of the software.
-- All rights to the original work remain with its copyright holder, Copyright (c) 2020 Cypress.io. This fork is not affiliated with, endorsed by, or sponsored by Cypress.io.
-- The software is provided "as is", without warranty of any kind, express or implied, and I accept no liability for any claim or damages arising from its use.
-- Any modifications I make are my own and are likewise shared under the terms of the MIT License.
+- The original MIT License text and the copyright notice (Copyright (c) 2020 Cypress.io) are retained in [LICENSE](LICENSE).
+- This fork is used **solely for non-commercial purposes** (personal learning and portfolio), and it is not affiliated with, endorsed by, or sponsored by Cypress.io. Cypress logos and trademarks are not used.
+- My modifications are shared under the same MIT License.
+- The software is provided "as is", without warranty of any kind; see [LICENSE](LICENSE).
 
 **한국어 안내**
 
-이 저장소는 Cypress.io가 만들고 [MIT 라이선스](LICENSE)로 배포한 [Cypress Real World App](https://github.com/cypress-io/cypress-realworld-app)을 개인적으로 포크한 것입니다.
+이 저장소는 Cypress.io의 [Cypress Real World App](https://github.com/cypress-io/cypress-realworld-app)을 개인적으로 포크한 것이며, [MIT 라이선스](LICENSE)를 따릅니다.
 
-저는 이 프로젝트를 **오직 비상업적 목적**, 즉 개인 학습과 테스트 자동화 역량을 보여주기 위한 포트폴리오 용도로만 사용합니다. MIT 라이선스 조건에 따라 다음을 준수합니다.
-
-- 원저작자의 저작권 고지와 MIT 라이선스 전문([LICENSE](LICENSE))을 이 저장소와 모든 사본 또는 주요 부분에 그대로 유지합니다.
-- 원본에 대한 모든 권리는 원저작권자(Copyright (c) 2020 Cypress.io)에게 있으며, 이 포크는 Cypress.io와 제휴, 보증, 후원 관계가 없습니다.
-- 소프트웨어는 명시적이든 묵시적이든 어떠한 보증도 없이 "있는 그대로" 제공되며, 사용으로 인한 어떠한 청구나 손해에 대해서도 책임을 지지 않습니다.
-- 제가 수정한 부분 역시 MIT 라이선스 조건에 따라 공유됩니다.
+- 원본 MIT 라이선스 전문과 저작권 고지(Copyright (c) 2020 Cypress.io)를 [LICENSE](LICENSE)에 그대로 유지합니다.
+- **오직 비상업적 목적**(개인 학습, 포트폴리오)으로만 사용하며, Cypress.io와 제휴·보증·후원 관계가 없습니다. Cypress 로고와 상표는 사용하지 않습니다.
+- 제가 수정한 부분도 동일하게 MIT 라이선스로 공유합니다.
+- 소프트웨어는 어떠한 보증도 없이 "있는 그대로" 제공됩니다. 자세한 내용은 [LICENSE](LICENSE)를 참고하세요.
 
 ---
 
 ## Features
 
-🛠 Built with [React][reactjs], [XState][xstate], [Express][express], [lowdb][lowdb], [Material-UI][material-ui] and [TypeScript][typescript]
-⚡️ Zero database dependencies
+🛠 Built with [React][reactjs], [XState][xstate], [Express][express], [PostgreSQL][postgresql] with [Prisma][prisma], [Material-UI][material-ui] and [TypeScript][typescript]
+🐘 PostgreSQL (Docker) with Prisma migrations
 🚀 Full-stack [Express][express]/[React][reactjs] application with real-world features and tests
 👮‍♂️ Local Authentication
 🔥 Database Seeding with End-to-end Tests
@@ -56,14 +52,11 @@ I am using this project **solely for non-commercial purposes**, namely personal 
 
 ## Getting Started
 
-The app is a full-stack Express/React application backed by a local JSON database ([lowdb]).
-
-The app is bundled with [example data](./data/database.json) (`data/database.json`) that contains everything you need to start using the app and run tests out-of-the-box.
+The app is a full-stack Express/React application backed by [PostgreSQL][postgresql], accessed with [Prisma][prisma].
 
 > 🚩 **Note**
 >
-> You can login to the app with any of the [example app users](./data/database.json#L2). The default password for all users is `s3cret`.
-> Example users can be seen by running `pnpm list:dev:users`.
+> The database starts empty and there is no sample data. Create your own users with the sign-up page.
 
 ### Prerequisites
 
@@ -93,6 +86,20 @@ pnpm install
 pnpm playwright:install
 ```
 
+### Start the database
+
+PostgreSQL runs in Docker. Start it (and the web app) with:
+
+```shell
+pnpm docker:up
+```
+
+Then create the tables once:
+
+```shell
+pnpm prisma:migrate
+```
+
 ### Run the app
 
 ```shell
@@ -101,7 +108,7 @@ pnpm dev
 
 > 🚩 **Note**
 >
-> The app will run on port `3000` (frontend) and `3001` (API backend) by default. Please make sure there are no other applications or services running on both ports.
+> The app will run on port `7201` (frontend) and `7202` (API backend) by default. Please make sure there are no other applications or services running on both ports.
 > If you want to change the default ports, you can do so by modifying `PORT` and `VITE_BACKEND_PORT` variables in `.env` file.
 > If you change the frontend port, also update `baseURL` and `webServer.url` in [playwright.config.ts](./playwright.config.ts).
 
@@ -116,24 +123,22 @@ pnpm test:report   # open the last HTML report
 
 ## Tests
 
-| Type | Location                           |
-| ---- | ---------------------------------- |
-| e2e  | [e2e](./e2e) (Playwright)          |
-| unit | [`src/__tests__`](./src/__tests__) |
+| Type | Location                                                                                                                 |
+| ---- | ------------------------------------------------------------------------------------------------------------------------ |
+| e2e  | [e2e](./e2e) (Playwright)                                                                                                |
+| unit | [`apps/api/src/__tests__`](./apps/api/src/__tests__), [`packages/shared/src/__tests__`](./packages/shared/src/__tests__) |
 
 Unit tests run with `pnpm test:unit`.
 
 ## Database
 
-- The local JSON database is located in [data/database.json](./data/database.json) and is managed with [lowdb].
+- The database is PostgreSQL. It runs in Docker (`docker-compose.yml`) and its data is kept in a Docker volume, so it stays when the app restarts.
 
-- The database is [reseeded](./data/database-seed.json) each time the application is started (via `pnpm dev`).
+- The tables are defined in [apps/api/prisma/schema.prisma](./apps/api/prisma/schema.prisma) and created by the migrations in [apps/api/prisma/migrations](./apps/api/prisma/migrations) (`pnpm prisma:migrate`).
 
-- Updates via the React frontend are sent to the [Express][express] server and handled by a set of [database utilities](backend/database.ts)
+- Updates from the React frontend go to the [Express][express] server, which reads and writes with Prisma. The data access code is in the `apps/api/src/*-db.ts` files.
 
-- Generate a new database using `pnpm db:seed`.
-
-- An [empty database seed](./data/empty-seed.json) is provided along with a script (`pnpm start:empty`) to view the application without data.
+- There is no sample data. Unit tests use a separate database (`<name>_test`) that is emptied before each test, so they never touch your development data.
 
 ## Additional NPM Scripts
 
@@ -168,7 +173,7 @@ The app contains different entry points for each provider. There is a separate *
 
 Prerequisites include an Auth0 account and a Tenant configured for use with a SPA. Environment variables from Auth0 are to be placed in the [.env](./.env). For more details see [Auth0 Application Setup](http://on.cypress.io/auth0#Auth0-Application-Setup) and [Setting Auth0 app credentials in Cypress](http://on.cypress.io/auth0#Setting-Auth0-app-credentials-in-Cypress).
 
-To start the application with Auth0, replace the current **src/index.tsx** file with the **src/index.auth0.tsx** file and start the application with `pnpm dev:auth0`.
+To start the application with Auth0, replace the current **apps/web/src/index.tsx** file with the **apps/web/src/index.auth0.tsx** file and start the application with `pnpm dev:auth0`.
 
 ### Okta
 
@@ -176,7 +181,7 @@ A [guide has been written with detail around adapting the RWA](http://on.cypress
 
 Prerequisites include an [Okta][okta] account and [application configured for use with a SPA][oktacreateapp]. Environment variables from [Okta][okta] are to be placed in the [.env](./.env).
 
-To start the application with Okta, replace the current **src/index.tsx** file with the **src/index.okta.tsx** file and start the application with `pnpm dev:okta`.
+To start the application with Okta, replace the current **apps/web/src/index.tsx** file with the **apps/web/src/index.okta.tsx** file and start the application with `pnpm dev:okta`.
 
 ### Amazon Cognito
 
@@ -186,7 +191,7 @@ Prerequisites include an [Amazon Cognito][cognito] account. Environment variable
 
 - A user pool is required (identity pool is not used here)
   - The user pool must have a hosted UI domain configured, which must:
-    - allow callback and sign-out URLs of `http://localhost:3000/`,
+    - allow callback and sign-out URLs of `http://localhost:7201/`,
     - allow implicit grant Oauth grant type,
     - allow these OpenID Connect scopes:
       - aws.cognito.signin.user.admin
@@ -200,9 +205,9 @@ Prerequisites include an [Amazon Cognito][cognito] account. Environment variable
 The test knobs are in a few places:
 
 - The `.env` file has `VITE_AUTH_TOKEN_NAME` and vars beginning `AWS_COGNITO`. Be careful not to commit any secrets.
-- Both `scripts/mock-aws-exports.js` and `scripts/mock-aws-exports-es5.js` must have the same data; only their export statements differ. These files can be edited manually or exported from the amplify CLI.
+- Both `apps/web/scripts/mock-aws-exports.js` and `apps/web/scripts/mock-aws-exports-es5.js` must have the same data; only their export statements differ. These files can be edited manually or exported from the amplify CLI.
 
-To start the application with Cognito, replace the current **src/index.tsx** file with the **src/index.cognito.tsx** file and start the application with `pnpm dev:cognito`.
+To start the application with Cognito, replace the current **apps/web/src/index.tsx** file with the **apps/web/src/index.cognito.tsx** file and start the application with `pnpm dev:cognito`.
 
 ### Google
 
@@ -210,18 +215,19 @@ A [guide has been written with detail around adapting the RWA](https://docs.cypr
 
 Prerequisites include an [Google][google] account. Environment variables from [Google][google] are to be placed in the [.env](./.env).
 
-To start the application with Google, replace the current **src/index.tsx** file with the **src/index.google.tsx** file and start the application with `pnpm dev:google`.
+To start the application with Google, replace the current **apps/web/src/index.tsx** file with the **apps/web/src/index.google.tsx** file and start the application with `pnpm dev:google`.
 
 ## License
 
-[![license](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/cypress-io/cypress/blob/master/LICENSE)
+[![license](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
 This project is licensed under the terms of the [MIT license](/LICENSE).
 
 [reactjs]: https://reactjs.org
 [xstate]: https://xstate.js.org
 [express]: https://expressjs.com
-[lowdb]: https://github.com/typicode/lowdb
+[postgresql]: https://www.postgresql.org/
+[prisma]: https://www.prisma.io/
 [typescript]: https://typescriptlang.org
 [material-ui]: https://material-ui.com
 [okta]: https://okta.com
