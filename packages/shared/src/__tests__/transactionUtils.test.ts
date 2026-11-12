@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 import {
-  isRequestTransaction,
   getFakeAmount,
   currentUserLikesTransaction,
   getQueryWithoutDateFields,
@@ -10,17 +9,13 @@ import {
 import { faker } from "@faker-js/faker";
 import {
   Transaction,
-  TransactionRequestStatus,
   DefaultPrivacyLevel,
   TransactionStatus,
   TransactionResponseItem,
 } from "../models";
 import shortid from "shortid";
 
-const fakeTransaction = (
-  requestStatus?: TransactionRequestStatus,
-  createdAt?: Date
-): Transaction => ({
+const fakeTransaction = (createdAt?: Date): Transaction => ({
   id: shortid(),
   uuid: faker.datatype.uuid(),
   source: shortid(),
@@ -31,28 +26,12 @@ const fakeTransaction = (
   senderId: shortid(),
   balanceAtCompletion: getFakeAmount(),
   status: TransactionStatus.pending,
-  requestStatus,
-  requestResolvedAt: faker.date.future(),
   createdAt: faker.date.past(),
   modifiedAt: createdAt || faker.date.recent(),
 });
 
 describe("Transaction Utils", () => {
-  describe("isRequestTransaction", () => {
-    let transaction;
-
-    test("validates that a transaction is a request", () => {
-      for (let s in TransactionRequestStatus) {
-        transaction = fakeTransaction(s as TransactionRequestStatus);
-        expect(isRequestTransaction(transaction)).toBeTruthy();
-      }
-    });
-
-    test("validates that a transaction is not a request", () => {
-      transaction = fakeTransaction();
-      expect(isRequestTransaction(transaction)).toBe(false);
-    });
-
+  describe("transactions", () => {
     test("checks if the current user likes a transaction", () => {
       const transactionBase = fakeTransaction();
 
@@ -136,12 +115,11 @@ describe("Transaction Utils", () => {
     const query = {
       depositMin: 5,
       depositMax: 10,
-      requestStatus: "pending",
       dateRangeStart: "2019-12-01T06:00:00.000Z",
       dateRangeEnd: "2019-12-05T06:00:00.000Z",
     };
-    expect(getQueryWithoutFilterFields(query)).toMatchObject({
-      requestStatus: "pending",
+    expect(getQueryWithoutFilterFields({ ...query, status: "incomplete" })).toMatchObject({
+      status: "incomplete",
     });
     expect(
       getQueryWithoutFilterFields({

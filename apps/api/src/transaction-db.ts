@@ -26,24 +26,17 @@ import {
   TransactionPayload,
   TransactionAmountFilterPayload,
   TransactionQueryPayload,
-  TransactionRequestStatus,
   TransactionResponseItem,
   TransactionStatus,
   User,
 } from "@rwa/shared";
 import {
   getAmountQueryFields,
-  getChargeAmount,
   getDateQueryFields,
-  getPayAppCreditedAmount,
   getQueryWithoutFilterFields,
-  getTransferAmount,
   hasAmountQueryFields,
   matchesDirectionAmountFilter,
   hasDateQueryFields,
-  hasSufficientFunds,
-  isPayment,
-  isRequestTransaction,
   isValidAmountDollars,
   MAX_AMOUNT_DOLLARS,
   MAX_BALANCE_CENTS,
@@ -68,8 +61,6 @@ const toTransaction = (row: TransactionRow): Transaction =>
     balanceAtCompletion: row.balanceAtCompletion ?? undefined,
     status: row.status,
     // stored as "" when empty; the API omits it for payments
-    requestStatus: row.requestStatus || undefined,
-    requestResolvedAt: row.requestResolvedAt || undefined,
     createdAt: row.createdAt,
     modifiedAt: row.modifiedAt,
   }) as Transaction;
@@ -131,7 +122,7 @@ const STATUS_VALUES = Object.values(TransactionStatus) as string[];
 const PRIVACY_VALUES = ["public", "private", "contacts"];
 
 /**
- * "Equal" filters from the query (status, requestStatus, privacyLevel).
+ * "Equal" filters from the query (status, privacyLevel).
  * receiverId and senderId are NOT accepted here: the list is always about the given user.
  * (The old code let them replace the user's id, so a member could list someone else's transactions.)
  * Returns null when a value can never match (the old code returned an empty list then).
@@ -141,7 +132,7 @@ const equalFilters = (query?: object): Record<string, string> | null => {
     query ? getQueryWithoutFilterFields(query as TransactionQueryPayload) : {}
   ) as Record<string, unknown>;
   const out: Record<string, string> = {};
-  for (const key of ["status", "requestStatus", "privacyLevel"]) {
+  for (const key of ["status", "privacyLevel"]) {
     const value = fields[key];
     if (value === undefined || value === "") continue;
     if (key === "status" && !STATUS_VALUES.includes(String(value))) return null;
@@ -431,8 +422,6 @@ export const createTransaction = async (
         senderId: userId,
         privacyLevel: transactionDetails.privacyLevel || sender.defaultPrivacyLevel || "public",
         status: TransactionStatus.pending,
-        requestStatus: "",
-        requestResolvedAt: "",
         payerAccountId: myAccount.id,
         payeeAccountId: otherAccount.id,
         createdAt: now,

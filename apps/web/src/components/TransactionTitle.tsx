@@ -2,14 +2,7 @@ import React, { useContext } from "react";
 import { styled } from "@mui/material/styles";
 import { Typography } from "@mui/material";
 import { TransactionResponseItem } from "@rwa/shared";
-import {
-  isRequestTransaction,
-  isAcceptedRequestTransaction,
-  isExternalDeposit,
-  isMoneySettled,
-  getMoneyDirection,
-  bankLabel,
-} from "@rwa/shared";
+import { isExternalDeposit, isMoneySettled, getMoneyDirection, bankLabel } from "@rwa/shared";
 import { CurrentUserIdContext } from "../utils/currentUserContext";
 
 const PREFIX = "TransactionTitle";
@@ -42,7 +35,7 @@ const StyledTypography = styled(Typography)(({ theme }) => ({
     },
     color: "#1A202C",
   },
-}));
+})) as typeof Typography;
 
 // the bank name may be long: cut it with "..." (generously, about 18 characters fit)
 const BankName: React.FC<{ name: string; testId: string }> = ({ name, testId }) => (
@@ -106,11 +99,7 @@ const TransactionTitle: React.FC<{
             className={classes.titleAction}
             component="span"
           >
-            {isRequestTransaction(transaction)
-              ? isAcceptedRequestTransaction(transaction)
-                ? "님에게 청구했습니다"
-                : "님에게 요청했습니다"
-              : "님에게 이체했습니다"}
+            님에게 이체했습니다
           </Typography>
         )}
       </div>

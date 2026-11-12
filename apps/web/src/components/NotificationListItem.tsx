@@ -5,7 +5,6 @@ import { styled } from "@mui/material/styles";
 import {
   Check as CheckIcon,
   ThumbUpAltOutlined as LikeIcon,
-  Payment as PaymentIcon,
   CommentRounded as CommentIcon,
   MonetizationOn as MonetizationOnIcon,
 } from "@mui/icons-material";
@@ -22,7 +21,6 @@ import {
   isCommentNotification,
   isLikeNotification,
   isPaymentNotification,
-  isPaymentRequestedNotification,
   isPaymentReceivedNotification,
 } from "@rwa/shared";
 import { NotificationResponseItem } from "@rwa/shared";
@@ -38,7 +36,6 @@ const classes = {
   card: `${PREFIX}-card`,
   title: `${PREFIX}-title`,
   green: `${PREFIX}-green`,
-  red: `${PREFIX}-red`,
   blue: `${PREFIX}-blue`,
 };
 
@@ -51,9 +48,6 @@ const StyledListItem = styled(ListItem)({
   },
   [`& .${classes.green}`]: {
     color: "#4CAF50",
-  },
-  [`& .${classes.red}`]: {
-    color: "red",
   },
   [`& .${classes.blue}`]: {
     color: "blue",
@@ -80,10 +74,7 @@ const NotificationListItem: React.FC<NotificationListItemProps> = ({
   }
 
   if (isPaymentNotification(notification)) {
-    if (isPaymentRequestedNotification(notification)) {
-      listItemIcon = <PaymentIcon className={classes.red} />;
-      listItemText = `${notification.userFullName}님이 결제를 요청했습니다.`;
-    } else if (isPaymentReceivedNotification(notification)) {
+    if (isPaymentReceivedNotification(notification)) {
       listItemIcon = <MonetizationOnIcon className={classes.green} />;
       listItemText = `${notification.userFullName}님이 이체했습니다.`;
     }

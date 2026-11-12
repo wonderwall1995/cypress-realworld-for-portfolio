@@ -17,7 +17,6 @@ import { getViewableTransaction } from "./transaction-access";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
 import {
   sanitizeTransactionStatus,
-  sanitizeRequestStatus,
   isTransactionQSValidator,
   isTransactionPayloadValidator,
   shortIdValidation,
@@ -32,11 +31,7 @@ const router = express.Router();
 router.get(
   "/",
   ensureAuthenticated,
-  validateMiddleware([
-    sanitizeTransactionStatus,
-    sanitizeRequestStatus,
-    ...isTransactionQSValidator,
-  ]),
+  validateMiddleware([sanitizeTransactionStatus, ...isTransactionQSValidator]),
   asyncHandler(async (req, res) => {
     /* istanbul ignore next */
     const transactions = await getTransactionsForUserForApi(req.user?.id!, req.query);

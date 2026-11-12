@@ -1,5 +1,4 @@
 export enum PaymentNotificationStatus {
-  requested = "requested",
   received = "received",
   incomplete = "incomplete",
 }

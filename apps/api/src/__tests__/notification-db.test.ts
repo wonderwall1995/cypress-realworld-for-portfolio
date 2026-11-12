@@ -48,7 +48,7 @@ describe("Notifications (PostgreSQL)", () => {
       {
         type: NotificationsType.payment,
         transactionId: "t1",
-        status: PaymentNotificationStatus.requested,
+        status: PaymentNotificationStatus.received,
       },
       { type: NotificationsType.like, transactionId: "t2", likeId: "l1" },
       { type: NotificationsType.comment, transactionId: "t3", commentId: "c1" },

@@ -77,10 +77,8 @@ model Transaction {
   senderId            String
   balanceAtCompletion Int?
   status              TransactionStatus
-  requestStatus       String
-  requestResolvedAt   String
   // Money goes from the payer's bank account to the payee's bank account.
-  // Payment: payer = sender, payee = receiver. Request: payer = receiver (who is asked), payee = sender.
+  // payer = sender, payee = receiver.
   payerAccountId      String?
   payeeAccountId      String?
   payerBalanceAfter   Int? // payer's bank account balance right after the money moved (cents)

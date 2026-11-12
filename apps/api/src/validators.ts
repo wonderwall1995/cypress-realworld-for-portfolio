@@ -1,11 +1,6 @@
 import { body, check, oneOf, query, sanitizeQuery } from "express-validator";
 import { isValid } from "shortid";
-import {
-  TransactionStatus,
-  TransactionRequestStatus,
-  DefaultPrivacyLevel,
-  NotificationsType,
-} from "@rwa/shared";
+import { TransactionStatus, DefaultPrivacyLevel, NotificationsType } from "@rwa/shared";
 import { includes } from "lodash/fp";
 import {
   ACCOUNT_NUMBER_PATTERN,
@@ -15,7 +10,6 @@ import {
 } from "@rwa/shared";
 
 const TransactionStatusValues = Object.values(TransactionStatus);
-const RequestStatusValues = Object.values(TransactionRequestStatus);
 const DefaultPrivacyLevelValues = Object.values(DefaultPrivacyLevel);
 const NotificationsTypeValues = Object.values(NotificationsType);
 
@@ -89,15 +83,6 @@ export const sanitizeTransactionStatus = sanitizeQuery("status").customSanitizer
   return;
 });
 
-// default request status to undefined if not provided
-export const sanitizeRequestStatus = sanitizeQuery("requestStatus").customSanitizer((value) => {
-  /* istanbul ignore if*/
-  if (includes(value, RequestStatusValues)) {
-    return value;
-  }
-  return;
-});
-
 // Filters of the transaction lists (all optional):
 //  - deposit / withdrawal amounts, in cents; a minimum above its maximum is refused (equal is fine)
 //  - a date range; either side may be missing, a start after the end is refused (the same day is fine)
@@ -148,7 +133,6 @@ export const transactionFilterValidators = [
 
 export const isTransactionQSValidator = [
   query("status").isIn(TransactionStatusValues).optional().trim(),
-  query("requestStatus").optional({ checkFalsy: true }).isIn(RequestStatusValues).trim(),
   query("receiverId").optional({ checkFalsy: true }).isString().trim(),
   query("senderId").optional({ checkFalsy: true }).isString().trim(),
   query("rangeStartTs").optional({ checkFalsy: true }).isString().trim(),

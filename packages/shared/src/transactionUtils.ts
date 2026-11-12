@@ -1,7 +1,6 @@
 import {
   Transaction,
   User,
-  TransactionRequestStatus,
   NotificationType,
   PaymentNotificationStatus,
   TransactionResponseItem,
@@ -44,23 +43,6 @@ export const isExternalDeposit = (transaction: Pick<Transaction, "senderId">) =>
 /** "국민" -> "국민 은행"; a name that already ends with 은행 / Bank is kept as typed. */
 export const bankLabel = (bankName: string) =>
   /(은행|bank)$/i.test(bankName.trim()) ? bankName.trim() : `${bankName.trim()} 은행`;
-
-export const isRequestTransaction = (transaction: Transaction) =>
-  flow(get("requestStatus"), negate(isEmpty))(transaction);
-
-/* istanbul ignore next */
-export const isPendingRequestTransaction = (transaction: Transaction) =>
-  flow(get("requestStatus"), isEqual(TransactionRequestStatus.pending))(transaction);
-
-/* istanbul ignore next */
-export const isAcceptedRequestTransaction = (transaction: Transaction) =>
-  flow(get("requestStatus"), isEqual(TransactionRequestStatus.accepted))(transaction);
-
-/* istanbul ignore next */
-export const isRejectedRequestTransaction = (transaction: Transaction) =>
-  flow(get("requestStatus"), isEqual(TransactionRequestStatus.rejected))(transaction);
-
-export const isPayment = negate(isRequestTransaction);
 
 /* istanbul ignore next */
 export const getFakeAmount = (min: number = 1000, max: number = 50000) =>
@@ -127,10 +109,6 @@ export const isLikeNotification = (
 
 export const isPaymentNotification = (notification: NotificationType) =>
   has("status")(notification);
-
-/* istanbul ignore next */
-export const isPaymentRequestedNotification = (notification: NotificationType) =>
-  flow(get("status"), isEqual(PaymentNotificationStatus.requested))(notification);
 
 /* istanbul ignore next */
 export const isPaymentReceivedNotification = (notification: NotificationType) =>

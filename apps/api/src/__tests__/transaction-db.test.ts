@@ -60,7 +60,6 @@ describe("Transactions (PostgreSQL)", () => {
 
       expect(tx.id).toBeDefined();
       expect(tx.status).toBe("complete");
-      expect(tx.requestStatus).toBeUndefined();
       expect(tx.amount).toBe(2000);
       expect(await balanceOf(sender.id)).toBe(8000);
       expect(await balanceOf(receiver.id)).toBe(2500);
@@ -149,36 +148,22 @@ describe("Transactions (PostgreSQL)", () => {
       expect(list.map((t) => t.id).sort()).toEqual([sent.id, received.id].sort());
     });
 
-    it("filters by status and request status (an old request row can still be read)", async () => {
+    it("filters by status", async () => {
       const a = await makeUser(1, 100000);
       const b = await makeUser(2, 100000);
       await createTx(a.id, "payment", details(b.id, 5));
-      // requests cannot be made any more, but rows made earlier are still in the database
-      const now = new Date();
-      const old = await prisma.transaction.create({
-        data: {
-          id: "oldreq1",
-          uuid: "oldreq1-uuid",
-          source: "",
-          amount: 600,
-          description: "old",
-          receiverId: b.id,
-          senderId: a.id,
-          privacyLevel: "public",
-          status: "pending",
-          requestStatus: "pending",
-          requestResolvedAt: "",
-          createdAt: now,
-          modifiedAt: now,
-        },
-      });
 
-      const complete = await getTransactionsForUserByObj(a.id, { status: "complete" });
-      const pending = await getTransactionsForUserByObj(a.id, { requestStatus: "pending" });
-
-      expect(complete).toHaveLength(1);
-      expect(pending.map((t) => t.id)).toEqual([old.id]);
+      expect(await getTransactionsForUserByObj(a.id, { status: "complete" })).toHaveLength(1);
+      expect(await getTransactionsForUserByObj(a.id, { status: "pending" })).toHaveLength(0);
       expect(await getTransactionsForUserByObj(a.id, { status: "invalid" })).toEqual([]);
+    });
+
+    it("ignores a requestStatus in the query (the request flow no longer exists)", async () => {
+      const a = await makeUser(1, 100000);
+      const b = await makeUser(2, 100000);
+      await createTx(a.id, "payment", details(b.id, 5));
+
+      expect(await getTransactionsForUserByObj(a.id, { requestStatus: "pending" })).toHaveLength(1);
     });
 
     it("filters by date range", async () => {

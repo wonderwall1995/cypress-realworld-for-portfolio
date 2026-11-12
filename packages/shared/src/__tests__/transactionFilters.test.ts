@@ -209,35 +209,14 @@ describe("deposit / withdrawal seen from one user", () => {
     ({
       senderId: sender,
       receiverId: receiver,
-      requestStatus: undefined,
       status,
       amount: dollars * 100,
     }) as any;
-  const request = (
-    sender: string,
-    receiver: string,
-    dollars: number,
-    requestStatus: string,
-    status: string
-  ) =>
-    ({
-      senderId: sender,
-      receiverId: receiver,
-      requestStatus,
-      status,
-      amount: dollars * 100,
-    }) as any;
-
   it("a payment is a deposit for the receiver and a withdrawal for the sender", () => {
     expect(getMoneyDirection(payment("other", ME, 10), ME)).toBe("in");
     expect(getMoneyDirection(payment(ME, "other", 10), ME)).toBe("out");
     expect(getMoneyDirection(payment("a", "b", 10), ME)).toBeNull();
     expect(getMoneyDirection(payment(ME, ME, 10), ME)).toBeNull();
-  });
-
-  it("a request goes the other way: the one who is asked pays", () => {
-    expect(getMoneyDirection(request(ME, "other", 10, "accepted", "complete"), ME)).toBe("in");
-    expect(getMoneyDirection(request("other", ME, 10, "accepted", "complete"), ME)).toBe("out");
   });
 
   it("no filter: everything passes", () => {
@@ -282,18 +261,12 @@ describe("deposit / withdrawal seen from one user", () => {
     );
   });
 
-  it("transactions between other people and unsettled requests never pass once a filter is set", () => {
+  it("transactions between other people and ones whose money did not move never pass once a filter is set", () => {
     const f = { depositMin: 0, withdrawalMin: 0 };
     expect(matchesDirectionAmountFilter(payment("a", "b", 10), ME, f)).toBe(false);
-    expect(matchesDirectionAmountFilter(request(ME, "o", 10, "pending", "pending"), ME, f)).toBe(
-      false
-    );
-    expect(matchesDirectionAmountFilter(request("o", ME, 10, "rejected", "pending"), ME, f)).toBe(
-      false
-    );
-    expect(matchesDirectionAmountFilter(request(ME, "o", 10, "accepted", "complete"), ME, f)).toBe(
-      true
-    );
+    expect(matchesDirectionAmountFilter(payment(ME, "o", 10, "pending"), ME, f)).toBe(false);
+    expect(matchesDirectionAmountFilter(payment("o", ME, 10, "pending"), ME, f)).toBe(false);
+    expect(matchesDirectionAmountFilter(payment(ME, "o", 10, "complete"), ME, f)).toBe(true);
   });
 });
 

@@ -66,11 +66,11 @@ describe("assertCanViewTransaction", () => {
   });
 });
 
-const asker = "asker-id"; // sender of the request: asks for money
-const payer = "payer-id"; // receiver of the request: is asked to pay
+const asker = "sender-of-it-id";
+const payer = "receiver-of-it-id";
 const stranger = "stranger-id";
 
-const request = { senderId: asker, receiverId: payer, requestStatus: "pending" } as Transaction;
+const request = { senderId: asker, receiverId: payer } as Transaction;
 
 describe("isTransactionParty", () => {
   it("is true for the sender and the receiver only", () => {

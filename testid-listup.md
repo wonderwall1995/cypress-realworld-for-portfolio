@@ -137,9 +137,9 @@ await page.getByTestId("sidenav-signout").click();
 
 | 줄  | test id                                     | 종류                   | 요소             | 컴포넌트             | 연결 방식 | UI 특징              |
 | --- | ------------------------------------------- | ---------------------- | ---------------- | -------------------- | --------- | -------------------- |
-| 93  | `notification-list-item-${notification.id}` | 동적 (notification.id) | `StyledListItem` | NotificationListItem | attribute | -                    |
-| 97  | `notification-mark-read-${notification.id}` | 동적 (notification.id) | `IconButton`     | NotificationListItem | attribute | onClick              |
-| 108 | `notification-mark-read-${notification.id}` | 동적 (notification.id) | `Button`         | NotificationListItem | attribute | onClick, text="확인" |
+| 84  | `notification-list-item-${notification.id}` | 동적 (notification.id) | `StyledListItem` | NotificationListItem | attribute | -                    |
+| 88  | `notification-mark-read-${notification.id}` | 동적 (notification.id) | `IconButton`     | NotificationListItem | attribute | onClick              |
+| 99  | `notification-mark-read-${notification.id}` | 동적 (notification.id) | `Button`         | NotificationListItem | attribute | onClick, text="확인" |
 
 ## src/components/PasswordConfirmDialog.tsx
 
@@ -289,14 +289,14 @@ await page.getByTestId("sidenav-signout").click();
 
 ## src/components/TransactionTitle.tsx
 
-| 줄  | test id                                   | 종류                  | 요소         | 컴포넌트         | 연결 방식 | UI 특징        |
-| --- | ----------------------------------------- | --------------------- | ------------ | ---------------- | --------- | -------------- |
-| 49  | `${testId}`                               | 동적 (testId)         | `Typography` | BankName         | attribute | component=span |
-| 83  | `transaction-sender-${transaction.id}`    | 동적 (transaction.id) | `Typography` | TransactionTitle | attribute | component=span |
-| 93  | `transaction-receiver-${transaction.id}`  | 동적 (transaction.id) | `Typography` | TransactionTitle | attribute | component=span |
-| 103 | `transaction-action-${transaction.id}`    | 동적 (transaction.id) | `Typography` | TransactionTitle | attribute | component=span |
-| 118 | `transaction-bank-line-${transaction.id}` | 동적 (transaction.id) | `div`        | TransactionTitle | attribute | -              |
-| 126 | `transaction-move-word-${transaction.id}` | 동적 (transaction.id) | `Typography` | TransactionTitle | attribute | component=span |
+| 줄  | test id                                   | 종류                  | 요소         | 컴포넌트         | 연결 방식 | UI 특징                                    |
+| --- | ----------------------------------------- | --------------------- | ------------ | ---------------- | --------- | ------------------------------------------ |
+| 42  | `${testId}`                               | 동적 (testId)         | `Typography` | BankName         | attribute | component=span                             |
+| 76  | `transaction-sender-${transaction.id}`    | 동적 (transaction.id) | `Typography` | TransactionTitle | attribute | component=span                             |
+| 86  | `transaction-receiver-${transaction.id}`  | 동적 (transaction.id) | `Typography` | TransactionTitle | attribute | component=span                             |
+| 96  | `transaction-action-${transaction.id}`    | 동적 (transaction.id) | `Typography` | TransactionTitle | attribute | component=span, text="님에게 이체했습니다" |
+| 107 | `transaction-bank-line-${transaction.id}` | 동적 (transaction.id) | `div`        | TransactionTitle | attribute | -                                          |
+| 115 | `transaction-move-word-${transaction.id}` | 동적 (transaction.id) | `Typography` | TransactionTitle | attribute | component=span                             |
 
 ## src/components/UpdateNotesDialog.tsx
 

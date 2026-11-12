@@ -57,7 +57,6 @@ describe("an outside deposit is also a feed entry (PostgreSQL)", () => {
       amount: 4000,
       privacyLevel: "private",
       status: TransactionStatus.complete,
-      requestStatus: "",
       source: account.id,
     });
     expect(transfer.transactionId).toBe(rows[0].id);

@@ -154,25 +154,21 @@ export type MoneyDirection = "in" | "out";
 
 /**
  * Which way did the money go for this user?
- *   payment:  the sender pays the receiver
- *   request:  the receiver pays the sender (once the request is accepted)
+ *   the sender pays the receiver
  * "in" = the user received money (deposit), "out" = the user paid (withdrawal),
  * null = the transaction is between other people (or someone paid themselves).
  */
 export const getMoneyDirection = (
-  transaction: Pick<Transaction, "senderId" | "receiverId" | "requestStatus">,
+  transaction: Pick<Transaction, "senderId" | "receiverId">,
   userId: string
 ): MoneyDirection | null => {
   if (transaction.senderId === transaction.receiverId) return null;
-  const isRequest = !isEmpty(transaction.requestStatus);
-  const payer = isRequest ? transaction.receiverId : transaction.senderId;
-  const payee = isRequest ? transaction.senderId : transaction.receiverId;
-  if (payee === userId) return "in";
-  if (payer === userId) return "out";
+  if (transaction.receiverId === userId) return "in";
+  if (transaction.senderId === userId) return "out";
   return null;
 };
 
-/** Money really moved only when the transaction is complete (a pending or rejected request moved nothing). */
+/** Money really moved only when the transaction is complete. */
 export const isMoneySettled = (transaction: Pick<Transaction, "status">) =>
   transaction.status === TransactionStatus.complete;
 
@@ -188,10 +184,10 @@ export const hasDirectionAmountFilter = (filter?: TransactionAmountFilterPayload
  *  - only the deposit boxes set: only money the user received, inside that range
  *  - only the withdrawal boxes set: only money the user paid, inside that range
  *  - both set: either of the two
- * Transactions between other people and unsettled requests never pass once a filter is set.
+ * Transactions between other people and transactions whose money did not move never pass once a filter is set.
  */
 export const matchesDirectionAmountFilter = (
-  transaction: Pick<Transaction, "senderId" | "receiverId" | "requestStatus" | "status" | "amount">,
+  transaction: Pick<Transaction, "senderId" | "receiverId" | "status" | "amount">,
   userId: string,
   filter?: TransactionAmountFilterPayload
 ): boolean => {

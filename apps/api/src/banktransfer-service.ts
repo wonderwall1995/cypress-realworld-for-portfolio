@@ -80,8 +80,6 @@ export const moveMoney = (userId: string, input: MoveMoneyInput): Promise<BankTr
           senderId: EXTERNAL_DEPOSIT_SENDER_ID,
           privacyLevel: "private",
           status: TransactionStatus.complete,
-          requestStatus: "",
-          requestResolvedAt: "",
           payeeAccountId: account.id,
           payeeBalanceAfter: after,
           createdAt: now,

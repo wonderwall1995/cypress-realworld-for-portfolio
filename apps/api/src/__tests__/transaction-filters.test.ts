@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, beforeEach, afterAll } from "vitest";
 import { validationResult } from "express-validator";
-import { DefaultPrivacyLevel, TransactionPayload, TransactionRequestStatus } from "@rwa/shared";
+import { DefaultPrivacyLevel, TransactionPayload } from "@rwa/shared";
 import prisma from "../prisma";
 import { fundUser, createTx } from "./db-setup/accounts";
 import { createUser, updateUserById } from "../user-db";
@@ -34,27 +34,21 @@ const details = (receiverId: string, dollars: number) =>
     privacyLevel: "public",
   }) as unknown as TransactionPayload;
 
-let legacyCount = 0;
-const legacyRequest = async (
-  senderId: string,
-  receiverId: string,
-  dollars: number,
-  requestStatus: TransactionRequestStatus
-) => {
-  const now = new Date(Date.now() + ++legacyCount);
+// a transaction whose money did not move (status pending): it must never pass an amount filter
+let unsettledCount = 0;
+const unsettledTransaction = async (senderId: string, receiverId: string, dollars: number) => {
+  const now = new Date(Date.now() + ++unsettledCount);
   const row = await prisma.transaction.create({
     data: {
-      id: `legacy${legacyCount}`,
-      uuid: `legacy-uuid-${legacyCount}`,
+      id: `unsettled${unsettledCount}`,
+      uuid: `unsettled-uuid-${unsettledCount}`,
       source: "",
       amount: dollars * 100,
-      description: "old request",
+      description: "money did not move",
       receiverId,
       senderId,
       privacyLevel: "public",
-      status: requestStatus === TransactionRequestStatus.accepted ? "complete" : "pending",
-      requestStatus,
-      requestResolvedAt: "",
+      status: "pending",
       createdAt: now,
       modifiedAt: now,
     },
@@ -73,8 +67,8 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
     await prisma.$disconnect();
   });
 
-  // me has:  in $100, in $250, out $100, out $30, an accepted request I made ($40, in),
-  //          and a pending request someone made to me ($60, no money moved)
+  // me has:  in $100, in $250, out $100, out $30, a third $40 payment I received (in),
+  //          and a $60 transaction whose money did not move
   const world = async () => {
     const me = await makeUser("Me");
     const other = await makeUser("Other");
@@ -85,9 +79,8 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
     const in250 = await createTx(other.id, "payment", details(me.id, 250));
     const out100 = await createTx(me.id, "payment", details(other.id, 100));
     const out30 = await createTx(me.id, "payment", details(other.id, 30));
-    // requests cannot be made any more; rows made earlier are still read by the filters
-    const req40 = await legacyRequest(me.id, other.id, 40, TransactionRequestStatus.accepted);
-    const pending60 = await legacyRequest(other.id, me.id, 60, TransactionRequestStatus.pending);
+    const in40 = await createTx(other.id, "payment", details(me.id, 40));
+    const unsettled60 = await unsettledTransaction(other.id, me.id, 60);
     const friendToMe = await createTx(friend.id, "payment", details(me.id, 20));
     const friendToStranger = await createTx(friend.id, "payment", details(stranger.id, 75));
     const strangerToOther = await createTx(stranger.id, "payment", details(other.id, 90));
@@ -100,8 +93,8 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
       in250,
       out100,
       out30,
-      req40,
-      pending60,
+      in40,
+      unsettled60,
       friendToMe,
       friendToStranger,
       strangerToOther,
@@ -119,8 +112,8 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
       expect(ids(exact)).toEqual(ids([w.in100]));
 
       const wide = await getTransactionsForUserByObj(w.me.id, { depositMin: 0, depositMax: 30000 });
-      // in100, in250, the accepted request I made ($40, I received it) and the $20 from my friend
-      expect(ids(wide)).toEqual(ids([w.in100, w.in250, w.req40, w.friendToMe]));
+      // in100, in250, the third $40 I received and the $20 from my friend
+      expect(ids(wide)).toEqual(ids([w.in100, w.in250, w.in40, w.friendToMe]));
     });
 
     it("edge case: 100 ~ 100 finds only the $100 transactions", async () => {
@@ -166,22 +159,22 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
       expect(ids(list)).toEqual(ids([w.in100, w.in250]));
     });
 
-    it("a pending request moved no money, so it never shows up in a deposit or withdrawal filter", async () => {
+    it("a transaction whose money did not move never shows up in a deposit or withdrawal filter", async () => {
       const w = await world();
 
       const all = await getTransactionsForUserByObj(w.me.id, { depositMin: 0, withdrawalMin: 0 });
 
-      expect(ids(all)).not.toContain(w.pending60.id);
-      expect(ids(all)).toEqual(ids([w.in100, w.in250, w.out100, w.out30, w.req40, w.friendToMe]));
+      expect(ids(all)).not.toContain(w.unsettled60.id);
+      expect(ids(all)).toEqual(ids([w.in100, w.in250, w.out100, w.out30, w.in40, w.friendToMe]));
     });
 
-    it("no filter: everything of mine, including the pending request", async () => {
+    it("no filter: everything of mine, including the unsettled one", async () => {
       const w = await world();
 
       const all = await getTransactionsForUserByObj(w.me.id, {});
 
       expect(ids(all)).toEqual(
-        ids([w.in100, w.in250, w.out100, w.out30, w.req40, w.pending60, w.friendToMe])
+        ids([w.in100, w.in250, w.out100, w.out30, w.in40, w.unsettled60, w.friendToMe])
       );
     });
 
@@ -232,7 +225,7 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
       } as any);
 
       const shown = ids(result);
-      expect(shown).toEqual(ids([w.in100, w.in250, w.out100, w.out30, w.req40, w.friendToMe]));
+      expect(shown).toEqual(ids([w.in100, w.in250, w.out100, w.out30, w.in40, w.friendToMe]));
       expect(shown).not.toContain(w.strangerToOther.id);
       expect(shown).not.toContain(w.friendToStranger.id);
     });
