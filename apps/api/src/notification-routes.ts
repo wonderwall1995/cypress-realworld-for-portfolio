@@ -3,6 +3,7 @@
 import express from "express";
 import { createNotifications, updateNotificationById } from "./notification-db";
 import { getUnreadNotificationsForApi } from "./notification-api";
+import { openNotificationStream, publishNotifications } from "./notification-stream";
 import { asyncHandler } from "./async-handler";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
 import {
@@ -27,6 +28,10 @@ router.get(
   })
 );
 
+//GET /notifications/stream - live notifications (Server-Sent Events). See notification-stream.ts.
+// 401 JSON when not signed in (the same login check as the other notification routes).
+router.get("/stream", ensureAuthenticated, (req, res) => openNotificationStream(req, res));
+
 //POST /notifications/bulk
 router.post(
   "/bulk",
@@ -36,6 +41,7 @@ router.post(
     const { items } = req.body;
     /* istanbul ignore next */
     const notifications = await createNotifications(req.user?.id!, items);
+    await publishNotifications(notifications); // already committed
 
     res.status(200);
     // @ts-ignore

@@ -29,8 +29,6 @@ const TransactionDetailsContainer: React.FC<Props> = ({ authService }) => {
   const transactionComment = (payload: any) =>
     sendTransactionDetail("CREATE", { entity: "COMMENT", ...payload });
 
-  const transactionUpdate = (payload: any) => sendTransactionDetail("UPDATE", payload);
-
   const transaction = first(transactionDetailState.context?.results);
   const currentUser = authState?.context?.user;
 
@@ -47,7 +45,6 @@ const TransactionDetailsContainer: React.FC<Props> = ({ authService }) => {
           transaction={transaction}
           transactionLike={transactionLike}
           transactionComment={transactionComment}
-          transactionUpdate={transactionUpdate}
           currentUser={currentUser}
         />
       )}

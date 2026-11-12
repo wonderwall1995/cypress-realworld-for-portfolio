@@ -12,9 +12,17 @@ import {
   Theme,
 } from "@mui/material";
 import { ThumbUpAltOutlined as LikeIcon, CommentRounded as CommentIcon } from "@mui/icons-material";
-import { TransactionResponseItem } from "@rwa/shared";
+import { TransactionResponseItem, isExternalDeposit } from "@rwa/shared";
 import TransactionTitle from "./TransactionTitle";
 import TransactionAmount from "./TransactionAmount";
+
+// YYYY/MM/DD in the viewer's local time, the day the transfer or deposit was made
+const formatSlashDate = (value: Date | string) => {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const two = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}/${two(d.getMonth() + 1)}/${two(d.getDate())}`;
+};
 
 const PREFIX = "TransactionItem";
 
@@ -109,12 +117,23 @@ const TransactionItem: React.FC<TransactionProps> = ({ transaction }) => {
             </ListItemAvatar>
           </Grid>
           <Grid item xs={12} sm container>
-            <Grid item xs container direction="column" spacing={2}>
-              <Grid item xs>
-                <TransactionTitle transaction={transaction} />
-                <Typography variant="body2" color="textSecondary" gutterBottom>
-                  {transaction.description}
+            <Grid item xs container direction="column" spacing={2} sx={{ minWidth: 0 }}>
+              <Grid item xs sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="body2"
+                  color="textSecondary"
+                  gutterBottom
+                  sx={{ fontSize: "1.3em" }}
+                  data-testid={`transaction-date-${transaction.id}`}
+                >
+                  {formatSlashDate(transaction.createdAt)}
                 </Typography>
+                <TransactionTitle transaction={transaction} />
+                {!isExternalDeposit(transaction) && (
+                  <Typography variant="body2" color="textSecondary" gutterBottom>
+                    {transaction.description}
+                  </Typography>
+                )}
                 <Grid
                   container
                   direction="row"

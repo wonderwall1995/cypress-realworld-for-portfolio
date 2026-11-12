@@ -14,7 +14,6 @@ import { addResolversToSchema } from "@graphql-tools/schema";
 
 import auth from "./auth";
 import userRoutes from "./user-routes";
-import contactRoutes from "./contact-routes";
 import bankAccountRoutes from "./bankaccount-routes";
 import gqlPlaygroundRoutes from "./gql-playground-routes";
 import transactionRoutes from "./transaction-routes";
@@ -23,6 +22,7 @@ import commentRoutes from "./comment-routes";
 import notificationRoutes from "./notification-routes";
 import bankTransferRoutes from "./banktransfer-routes";
 import { HttpError } from "./http-error";
+import { closeAllStreams } from "./notification-stream";
 import testDataRoutes from "./testdata-routes";
 import { checkAuth0Jwt, verifyOktaToken, checkCognitoJwt, checkGoogleJwt } from "./helpers";
 import resolvers from "./graphql/resolvers";
@@ -108,7 +108,6 @@ api.use(
   })
 );
 api.use("/users", userRoutes);
-api.use("/contacts", contactRoutes);
 api.use("/bankAccounts", bankAccountRoutes);
 api.use("/transactions", transactionRoutes);
 api.use("/likes", likeRoutes);
@@ -127,5 +126,14 @@ app.use((err: any, _req: express.Request, res: express.Response, next: express.N
 });
 
 getBackendPort().then((port) => {
-  app.listen(port);
+  const server = app.listen(port);
+
+  // Open notification streams never end by themselves: close them first, or the shutdown would wait for them.
+  const shutdown = () => {
+    closeAllStreams();
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(0), 3000).unref();
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 });

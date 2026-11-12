@@ -9,8 +9,7 @@ export default function TransactionNavTabs() {
   const navUrls: any = {
     "/": 0,
     "/public": 0,
-    "/contacts": 1,
-    "/personal": 2,
+    "/personal": 1,
   };
 
   // Set selected tab based on url
@@ -45,7 +44,6 @@ export default function TransactionNavTabs() {
       data-testid="nav-transaction-tabs"
     >
       <Tab label="전체" component={Link} to="/" data-testid="nav-public-tab" />
-      <Tab label="친구" component={Link} to="/contacts" data-testid="nav-contacts-tab" />
       <Tab label="내 거래" component={Link} to="/personal" data-testid="nav-personal-tab" />
     </Tabs>
   );

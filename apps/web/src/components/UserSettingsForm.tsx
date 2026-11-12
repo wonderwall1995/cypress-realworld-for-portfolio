@@ -1,6 +1,6 @@
 import React from "react";
 import { styled } from "@mui/material/styles";
-import { TextField, Button, Grid } from "@mui/material";
+import { TextField, Button, Grid, Typography } from "@mui/material";
 import { Formik, Form, Field, FieldProps } from "formik";
 import { string, object, mixed } from "yup";
 import { User, DefaultPrivacyLevel, UserSettingsPayload, PHONE_NUMBER_PATTERN } from "@rwa/shared";
@@ -31,24 +31,41 @@ const DefaultPrivacyLevelValues = Object.values(DefaultPrivacyLevel);
 const validationSchema = object({
   firstName: string().required("이름을 입력하세요"),
   lastName: string().required("성을 입력하세요"),
-  email: string().email("올바른 이메일 주소가 아닙니다").required("이메일 주소를 입력하세요"),
-  phoneNumber: string()
-    .matches(PHONE_NUMBER_PATTERN, "올바른 전화번호가 아닙니다 (예: 010-1234-5678)")
-    .required("전화번호를 입력하세요"),
+  // e-mail and phone number may be left empty
+  email: string().email("올바른 이메일 주소가 아닙니다"),
+  phoneNumber: string().matches(PHONE_NUMBER_PATTERN, {
+    message: "올바른 전화번호가 아닙니다 (예: 010-1234-5678)",
+    excludeEmptyString: true,
+  }),
   defaultPrivacyLevel: mixed<DefaultPrivacyLevel>().oneOf(DefaultPrivacyLevelValues),
 });
 
-export interface UserSettingsProps {
-  userProfile: User;
-  updateUser: Function;
+export interface SaveMessage {
+  kind: "success" | "error";
+  text: string;
 }
 
-const UserSettingsForm: React.FC<UserSettingsProps> = ({ userProfile, updateUser }) => {
+export interface UserSettingsProps {
+  userProfile: User;
+  /** returns when the server has answered (it does not throw) */
+  updateUser: (payload: any) => Promise<void> | void;
+  /** result of the last save, shown above the save button */
+  saveMessage?: SaveMessage;
+  /** called when the member edits a field again (the old result is no longer true) */
+  onEdit?: () => void;
+}
+
+const UserSettingsForm: React.FC<UserSettingsProps> = ({
+  userProfile,
+  updateUser,
+  saveMessage,
+  onEdit,
+}) => {
   const initialValues: UserSettingsPayload = {
     firstName: userProfile.firstName,
     lastName: userProfile.lastName,
-    email: userProfile.email,
-    phoneNumber: userProfile.phoneNumber,
+    email: userProfile.email ?? "",
+    phoneNumber: userProfile.phoneNumber ?? "",
     defaultPrivacyLevel: userProfile.defaultPrivacyLevel,
   };
 
@@ -56,15 +73,15 @@ const UserSettingsForm: React.FC<UserSettingsProps> = ({ userProfile, updateUser
     <StyledFormik
       initialValues={initialValues}
       validationSchema={validationSchema}
-      onSubmit={(values, { setSubmitting }) => {
+      onSubmit={async (values, { setSubmitting }) => {
         setSubmitting(true);
-        updateUser({ id: userProfile.id, ...values });
+        await updateUser({ id: userProfile.id, ...values });
         setSubmitting(false);
       }}
     >
       {({ isValid, isSubmitting }) => (
         <MarginHonoringDiv>
-          <Form data-testid="user-settings-form">
+          <Form data-testid="user-settings-form" onInput={() => onEdit?.()}>
             <Field name="lastName">
               {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
                 <TextField
@@ -105,7 +122,6 @@ const UserSettingsForm: React.FC<UserSettingsProps> = ({ userProfile, updateUser
                   variant="outlined"
                   margin="dense"
                   fullWidth
-                  required
                   id={"user-settings-email-input"}
                   type="text"
                   placeholder="이메일"
@@ -122,7 +138,6 @@ const UserSettingsForm: React.FC<UserSettingsProps> = ({ userProfile, updateUser
                   variant="outlined"
                   margin="dense"
                   fullWidth
-                  required
                   id={"user-settings-phoneNumber-input"}
                   type="text"
                   placeholder="전화번호 (예: 010-1234-5678)"
@@ -133,6 +148,22 @@ const UserSettingsForm: React.FC<UserSettingsProps> = ({ userProfile, updateUser
                 />
               )}
             </Field>
+            {/* this space is always kept, so the page does not jump when a result appears */}
+            <Typography
+              variant="caption"
+              component="div"
+              role="status"
+              data-testid="user-settings-message"
+              data-kind={saveMessage?.kind ?? "none"}
+              sx={{
+                minHeight: 20,
+                marginTop: 1,
+                fontWeight: 600,
+                color: saveMessage?.kind === "error" ? "error.main" : "success.main",
+              }}
+            >
+              {saveMessage?.text ?? ""}
+            </Typography>
             <Grid
               container
               spacing={2}
@@ -146,7 +177,7 @@ const UserSettingsForm: React.FC<UserSettingsProps> = ({ userProfile, updateUser
                   fullWidth
                   variant="contained"
                   color="primary"
-                  sx={{ marginTop: 3, marginLeft: 0, marginBottom: 2 }}
+                  sx={{ marginTop: 0, marginLeft: 0, marginBottom: 2 }}
                   data-testid="user-settings-submit"
                   disabled={!isValid || isSubmitting}
                 >

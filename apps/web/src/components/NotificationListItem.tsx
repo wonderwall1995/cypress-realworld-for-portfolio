@@ -85,7 +85,7 @@ const NotificationListItem: React.FC<NotificationListItemProps> = ({
       listItemText = `${notification.userFullName}님이 결제를 요청했습니다.`;
     } else if (isPaymentReceivedNotification(notification)) {
       listItemIcon = <MonetizationOnIcon className={classes.green} />;
-      listItemText = `${notification.userFullName}님이 결제를 받았습니다.`;
+      listItemText = `${notification.userFullName}님이 이체했습니다.`;
     }
   }
 

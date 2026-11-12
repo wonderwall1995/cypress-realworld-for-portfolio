@@ -6,6 +6,6 @@ export async function resetDatabase(prisma: {
 }) {
   assertTestDatabase();
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "bank_transfer_logs", "bank_transfers", "notifications", "comments", "likes", "transactions", "bank_accounts", "contacts", "users" RESTART IDENTITY CASCADE'
+    'TRUNCATE TABLE "bank_transfer_logs", "bank_transfers", "notifications", "comments", "likes", "transactions", "bank_accounts", "users" RESTART IDENTITY CASCADE'
   );
 }

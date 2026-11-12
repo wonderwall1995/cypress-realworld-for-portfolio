@@ -19,6 +19,8 @@ import { string, object } from "yup";
 
 import RWALogo from "./SvgRwaLogo";
 import SourceCredit from "./SourceCredit";
+import UpdateNotesDialog from "./UpdateNotesDialog";
+import { StickyNote2 as NoteIcon } from "@mui/icons-material";
 import { SignInPayload } from "@rwa/shared";
 import { AuthMachineContext, AuthMachineEvents, AuthMachineSchema } from "../machines/authMachine";
 import { Alert } from "@mui/material";
@@ -69,6 +71,7 @@ export interface Props {
 }
 
 const SignInForm: React.FC<Props> = ({ authService }) => {
+  const [notesOpen, setNotesOpen] = React.useState(false);
   const [authState, sendAuth] = useActor(authService);
   const initialValues: SignInPayload = {
     username: "",
@@ -175,7 +178,21 @@ const SignInForm: React.FC<Props> = ({ authService }) => {
           )}
         </Formik>
       </div>
-      <Box mt={8}></Box>
+      {/* what changed on the screens: opens a window with one line per change */}
+      <Box mt={2} display="flex" justifyContent="center">
+        <Button
+          size="small"
+          color="inherit"
+          sx={{ textTransform: "none" }}
+          startIcon={<NoteIcon />}
+          onClick={() => setNotesOpen(true)}
+          data-testid="signin-note-button"
+        >
+          Note
+        </Button>
+      </Box>
+      <UpdateNotesDialog open={notesOpen} onClose={() => setNotesOpen(false)} />
+      <Box mt={6}></Box>
     </StyledContainer>
   );
 };

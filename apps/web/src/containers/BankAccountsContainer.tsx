@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { BANK_ACCOUNTS_CHANGED } from "../utils/bankAccountEvents";
 import { styled } from "@mui/material/styles";
 import { useActor } from "@xstate/react";
@@ -10,12 +10,14 @@ import {
   TypegenDisabled,
 } from "xstate";
 import { Link as RouterLink, useRouteMatch } from "react-router-dom";
-import { Grid, Button, Paper, Typography } from "@mui/material";
+import { Alert, Grid, Button, Paper, Typography } from "@mui/material";
 
 import { AuthMachineContext, AuthMachineEvents, AuthMachineSchema } from "../machines/authMachine";
 import { DataContext, DataEvents, DataSchema } from "../machines/dataMachine";
 import BankAccountForm from "../components/BankAccountForm";
 import BankAccountList from "../components/BankAccountList";
+import { apiErrorText } from "../utils/apiErrors";
+import { createBankAccountRequest, deleteBankAccountRequest } from "../utils/bankAccountApi";
 
 export interface Props {
   authService: Interpreter<AuthMachineContext, AuthMachineSchema, AuthMachineEvents, any, any>;
@@ -50,12 +52,26 @@ const BankAccountsContainer: React.FC<Props> = ({ authService, bankAccountsServi
 
   const currentUser = authState?.context.user;
 
-  const createBankAccount = (payload: any) => {
-    sendBankAccounts({ type: "CREATE", ...payload });
+  // Both wait for the server. The screen changes only after the server approved.
+  const createBankAccount = async (payload: any): Promise<string | undefined> => {
+    try {
+      await createBankAccountRequest(payload);
+      sendBankAccounts("FETCH");
+      return undefined;
+    } catch (error) {
+      return apiErrorText(error, "계좌를 만들지 못했습니다.");
+    }
   };
 
-  const deleteBankAccount = (payload: any) => {
-    sendBankAccounts({ type: "DELETE", ...payload });
+  const [deleteRefusal, setDeleteRefusal] = useState("");
+  const deleteBankAccount = async ({ id }: { id: string }) => {
+    setDeleteRefusal("");
+    try {
+      await deleteBankAccountRequest(id);
+      sendBankAccounts("FETCH");
+    } catch (error) {
+      setDeleteRefusal(apiErrorText(error, "계좌를 삭제하지 못했습니다."));
+    }
   };
 
   useEffect(() => {
@@ -98,6 +114,16 @@ const BankAccountsContainer: React.FC<Props> = ({ authService, bankAccountsServi
           </Button>
         </Grid>
       </Grid>
+      {deleteRefusal && (
+        <Alert
+          severity="error"
+          onClose={() => setDeleteRefusal("")}
+          data-testid="bankaccount-notice"
+          sx={{ marginBottom: 1 }}
+        >
+          {deleteRefusal}
+        </Alert>
+      )}
       <BankAccountList
         bankAccounts={bankAccountsState?.context.results!}
         deleteBankAccount={deleteBankAccount}

@@ -1,9 +1,8 @@
 import React from "react";
 import { useMachine } from "@xstate/react";
-import { Switch, Route } from "react-router";
+import { Switch, Route, Redirect } from "react-router";
 import { TransactionDateRangePayload, TransactionAmountFilterPayload } from "@rwa/shared";
 import TransactionListFilters from "../components/TransactionListFilters";
-import TransactionContactsList from "../components/TransactionContactsList";
 import { transactionFiltersMachine } from "../machines/transactionFiltersMachine";
 import { getDateQueryFields, getAmountQueryFields } from "@rwa/shared";
 import TransactionPersonalList from "../components/TransactionPersonalList";
@@ -30,12 +29,9 @@ const TransactionsContainer: React.FC = () => {
 
   return (
     <Switch>
+      {/* the friends tab is gone: an old bookmark goes to the main list */}
       <Route exact path="/contacts">
-        <TransactionContactsList
-          filterComponent={Filters}
-          dateRangeFilters={dateRangeFilters as TransactionDateRangePayload}
-          amountRangeFilters={amountRangeFilters as TransactionAmountFilterPayload}
-        />
+        <Redirect to="/" />
       </Route>
       <Route exact path="/personal">
         <TransactionPersonalList

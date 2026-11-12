@@ -6,6 +6,8 @@ import { ThemeProvider } from "@mui/material/styles";
 import App from "./containers/App";
 import { history } from "./utils/historyUtils";
 
+const INPUT_PADDING = "10px 14px";
+
 const theme = createTheme({
   palette: {
     secondary: {
@@ -21,17 +23,32 @@ const theme = createTheme({
     },
   },
   components: {
+    // One rule for the text inside EVERY text box (sign in, sign up, settings, transfer, bank account...):
+    // a left/right space so the text and the placeholder do not touch the border, and an even
+    // space above and below. The font size is not changed here.
     MuiOutlinedInput: {
       styleOverrides: {
         input: {
-          padding: "6px 0 7px",
+          padding: INPUT_PADDING,
         },
       },
     },
     MuiInputBase: {
       styleOverrides: {
         input: {
-          padding: "6px 0 7px",
+          padding: INPUT_PADDING,
+        },
+      },
+    },
+    // A label that sits INSIDE the box (sign in, sign up) is centred for the box height above:
+    // without this it sits a few pixels too low. Once it floats up it is on the border as usual.
+    MuiInputLabel: {
+      styleOverrides: {
+        outlined: {
+          transform: "translate(14px, 10px) scale(1)",
+          "&.MuiInputLabel-shrink": {
+            transform: "translate(14px, -9px) scale(0.75)",
+          },
         },
       },
     },

@@ -4,7 +4,6 @@
  */
 import { Transaction } from "@rwa/shared";
 import { assertCanViewTransaction } from "./access";
-import { getContactIdsForUser } from "./contact-db";
 import { getTransactionById } from "./transaction-db";
 
 /** Returns the transaction, or throws 404 when it does not exist or the member may not see it. */
@@ -13,6 +12,5 @@ export const getViewableTransaction = async (
   transactionId: string
 ): Promise<Transaction> => {
   const transaction = await getTransactionById(transactionId);
-  const contactIds = userId ? await getContactIdsForUser(userId) : [];
-  return assertCanViewTransaction(userId, transaction, contactIds);
+  return assertCanViewTransaction(userId, transaction);
 };

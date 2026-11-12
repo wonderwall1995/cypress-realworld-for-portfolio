@@ -54,6 +54,10 @@ export interface TransactionResponseItem extends Transaction {
   receiverAvatar: string;
   senderName: string;
   senderAvatar: string;
+  // The signed-in user's OWN bank account in this transaction and its balance right after the
+  // money moved (cents). Missing when the user has no account in it (someone else's transaction)
+  // or the money has not moved yet (pending request).
+  myAccount?: { bankName: string; balanceAfter?: number };
 }
 
 export type TransactionScenario = {
@@ -67,6 +71,12 @@ export type TransactionCreatePayload = Partial<
   Pick<Transaction, "senderId" | "receiverId" | "description"> & {
     amount: string;
     transactionType: string;
+    // payment: my account the money leaves + the receiver's account it goes to
+    // request: my account I want to be paid into
+    myAccountId: string;
+    otherAccountId: string;
+    // payments only: the signed-in user's own password, asked again before money leaves
+    password: string;
   }
 >;
 

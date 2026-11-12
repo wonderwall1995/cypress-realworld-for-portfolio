@@ -27,6 +27,29 @@ router.get("/", ensureAuthenticated, async (req, res, next) => {
   }
 });
 
+//GET /bankAccounts/of-user/:userId - the bank accounts another member can be paid into.
+// Only the bank name and the last 4 digits are shown, never the full number or the balance.
+router.get(
+  "/of-user/:userId",
+  ensureAuthenticated,
+  validateMiddleware([shortIdValidation("userId")]),
+  async (req, res, next) => {
+    try {
+      const accounts = await getBankAccountsByUserId(req.params.userId);
+      res.status(200);
+      res.json({
+        results: accounts.map((a) => ({
+          id: a.id,
+          bankName: a.bankName,
+          accountNumberLast4: a.accountNumber.slice(-4),
+        })),
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 //GET /bankAccounts/:bankAccountId (scoped-user)
 router.get(
   "/:bankAccountId",

@@ -34,6 +34,17 @@ import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
 const timezone = "UTC";
 
+// An outside deposit has no sender user: senderId holds this fixed text instead of a user id.
+export const EXTERNAL_DEPOSIT_SENDER_ID = "external-deposit";
+export const EXTERNAL_DEPOSIT_NAME = "외부 입금";
+
+export const isExternalDeposit = (transaction: Pick<Transaction, "senderId">) =>
+  transaction.senderId === EXTERNAL_DEPOSIT_SENDER_ID;
+
+/** "국민" -> "국민 은행"; a name that already ends with 은행 / Bank is kept as typed. */
+export const bankLabel = (bankName: string) =>
+  /(은행|bank)$/i.test(bankName.trim()) ? bankName.trim() : `${bankName.trim()} 은행`;
+
 export const isRequestTransaction = (transaction: Transaction) =>
   flow(get("requestStatus"), negate(isEmpty))(transaction);
 
