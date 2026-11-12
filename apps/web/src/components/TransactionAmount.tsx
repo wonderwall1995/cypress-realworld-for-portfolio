@@ -1,8 +1,8 @@
 import React, { useContext } from "react";
 import { styled } from "@mui/material/styles";
-import { Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { TransactionResponseItem } from "@rwa/shared";
-import { formatAmount, getMoneyDirection, isMoneySettled } from "@rwa/shared";
+import { bankLabel, formatAmount, getMoneyDirection, isMoneySettled } from "@rwa/shared";
 import { CurrentUserIdContext } from "../utils/currentUserContext";
 
 const PREFIX = "TransactionAmount";
@@ -63,17 +63,38 @@ const TransactionAmount: React.FC<{
   const sign = direction === "in" ? "+" : direction === "out" ? "-" : "";
 
   return (
-    <StyledTypography
-      data-testid={`transaction-amount-${transaction.id}`}
-      data-direction={direction ?? "none"}
-      className={className}
-      display="inline"
-      component="span"
-      color="primary"
-    >
-      {sign}
-      {transaction.amount && formatAmount(transaction.amount)}
-    </StyledTypography>
+    <Box sx={{ textAlign: "right" }}>
+      <StyledTypography
+        data-testid={`transaction-amount-${transaction.id}`}
+        data-direction={direction ?? "none"}
+        className={className}
+        display="inline"
+        component="span"
+        color="primary"
+      >
+        {sign}
+        {transaction.amount && formatAmount(transaction.amount)}
+      </StyledTypography>
+      {/* what is left in MY bank account after this transaction (never the other side's) */}
+      {transaction.myAccount && transaction.myAccount.balanceAfter !== undefined && (
+        <Typography
+          variant="caption"
+          color="textSecondary"
+          component="div"
+          data-testid={`transaction-balance-${transaction.id}`}
+          sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5, whiteSpace: "nowrap" }}
+        >
+          <Box
+            component="span"
+            data-testid={`transaction-balance-bank-${transaction.id}`}
+            sx={{ overflow: "hidden", textOverflow: "ellipsis", maxWidth: "8em" }}
+          >
+            {bankLabel(transaction.myAccount.bankName)}
+          </Box>
+          <span>남은 잔액 {formatAmount(transaction.myAccount.balanceAfter)}</span>
+        </Typography>
+      )}
+    </Box>
   );
 };
 

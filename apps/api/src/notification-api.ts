@@ -3,14 +3,15 @@
  *
  * Whose name is shown (same order of rules as the old JSON-file version, later rules win):
  *   1. the notification's own user
- *   2. a request transaction: the sender of the request
+ *   2. a received transfer: the sender of the transaction
  *   3. a like notification: the person who liked
  *   4. a comment notification: the person who commented
+ * The live stream (notification-stream.ts) sends items made by this same function.
  * Needs users, transactions, likes and comments, so it is separate from notification-db.ts.
  */
 import prisma from "./prisma";
 import { NotificationResponseItem, NotificationType } from "@rwa/shared";
-import { isCommentNotification, isLikeNotification, isRequestTransaction } from "@rwa/shared";
+import { isCommentNotification, isLikeNotification } from "@rwa/shared";
 import { getUnreadNotificationsByUserId } from "./notification-db";
 
 export const formatNotificationsForApiResponse = async (
@@ -49,7 +50,8 @@ export const formatNotificationsForApiResponse = async (
     let userFullName = nameOf(notification.userId);
 
     const transaction = transactionById.get(notification.transactionId);
-    if (transaction && isRequestTransaction(transaction as any)) {
+    // a received transfer names who SENT it
+    if (transaction && (notification as { status?: string }).status === "received") {
       userFullName = nameOf(transaction.senderId);
     }
     if (isLikeNotification(notification)) {

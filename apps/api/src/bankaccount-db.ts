@@ -41,16 +41,23 @@ export const createBankAccountForUser = async (
   });
 };
 
-// soft delete: the row stays, visible becomes false (the list no longer returns it).
-// Only the owner can delete an account. Returns true when an account was found and marked.
+// soft delete: the row stays, visible becomes false.
+// Only the owner can delete an account, and only an empty one (a balance cannot just disappear).
+// Returns true when an account was found and marked.
 // An id that does not exist, or one that belongs to someone else, changes nothing and returns false.
 export const removeBankAccountById = async (
   userId: string,
   bankAccountId: string
-): Promise<boolean> => {
-  const { count } = await prisma.bankAccount.updateMany({
-    where: { id: bankAccountId, userId },
-    data: { visible: false, modifiedAt: new Date() },
+): Promise<boolean> =>
+  prisma.$transaction(async (tx) => {
+    const account = await tx.bankAccount.findFirst({ where: { id: bankAccountId, userId } });
+    if (!account) return false;
+    if (account.balance !== 0) {
+      throw new HttpError(400, "an account with a balance cannot be deleted");
+    }
+    await tx.bankAccount.update({
+      where: { id: bankAccountId },
+      data: { visible: false, modifiedAt: new Date() },
+    });
+    return true;
   });
-  return count > 0;
-};

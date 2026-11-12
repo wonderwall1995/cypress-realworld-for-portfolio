@@ -1,4 +1,3 @@
-import { omit } from "lodash/fp";
 import gql from "graphql-tag";
 import { dataMachine } from "./dataMachine";
 import { httpClient } from "../utils/asyncUtils";
@@ -20,13 +19,13 @@ const listBankAccountQuery = gql`
   }
 `;
 
-const deleteBankAccountMutation = gql`
+export const deleteBankAccountMutation = gql`
   mutation DeleteBankAccount($id: ID!) {
     deleteBankAccount(id: $id)
   }
 `;
 
-const createBankAccountMutation = gql`
+export const createBankAccountMutation = gql`
   mutation CreateBankAccount($bankName: String!, $accountNumber: String!) {
     createBankAccount(bankName: $bankName, accountNumber: $accountNumber) {
       id
@@ -50,24 +49,6 @@ export const bankAccountsMachine = dataMachine("bankAccounts").withConfig({
       });
       // @ts-ignore
       return { results: resp.data.data.listBankAccount, pageData: {} };
-    },
-    deleteData: async (ctx, event: any) => {
-      const payload = omit("type", event);
-      const resp = await httpClient.post(`${API_BASE}/graphql`, {
-        operationName: "DeleteBankAccount",
-        query: deleteBankAccountMutation.loc?.source.body,
-        variables: payload,
-      });
-      return resp.data;
-    },
-    createData: async (ctx, event: any) => {
-      const payload = omit("type", event);
-      const resp = await httpClient.post(`${API_BASE}/graphql`, {
-        operationName: "CreateBankAccount",
-        query: createBankAccountMutation.loc?.source.body,
-        variables: payload,
-      });
-      return resp.data;
     },
   },
 });

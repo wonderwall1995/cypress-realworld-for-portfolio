@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { closeStreamsOfSession } from "./notification-stream";
 import passport from "passport";
 import express, { Request, Response } from "express";
 import { User } from "@rwa/shared";
@@ -55,6 +56,7 @@ router.post("/login", passport.authenticate("local"), (req: Request, res: Respon
 });
 
 router.post("/logout", (req: Request, res: Response): void => {
+  closeStreamsOfSession(req.sessionID); // live notification streams of this login end with it
   res.clearCookie("connect.sid");
   req.logout(() => res.redirect("/"));
   req.session!.destroy(function (err) {

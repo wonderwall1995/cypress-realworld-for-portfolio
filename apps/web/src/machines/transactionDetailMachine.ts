@@ -19,12 +19,5 @@ export const transactionDetailMachine = dataMachine("transactionData").withConfi
       const resp = await httpClient.post(`${API_BASE}/${route}/${payload.transactionId}`, payload);
       return resp.data;
     },
-    updateData: async (ctx, event: any) => {
-      const payload = omit("type", event);
-      const contextTransactionId = !isEmpty(ctx.results) && first(ctx.results)["id"];
-      const transactionId = contextTransactionId || payload.id;
-      const resp = await httpClient.patch(`${API_BASE}/transactions/${transactionId}`, payload);
-      return resp.data;
-    },
   },
 });

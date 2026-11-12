@@ -127,6 +127,50 @@ describe("Users (PostgreSQL)", () => {
     });
   });
 
+  describe("search by name or phone (OR)", () => {
+    beforeEach(async () => {
+      await createUser({
+        firstName: "웅기",
+        lastName: "홍",
+        username: "hong",
+        password: "s3cret",
+        phoneNumber: "010-1234-5678",
+      });
+      await createUser({
+        firstName: "철수",
+        lastName: "김",
+        username: "kim",
+        password: "s3cret",
+        phoneNumber: "010-9999-0000",
+      });
+    });
+
+    const names = async (q: string) => (await searchUsers(q)).map((u) => u.username);
+
+    it("finds a Korean name in either order, with or without a space", async () => {
+      for (const q of ["홍웅기", "홍 웅기", "웅기 홍", "웅기홍", "홍", "웅기", "웅"]) {
+        expect(await names(q), q).toEqual(["hong"]);
+      }
+    });
+
+    it("finds a phone number typed with or without hyphens, or part of it", async () => {
+      for (const q of ["010-1234-5678", "01012345678", "010 1234 5678", "1234", "5678"]) {
+        expect(await names(q), q).toEqual(["hong"]);
+      }
+    });
+
+    it("a name query does not match phone numbers, and an unknown name finds nobody", async () => {
+      expect(await names("철수")).toEqual(["kim"]);
+      expect(await names("없는사람")).toEqual([]);
+    });
+
+    it("nothing typed (empty, spaces, only symbols that are ignored) lists every member", async () => {
+      for (const q of ["", "   ", " - "]) {
+        expect((await names(q)).sort(), JSON.stringify(q)).toEqual(["hong", "kim"]);
+      }
+    });
+  });
+
   it("removes the signed-in user from a result list", async () => {
     const a = await createUser(signUp(1));
     await createUser(signUp(2));

@@ -1,17 +1,14 @@
 // @vitest-environment node
 import { describe, expect, it, beforeEach, afterAll } from "vitest";
 import { validationResult } from "express-validator";
-import { DefaultPrivacyLevel, TransactionPayload, TransactionRequestStatus } from "@rwa/shared";
+import { DefaultPrivacyLevel, TransactionPayload } from "@rwa/shared";
 import prisma from "../prisma";
+import { fundUser, createTx } from "./db-setup/accounts";
 import { createUser, updateUserById } from "../user-db";
-import { createContactForUser } from "../contact-db";
 import {
-  createTransaction,
   getPublicTransactionsByQuery,
   getTransactionsForUserByObj,
-  getTransactionsForUserContacts,
   getTransactionsForUserForApi,
-  updateTransactionById,
 } from "../transaction-db";
 import { transactionFilterValidators } from "../validators";
 import { resetDatabase } from "./db-setup/reset";
@@ -24,7 +21,7 @@ const makeUser = async (name: string, balance = 1_000_000) => {
     password: "s3cret",
     defaultPrivacyLevel: DefaultPrivacyLevel.public,
   });
-  await updateUserById(user.id, { balance });
+  await fundUser(user.id, balance);
   return user;
 };
 
@@ -37,6 +34,28 @@ const details = (receiverId: string, dollars: number) =>
     privacyLevel: "public",
   }) as unknown as TransactionPayload;
 
+// a transaction whose money did not move (status pending): it must never pass an amount filter
+let unsettledCount = 0;
+const unsettledTransaction = async (senderId: string, receiverId: string, dollars: number) => {
+  const now = new Date(Date.now() + ++unsettledCount);
+  const row = await prisma.transaction.create({
+    data: {
+      id: `unsettled${unsettledCount}`,
+      uuid: `unsettled-uuid-${unsettledCount}`,
+      source: "",
+      amount: dollars * 100,
+      description: "money did not move",
+      receiverId,
+      senderId,
+      privacyLevel: "public",
+      status: "pending",
+      createdAt: now,
+      modifiedAt: now,
+    },
+  });
+  return { id: row.id };
+};
+
 const ids = (list: { id: string }[]) => list.map((t) => t.id).sort();
 
 describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
@@ -48,29 +67,23 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
     await prisma.$disconnect();
   });
 
-  // me has:  in $100, in $250, out $100, out $30, an accepted request I made ($40, in),
-  //          and a pending request someone made to me ($60, no money moved)
+  // me has:  in $100, in $250, out $100, out $30, a third $40 payment I received (in),
+  //          and a $60 transaction whose money did not move
   const world = async () => {
     const me = await makeUser("Me");
     const other = await makeUser("Other");
     const friend = await makeUser("Friend");
     const stranger = await makeUser("Stranger");
-    await createContactForUser(me.id, friend.id);
 
-    const in100 = await createTransaction(other.id, "payment", details(me.id, 100));
-    const in250 = await createTransaction(other.id, "payment", details(me.id, 250));
-    const out100 = await createTransaction(me.id, "payment", details(other.id, 100));
-    const out30 = await createTransaction(me.id, "payment", details(other.id, 30));
-    const req40 = await createTransaction(me.id, "request", details(other.id, 40));
-    await updateTransactionById(req40.id, { requestStatus: TransactionRequestStatus.accepted });
-    const pending60 = await createTransaction(other.id, "request", details(me.id, 60));
-    const friendToMe = await createTransaction(friend.id, "payment", details(me.id, 20));
-    const friendToStranger = await createTransaction(
-      friend.id,
-      "payment",
-      details(stranger.id, 75)
-    );
-    const strangerToOther = await createTransaction(stranger.id, "payment", details(other.id, 90));
+    const in100 = await createTx(other.id, "payment", details(me.id, 100));
+    const in250 = await createTx(other.id, "payment", details(me.id, 250));
+    const out100 = await createTx(me.id, "payment", details(other.id, 100));
+    const out30 = await createTx(me.id, "payment", details(other.id, 30));
+    const in40 = await createTx(other.id, "payment", details(me.id, 40));
+    const unsettled60 = await unsettledTransaction(other.id, me.id, 60);
+    const friendToMe = await createTx(friend.id, "payment", details(me.id, 20));
+    const friendToStranger = await createTx(friend.id, "payment", details(stranger.id, 75));
+    const strangerToOther = await createTx(stranger.id, "payment", details(other.id, 90));
     return {
       me,
       other,
@@ -80,8 +93,8 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
       in250,
       out100,
       out30,
-      req40,
-      pending60,
+      in40,
+      unsettled60,
       friendToMe,
       friendToStranger,
       strangerToOther,
@@ -99,8 +112,8 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
       expect(ids(exact)).toEqual(ids([w.in100]));
 
       const wide = await getTransactionsForUserByObj(w.me.id, { depositMin: 0, depositMax: 30000 });
-      // in100, in250, the accepted request I made ($40, I received it) and the $20 from my friend
-      expect(ids(wide)).toEqual(ids([w.in100, w.in250, w.req40, w.friendToMe]));
+      // in100, in250, the third $40 I received and the $20 from my friend
+      expect(ids(wide)).toEqual(ids([w.in100, w.in250, w.in40, w.friendToMe]));
     });
 
     it("edge case: 100 ~ 100 finds only the $100 transactions", async () => {
@@ -146,22 +159,22 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
       expect(ids(list)).toEqual(ids([w.in100, w.in250]));
     });
 
-    it("a pending request moved no money, so it never shows up in a deposit or withdrawal filter", async () => {
+    it("a transaction whose money did not move never shows up in a deposit or withdrawal filter", async () => {
       const w = await world();
 
       const all = await getTransactionsForUserByObj(w.me.id, { depositMin: 0, withdrawalMin: 0 });
 
-      expect(ids(all)).not.toContain(w.pending60.id);
-      expect(ids(all)).toEqual(ids([w.in100, w.in250, w.out100, w.out30, w.req40, w.friendToMe]));
+      expect(ids(all)).not.toContain(w.unsettled60.id);
+      expect(ids(all)).toEqual(ids([w.in100, w.in250, w.out100, w.out30, w.in40, w.friendToMe]));
     });
 
-    it("no filter: everything of mine, including the pending request", async () => {
+    it("no filter: everything of mine, including the unsettled one", async () => {
       const w = await world();
 
       const all = await getTransactionsForUserByObj(w.me.id, {});
 
       expect(ids(all)).toEqual(
-        ids([w.in100, w.in250, w.out100, w.out30, w.req40, w.pending60, w.friendToMe])
+        ids([w.in100, w.in250, w.out100, w.out30, w.in40, w.unsettled60, w.friendToMe])
       );
     });
 
@@ -192,35 +205,18 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
     });
   });
 
-  describe("friends and everyone lists use MY deposits and withdrawals", () => {
-    it("friends list: the filter looks at me, not at the friend", async () => {
+  describe("the everyone list uses MY deposits and withdrawals", () => {
+    it("without a filter every public transaction is listed", async () => {
       const w = await world();
 
-      // the friend paid ME $20: that is a deposit for me, although it is the friend's withdrawal
-      const deposits = await getTransactionsForUserContacts(w.me.id, {
-        depositMin: 2000,
-        depositMax: 2000,
-      });
-      expect(ids(deposits)).toEqual(ids([w.friendToMe]));
+      const all = await getPublicTransactionsByQuery(w.me.id, {} as any);
 
-      const withdrawals = await getTransactionsForUserContacts(w.me.id, { withdrawalMin: 0 });
-      expect(ids(withdrawals)).toEqual([]); // the friend's other payments are not mine
+      expect(ids(all)).toContain(w.strangerToOther.id);
+      expect(ids(all)).toContain(w.friendToStranger.id);
+      expect(ids(all)).toContain(w.in100.id);
     });
 
-    it("friends list: transactions between other people drop out once a filter is set", async () => {
-      const w = await world();
-
-      const plain = await getTransactionsForUserContacts(w.me.id, {});
-      expect(ids(plain)).toEqual(ids([w.friendToMe, w.friendToStranger]));
-
-      const filtered = await getTransactionsForUserContacts(w.me.id, {
-        depositMin: 0,
-        withdrawalMin: 0,
-      });
-      expect(ids(filtered)).toEqual(ids([w.friendToMe]));
-    });
-
-    it("everyone list: same rule for the public part and for the friends part", async () => {
+    it("with a filter, transactions between other people drop out and my own money stays", async () => {
       const w = await world();
 
       const result = await getPublicTransactionsByQuery(w.me.id, {
@@ -228,13 +224,13 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
         withdrawalMin: 0,
       } as any);
 
-      const shown = ids([...result.contactsTransactions, ...result.publicTransactions]);
-      expect(shown).toEqual(ids([w.in100, w.in250, w.out100, w.out30, w.req40, w.friendToMe]));
+      const shown = ids(result);
+      expect(shown).toEqual(ids([w.in100, w.in250, w.out100, w.out30, w.in40, w.friendToMe]));
       expect(shown).not.toContain(w.strangerToOther.id);
       expect(shown).not.toContain(w.friendToStranger.id);
     });
 
-    it("everyone list: 100 ~ 100 deposit finds only my $100", async () => {
+    it("100 ~ 100 deposit finds only my $100", async () => {
       const w = await world();
 
       const result = await getPublicTransactionsByQuery(w.me.id, {
@@ -242,9 +238,18 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
         depositMax: 10000,
       } as any);
 
-      expect(ids([...result.contactsTransactions, ...result.publicTransactions])).toEqual(
-        ids([w.in100])
-      );
+      expect(ids(result)).toEqual(ids([w.in100]));
+    });
+
+    it("the filter looks at me: what a third member paid ME is my deposit", async () => {
+      const w = await world();
+
+      const result = await getPublicTransactionsByQuery(w.me.id, {
+        depositMin: 2000,
+        depositMax: 2000,
+      } as any);
+
+      expect(ids(result)).toEqual(ids([w.friendToMe]));
     });
   });
 
@@ -255,7 +260,7 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
     it("edge case: the same start and end day finds that whole day and nothing else", async () => {
       const me = await makeUser("Me");
       const other = await makeUser("Other");
-      const tx = async () => (await createTransaction(me.id, "payment", details(other.id, 5))).id;
+      const tx = async () => (await createTx(me.id, "payment", details(other.id, 5))).id;
       const dayStart = await tx();
       const noon = await tx();
       const dayEnd = await tx();
@@ -289,7 +294,7 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
     it("only a start finds that day and later, only an end finds that day and earlier", async () => {
       const me = await makeUser("Me");
       const other = await makeUser("Other");
-      const tx = async () => (await createTransaction(me.id, "payment", details(other.id, 5))).id;
+      const tx = async () => (await createTx(me.id, "payment", details(other.id, 5))).id;
       const early = await tx();
       const middle = await tx();
       const late = await tx();
@@ -311,8 +316,8 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
     it("date range and deposit filter work together", async () => {
       const me = await makeUser("Me");
       const other = await makeUser("Other");
-      const oldOne = await createTransaction(other.id, "payment", details(me.id, 100));
-      const newOne = await createTransaction(other.id, "payment", details(me.id, 100));
+      const oldOne = await createTx(other.id, "payment", details(me.id, 100));
+      const newOne = await createTx(other.id, "payment", details(me.id, 100));
       await at(oldOne.id, new Date(2026, 0, 5, 12));
       await at(newOne.id, new Date(2026, 2, 10, 12));
 

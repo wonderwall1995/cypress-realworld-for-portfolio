@@ -9,15 +9,17 @@
 import shortid from "shortid";
 import { v4 } from "uuid";
 import prisma from "./prisma";
-import { Comment, Like } from "@rwa/shared";
+import { Comment, Like, NotificationType } from "@rwa/shared";
 import { createCommentNotification, createLikeNotification } from "./notification-db";
+import { publishNotifications } from "./notification-stream";
 
 // Who gets a notification (the old code notified the sender and the receiver in almost every case)
 const recipients = (actingUserId: string, senderId: string, receiverId: string): string[] =>
   actingUserId !== senderId || actingUserId !== receiverId ? [senderId, receiverId] : [senderId];
 
-export const createLikes = (userId: string, transactionId: string): Promise<Like> =>
-  prisma.$transaction(async (tx) => {
+export const createLikes = async (userId: string, transactionId: string): Promise<Like> => {
+  const made: NotificationType[] = []; // sent to open streams only AFTER the commit
+  const like = await prisma.$transaction(async (tx) => {
     const transaction = await tx.transaction.findUnique({ where: { id: transactionId } });
     if (!transaction) throw new Error(`transaction not found: ${transactionId}`);
 
@@ -26,17 +28,21 @@ export const createLikes = (userId: string, transactionId: string): Promise<Like
       data: { id: shortid(), uuid: v4(), userId, transactionId, createdAt: now, modifiedAt: now },
     });
     for (const recipient of recipients(userId, transaction.senderId, transaction.receiverId)) {
-      await createLikeNotification(recipient, transactionId, like.id, tx);
+      made.push(await createLikeNotification(recipient, transactionId, like.id, tx));
     }
     return like;
   });
+  await publishNotifications(made);
+  return like;
+};
 
-export const createComments = (
+export const createComments = async (
   userId: string,
   transactionId: string,
   content: string
-): Promise<Comment> =>
-  prisma.$transaction(async (tx) => {
+): Promise<Comment> => {
+  const made: NotificationType[] = []; // sent to open streams only AFTER the commit
+  const comment = await prisma.$transaction(async (tx) => {
     const transaction = await tx.transaction.findUnique({ where: { id: transactionId } });
     if (!transaction) throw new Error(`transaction not found: ${transactionId}`);
 
@@ -53,7 +59,10 @@ export const createComments = (
       },
     });
     for (const recipient of recipients(userId, transaction.senderId, transaction.receiverId)) {
-      await createCommentNotification(recipient, transactionId, comment.id, tx);
+      made.push(await createCommentNotification(recipient, transactionId, comment.id, tx));
     }
     return comment;
   });
+  await publishNotifications(made);
+  return comment;
+};

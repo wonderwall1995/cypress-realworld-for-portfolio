@@ -1,10 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it, beforeEach, afterAll } from "vitest";
 import prisma from "../prisma";
-import { createUser, getUserById, updateUserById } from "../user-db";
+import { createUser, getUserById } from "../user-db";
 import { createBankAccountForUser, removeBankAccountById } from "../bankaccount-db";
 import { getBankTransferLogs, getBankTransfersByUserId } from "../banktransfer-db";
 import { moveMoney } from "../banktransfer-service";
+import { syncUserBalance } from "../account-money";
 import { resetDatabase } from "./db-setup/reset";
 
 const bank = { bankName: "Demo Bank", accountNumber: "123456789" };
@@ -16,8 +17,11 @@ const setup = async (balanceCents = 0) => {
     username: `user${Math.random().toString(36).slice(2, 8)}`,
     password: "s3cret",
   });
-  if (balanceCents) await updateUserById(user.id, { balance: balanceCents });
   const account = await createBankAccountForUser(user.id, bank);
+  if (balanceCents) {
+    await prisma.bankAccount.update({ where: { id: account.id }, data: { balance: balanceCents } });
+    await syncUserBalance(prisma, user.id);
+  }
   return { user, account };
 };
 
@@ -35,7 +39,7 @@ describe("Virtual deposit / withdrawal (PostgreSQL)", () => {
   });
 
   describe("deposit", () => {
-    it("adds the amount (whole dollars) to the BANK ACCOUNT balance, not the app balance", async () => {
+    it("adds the amount (whole dollars) to the bank account (and so to the sum shown in the sidebar)", async () => {
       const { user, account } = await setup(500);
 
       const transfer = await moveMoney(user.id, {
@@ -48,13 +52,13 @@ describe("Virtual deposit / withdrawal (PostgreSQL)", () => {
       expect(transfer.type).toBe("deposit");
       expect(transfer.amount).toBe(1200);
       expect(transfer.source).toBe(account.id);
-      expect(transfer.balanceBefore).toBe(0); // bank account balance before
-      expect(transfer.balanceAfter).toBe(1200);
-      expect(await accountBalance(account.id)).toBe(1200);
-      expect(await balanceOf(user.id)).toBe(500); // app balance untouched
+      expect(transfer.balanceBefore).toBe(500); // bank account balance before
+      expect(transfer.balanceAfter).toBe(1700);
+      expect(await accountBalance(account.id)).toBe(1700);
+      expect(await balanceOf(user.id)).toBe(1700); // sidebar = sum of the accounts
 
       await moveMoney(user.id, { bankAccountId: account.id, amount: 3, type: "deposit" });
-      expect(await accountBalance(account.id)).toBe(1500);
+      expect(await accountBalance(account.id)).toBe(2000);
     });
 
     it("only the chosen account grows", async () => {
@@ -109,7 +113,7 @@ describe("Virtual deposit / withdrawal (PostgreSQL)", () => {
   });
 
   describe("withdrawal", () => {
-    it("takes the amount from the app balance", async () => {
+    it("takes the amount out of the bank account", async () => {
       const { user, account } = await setup(5000);
 
       const transfer = await moveMoney(user.id, {
@@ -188,13 +192,13 @@ describe("Virtual deposit / withdrawal (PostgreSQL)", () => {
     });
 
     it("a deleted bank account (400)", async () => {
-      const { user, account } = await setup(500);
+      const { user, account } = await setup(0);
       await removeBankAccountById(user.id, account.id);
 
       await expect(
         moveMoney(user.id, { bankAccountId: account.id, amount: 5, type: "deposit" })
       ).rejects.toMatchObject({ status: 400 });
-      await expectNothingSaved(user.id, 500);
+      await expectNothingSaved(user.id, 0);
     });
 
     it("an amount that is not a whole number of dollars, 1 or more (400)", async () => {

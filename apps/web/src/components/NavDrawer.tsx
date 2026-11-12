@@ -1,6 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { styled } from "@mui/material/styles";
-import { head } from "lodash/fp";
 import { Interpreter } from "xstate";
 import { useActor } from "@xstate/react";
 import clsx from "clsx";
@@ -25,11 +24,16 @@ import {
   ExitToApp as LogoutIcon,
   AccountBalance as AccountBalanceIcon,
   SouthWest as DepositIcon,
+  StickyNote2 as NoteIcon,
   NorthEast as TransferIcon,
 } from "@mui/icons-material";
 
 import { formatAmount } from "@rwa/shared";
 import DepositDialog from "./DepositDialog";
+import UpdateNotesDialog from "./UpdateNotesDialog";
+import { BANK_ACCOUNTS_CHANGED } from "../utils/bankAccountEvents";
+import { httpClient } from "../utils/asyncUtils";
+import { API_BASE } from "../utils/apiUtils";
 import { AuthMachineContext, AuthMachineEvents } from "../machines/authMachine";
 
 const PREFIX = "NavDrawer";
@@ -48,6 +52,19 @@ const classes = {
 };
 
 const drawerWidth = 240;
+
+// the 은행 계좌 button while the member has no account (also when it is the open page)
+const yellowButton = {
+  backgroundColor: "#FFD54F",
+  borderColor: "#F9A825",
+  color: "#3E2723",
+  "& .MuiListItemIcon-root": { color: "#3E2723" },
+  "&:hover, &.Mui-selected, &.Mui-selected:hover": {
+    backgroundColor: "#FFCA28",
+    borderColor: "#F9A825",
+    color: "#3E2723",
+  },
+};
 
 const StyledDrawer = styled(Drawer)(({ theme }) => ({
   [`& .${classes.drawerPaper}`]: {
@@ -155,9 +172,38 @@ const NavDrawer: React.FC<Props> = ({
   const location = useLocation();
   const [authState, sendAuth] = useActor(authService);
   const [depositOpen, setDepositOpen] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
   const showTemporaryDrawer = useMediaQuery(theme.breakpoints.only("xs"));
 
   const currentUser = authState?.context?.user;
+  // How many bank accounts the member has. Without any, the 은행 계좌 button turns yellow.
+  // Asked again when the page changes and when an account is created, deleted or paid into.
+  const [accountCount, setAccountCount] = useState<number | undefined>();
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      httpClient
+        .get(`${API_BASE}/bankAccounts`)
+        .then((resp) => {
+          if (alive) setAccountCount((resp.data.results as any[]).filter((a) => a.visible).length);
+        })
+        .catch(() => undefined);
+    load();
+    window.addEventListener(BANK_ACCOUNTS_CHANGED, load);
+    return () => {
+      alive = false;
+      window.removeEventListener(BANK_ACCOUNTS_CHANGED, load);
+    };
+  }, [location.pathname]);
+  const noAccounts = accountCount === 0;
+
+  // a deposit changes the sum shown here: ask the server for the user again
+  useEffect(() => {
+    const refresh = () => sendAuth("REFRESH");
+    window.addEventListener(BANK_ACCOUNTS_CHANGED, refresh);
+    return () => window.removeEventListener(BANK_ACCOUNTS_CHANGED, refresh);
+  }, [sendAuth]);
+
   const signOut = () => sendAuth("LOGOUT");
 
   // on a phone the drawer covers the page, so close it after a choice
@@ -212,8 +258,11 @@ const NavDrawer: React.FC<Props> = ({
                 variant="subtitle1"
                 color="textPrimary"
                 data-testid="sidenav-user-full-name"
+                noWrap
+                sx={{ maxWidth: 140 }}
+                title={`${currentUser.lastName} ${currentUser.firstName}`}
               >
-                {currentUser.lastName} {head(currentUser.firstName)}
+                {currentUser.lastName} {currentUser.firstName}
               </Typography>
               <Typography variant="subtitle2" color="inherit" data-testid="sidenav-username">
                 @{currentUser.username}
@@ -265,26 +314,49 @@ const NavDrawer: React.FC<Props> = ({
       </Box>
       <Divider />
       <List sx={{ paddingTop: 2 }}>
-        {menu.map((item) => (
-          <ListItem
-            key={item.to}
-            button
-            className={classes.menuItem}
-            selected={isSelected(item.to, item.exact)}
-            onClick={afterChoice}
-            component={RouterLink}
-            to={item.to}
-            data-testid={item.testId}
-          >
-            <ListItemIcon>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.label} />
-          </ListItem>
-        ))}
+        {menu.map((item) => {
+          const warn = noAccounts && item.to === "/bankaccounts";
+          return (
+            <React.Fragment key={item.to}>
+              <ListItem
+                button
+                className={classes.menuItem}
+                selected={isSelected(item.to, item.exact)}
+                onClick={afterChoice}
+                component={RouterLink}
+                to={item.to}
+                data-testid={item.testId}
+                data-warning={warn ? "true" : undefined}
+                sx={warn ? yellowButton : undefined}
+              >
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.label} />
+              </ListItem>
+              {warn && (
+                <Typography
+                  variant="caption"
+                  color="textSecondary"
+                  component="div"
+                  data-testid="sidenav-no-bankaccount"
+                  sx={{ margin: "-4px 16px 8px", paddingLeft: 2 }}
+                >
+                  계좌가 없습니다.
+                </Typography>
+              )}
+            </React.Fragment>
+          );
+        })}
       </List>
       {/* Logout stays pinned to the bottom of the sidebar, like a footer */}
       <div className={classes.bottomNav}>
         <Divider />
         <List>
+          <ListItem button onClick={() => setNotesOpen(true)} data-testid="sidenav-note">
+            <ListItemIcon>
+              <NoteIcon />
+            </ListItemIcon>
+            <ListItemText primary="Note" />
+          </ListItem>
           <ListItem button onClick={() => signOut()} data-testid="sidenav-signout">
             <ListItemIcon>
               <LogoutIcon />
@@ -294,6 +366,7 @@ const NavDrawer: React.FC<Props> = ({
         </List>
       </div>
       <DepositDialog open={depositOpen} onClose={() => setDepositOpen(false)} />
+      <UpdateNotesDialog open={notesOpen} onClose={() => setNotesOpen(false)} />
     </StyledDrawer>
   );
 };

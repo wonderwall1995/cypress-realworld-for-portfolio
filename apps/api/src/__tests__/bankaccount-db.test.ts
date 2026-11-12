@@ -57,6 +57,15 @@ describe("Bank accounts (PostgreSQL)", () => {
     expect((await getBankAccountById(account.id))!.visible).toBe(false);
   });
 
+  it("refuses to delete an account that still holds money (400)", async () => {
+    const account = await createBankAccountForUser("u1", details);
+    await prisma.bankAccount.update({ where: { id: account.id }, data: { balance: 100 } });
+
+    await expect(removeBankAccountById("u1", account.id)).rejects.toMatchObject({ status: 400 });
+
+    expect((await getBankAccountById(account.id))!.visible).toBe(true);
+  });
+
   it("does not delete the account of another user", async () => {
     const account = await createBankAccountForUser("u1", details);
 

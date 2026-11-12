@@ -15,6 +15,7 @@ import {
 import { asyncHandler } from "./async-handler";
 import { omitPassword, toOtherUserResponse } from "./user-response";
 import { HttpError } from "./http-error";
+import { passwordMatches } from "./account-money";
 import { User } from "@rwa/shared";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
 import {
@@ -25,6 +26,19 @@ import {
   isSignUpValidator,
 } from "./validators";
 const router = express.Router();
+
+//POST /users/verifyPassword - scoped-user: is this the signed-in member's own password?
+// Used by the "are you sure?" step before money is moved. 204 yes, 403 no.
+router.post(
+  "/verifyPassword",
+  ensureAuthenticated,
+  asyncHandler(async (req, res) => {
+    if (!(await passwordMatches(req.user?.id!, req.body?.password))) {
+      throw new HttpError(403, "the password is not correct");
+    }
+    res.sendStatus(204);
+  })
+);
 
 // Routes
 router.get(
@@ -100,9 +114,18 @@ router.get(
   })
 );
 
+// E-mail and phone number may be left empty. Spaces only count as empty.
+const trimEmptyableFields: express.RequestHandler = (req, _res, next) => {
+  for (const key of ["email", "phoneNumber"]) {
+    if (typeof req.body?.[key] === "string") req.body[key] = req.body[key].trim();
+  }
+  next();
+};
+
 router.patch(
   "/:userId",
   ensureAuthenticated,
+  trimEmptyableFields,
   userFieldsValidator,
   validateMiddleware([shortIdValidation("userId"), ...isUserValidator]),
   asyncHandler(async (req, res) => {
@@ -119,7 +142,20 @@ router.patch(
       req.body
     );
 
-    await updateUserById(userId, edits);
+    // An empty e-mail or phone number clears the value (stored as null).
+    const wanted: Record<string, unknown> = { ...edits };
+    for (const key of ["email", "phoneNumber"]) {
+      if (wanted[key] === "") wanted[key] = null;
+    }
+
+    // Only what really changes is written. Nothing to change is still a success (204).
+    const current = (await getUserById(userId)) as unknown as Record<string, unknown>;
+    const changed = Object.fromEntries(
+      Object.entries(wanted).filter(([key, value]) => (current?.[key] ?? null) !== (value ?? null))
+    );
+    if (Object.keys(changed).length > 0) {
+      await updateUserById(userId, changed as Partial<User>);
+    }
 
     res.sendStatus(204);
   })

@@ -1,15 +1,11 @@
 import React from "react";
 import { styled } from "@mui/material/styles";
-import { Button, Typography, Grid, Avatar, Paper, IconButton } from "@mui/material";
+import { Typography, Grid, Avatar, Paper, IconButton } from "@mui/material";
 import { AvatarGroup } from "@mui/material";
 import { ThumbUpAltOutlined as LikeIcon, CommentRounded as CommentIcon } from "@mui/icons-material";
-import { TransactionResponseItem, TransactionRequestStatus, User } from "@rwa/shared";
+import { TransactionResponseItem, User } from "@rwa/shared";
 import CommentForm from "./CommentForm";
-import {
-  isPendingRequestTransaction,
-  receiverIsCurrentUser,
-  currentUserLikesTransaction,
-} from "@rwa/shared";
+import { currentUserLikesTransaction } from "@rwa/shared";
 import CommentsList from "./CommentList";
 import TransactionTitle from "./TransactionTitle";
 import TransactionAmount from "./TransactionAmount";
@@ -23,8 +19,6 @@ const classes = {
   headline: `${PREFIX}-headline`,
   avatarLarge: `${PREFIX}-avatarLarge`,
   avatarGroup: `${PREFIX}-avatarGroup`,
-  redButton: `${PREFIX}-redButton`,
-  greenButton: `${PREFIX}-greenButton`,
 };
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
@@ -59,43 +53,12 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
   [`& .${classes.avatarGroup}`]: {
     margin: 10,
   },
-
-  [`& .${classes.redButton}`]: {
-    backgrounColor: "red",
-    color: "#ffffff",
-    backgroundColor: "red",
-    paddingTop: 5,
-    paddingBottom: 5,
-    paddingRight: 20,
-    fontWeight: "bold",
-    "&:hover": {
-      backgroundColor: "red",
-      borderColor: "red",
-      boxShadow: "none",
-    },
-  },
-
-  [`& .${classes.greenButton}`]: {
-    marginRight: theme.spacing(2),
-    color: "#ffffff",
-    backgroundColor: "#00C853",
-    paddingTop: 5,
-    paddingBottom: 5,
-    paddingRight: 20,
-    fontWeight: "bold",
-    "&:hover": {
-      backgroundColor: "#4CAF50",
-      borderColor: "#00C853",
-      boxShadow: "none",
-    },
-  },
 }));
 
 type TransactionProps = {
   transaction: TransactionResponseItem;
   transactionLike: Function;
   transactionComment: Function;
-  transactionUpdate: Function;
   currentUser: User;
 };
 
@@ -103,7 +66,6 @@ const TransactionDetail: React.FC<TransactionProps> = ({
   transaction,
   transactionLike,
   transactionComment,
-  transactionUpdate,
   currentUser,
 }) => {
   return (
@@ -185,41 +147,7 @@ const TransactionDetail: React.FC<TransactionProps> = ({
                 <LikeIcon />
               </IconButton>
             </Grid>
-            <Grid item>
-              {receiverIsCurrentUser(currentUser, transaction) &&
-                isPendingRequestTransaction(transaction) && (
-                  <Grid item>
-                    <Button
-                      className={classes.greenButton}
-                      variant="contained"
-                      size="small"
-                      onClick={() =>
-                        transactionUpdate({
-                          id: transaction.id,
-                          requestStatus: TransactionRequestStatus.accepted,
-                        })
-                      }
-                      data-testid={`transaction-accept-request-${transaction.id}`}
-                    >
-                      요청 수락
-                    </Button>
-                    <Button
-                      variant="contained"
-                      className={classes.redButton}
-                      size="small"
-                      onClick={() =>
-                        transactionUpdate({
-                          id: transaction.id,
-                          requestStatus: TransactionRequestStatus.rejected,
-                        })
-                      }
-                      data-testid={`transaction-reject-request-${transaction.id}`}
-                    >
-                      요청 거절
-                    </Button>
-                  </Grid>
-                )}
-            </Grid>
+            <Grid item></Grid>
           </Grid>
           <Grid item>
             <CommentForm

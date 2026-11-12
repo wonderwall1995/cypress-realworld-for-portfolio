@@ -41,6 +41,10 @@ const BankAccountListItem: React.FC<BankAccountListItemProps> = ({
               color="secondary"
               size="large"
               data-testid="bankaccount-delete"
+              disabled={bankAccount.balance !== 0}
+              title={
+                bankAccount.balance !== 0 ? "잔액이 있는 계좌는 삭제할 수 없습니다" : undefined
+              }
               onClick={() => {
                 deleteBankAccount({ id: bankAccount.id });
               }}

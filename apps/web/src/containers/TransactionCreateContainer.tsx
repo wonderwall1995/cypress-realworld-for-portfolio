@@ -74,7 +74,7 @@ const TransactionCreateContainer: React.FC<Props> = ({ authService, snackbarServ
           <StepLabel>연락처 선택</StepLabel>
         </Step>
         <Step key={"stepTwo"}>
-          <StepLabel>결제</StepLabel>
+          <StepLabel>이체</StepLabel>
         </Step>
         <Step key={"stepThree"}>
           <StepLabel>완료</StepLabel>

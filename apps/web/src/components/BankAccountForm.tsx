@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { styled } from "@mui/material/styles";
 import { Alert, TextField, Button, Grid, Typography } from "@mui/material";
 import { Formik, Form, Field, FieldProps } from "formik";
@@ -41,16 +41,13 @@ const StyledFormik = styled(Formik)(({ theme }) => ({
 
 export interface BankAccountFormProps {
   userId: User["id"];
-  createBankAccount: Function;
-  onboarding?: boolean;
+  /** resolves to the reason when the server refused, and to nothing when it approved */
+  createBankAccount: (payload: any) => Promise<string | undefined>;
 }
 
-const BankAccountForm: React.FC<BankAccountFormProps> = ({
-  userId,
-  createBankAccount,
-  onboarding,
-}) => {
+const BankAccountForm: React.FC<BankAccountFormProps> = ({ userId, createBankAccount }) => {
   const history = useHistory();
+  const [serverError, setServerError] = useState("");
 
   const initialValues: BankAccountPayload = {
     userId,
@@ -62,14 +59,18 @@ const BankAccountForm: React.FC<BankAccountFormProps> = ({
     <StyledFormik
       initialValues={initialValues}
       validationSchema={validationSchema}
-      onSubmit={(values, { setSubmitting }) => {
+      onSubmit={async (values, { setSubmitting }) => {
         setSubmitting(true);
+        setServerError("");
 
-        createBankAccount({ ...values, userId });
-
-        if (!onboarding) {
-          history.push("/bankaccounts");
+        // go on only after the server has approved; a refusal is shown here
+        const refusal = await createBankAccount({ ...values, userId });
+        if (refusal) {
+          setServerError(refusal);
+          setSubmitting(false);
+          return;
         }
+        history.push("/bankaccounts");
       }}
     >
       {({ isValid, isSubmitting }) => (
@@ -77,6 +78,11 @@ const BankAccountForm: React.FC<BankAccountFormProps> = ({
           <Alert severity="warning" data-testid="bankaccount-demo-warning">
             진짜 자신의 계좌를 만들진 말아주세요! 이건 데모 웹입니다.
           </Alert>
+          {serverError && (
+            <Alert severity="error" sx={{ marginTop: 1 }} data-testid="bankaccount-error">
+              {serverError}
+            </Alert>
+          )}
           <Typography
             variant="caption"
             color="textSecondary"

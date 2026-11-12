@@ -1,8 +1,9 @@
 // @vitest-environment node
 import { describe, expect, it, beforeEach, afterAll } from "vitest";
 import prisma from "../prisma";
+import { fundUser, createTx } from "./db-setup/accounts";
 import { createUser } from "../user-db";
-import { createTransaction } from "../transaction-db";
+
 import { createComments, createLikes } from "../social-db";
 import { getLikesByTransactionId } from "../like-db";
 import { getCommentsByTransactionId } from "../comment-db";
@@ -14,13 +15,16 @@ import {
 import { resetDatabase } from "./db-setup/reset";
 import { TransactionPayload } from "@rwa/shared";
 
-const makeUser = (n: number) =>
-  createUser({
+const makeUser = async (n: number) => {
+  const user = await createUser({
     firstName: `First${n}`,
     lastName: `Last${n}`,
     username: `user${n}`,
     password: "s3cret",
   });
+  await fundUser(user.id, 100_000);
+  return user;
+};
 
 const payload = (receiverId: string, amount = 5) =>
   ({
@@ -42,7 +46,7 @@ describe("Likes, comments and notifications (PostgreSQL)", () => {
 
   it("a like notifies the sender and the receiver of the transaction", async () => {
     const [sender, receiver, fan] = [await makeUser(1), await makeUser(2), await makeUser(3)];
-    const tx = await createTransaction(sender.id, "payment", payload(receiver.id));
+    const tx = await createTx(sender.id, "payment", payload(receiver.id));
 
     const like = await createLikes(fan.id, tx.id);
 
@@ -56,7 +60,7 @@ describe("Likes, comments and notifications (PostgreSQL)", () => {
 
   it("a comment notifies the sender and the receiver of the transaction", async () => {
     const [sender, receiver, other] = [await makeUser(1), await makeUser(2), await makeUser(3)];
-    const tx = await createTransaction(sender.id, "payment", payload(receiver.id));
+    const tx = await createTx(sender.id, "payment", payload(receiver.id));
 
     const comment = await createComments(other.id, tx.id, "nice");
 
@@ -83,32 +87,32 @@ describe("Likes, comments and notifications (PostgreSQL)", () => {
 
   describe("notification list for the API", () => {
     it("shows the name of the person the notification is about, newest first", async () => {
-      const [requester, payer, fan] = [await makeUser(1), await makeUser(2), await makeUser(3)];
-      const request = await createTransaction(requester.id, "request", payload(payer.id));
+      const [sender, receiver, fan] = [await makeUser(1), await makeUser(2), await makeUser(3)];
+      const request = await createTx(sender.id, "payment", payload(receiver.id));
       await new Promise((r) => setTimeout(r, 5));
       await createLikes(fan.id, request.id);
       await new Promise((r) => setTimeout(r, 5));
       await createComments(fan.id, request.id, "hello");
 
-      const list = await getUnreadNotificationsForApi(payer.id);
+      const list = await getUnreadNotificationsForApi(receiver.id);
 
-      // newest first: comment, like, then the original request notification
+      // newest first: comment, like, then the original payment notification
       expect(list).toHaveLength(3);
       expect(list[0]).toHaveProperty("commentId");
       expect(list[0].userFullName).toBe("Last3 First3"); // who commented
       expect(list[1]).toHaveProperty("likeId");
       expect(list[1].userFullName).toBe("Last3 First3"); // who liked
-      expect(list[2]).toHaveProperty("status", "requested");
-      expect(list[2].userFullName).toBe("Last1 First1"); // sender of the request
+      expect(list[2]).toHaveProperty("status", "received");
+      expect(list[2].userFullName).toBe("Last1 First1"); // a received transfer names the sender
     });
 
-    it("shows the receiver's own name for a received payment", async () => {
+    it("names the sender for a received transfer", async () => {
       const [sender, receiver] = [await makeUser(1), await makeUser(2)];
-      await createTransaction(sender.id, "payment", payload(receiver.id));
+      await createTx(sender.id, "payment", payload(receiver.id));
 
       const list = await getUnreadNotificationsForApi(receiver.id);
 
-      expect(list[0].userFullName).toBe("Last2 First2");
+      expect(list[0].userFullName).toBe("Last1 First1");
     });
 
     it("returns an empty list when there is nothing to show", async () => {

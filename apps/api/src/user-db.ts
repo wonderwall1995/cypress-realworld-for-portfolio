@@ -5,7 +5,6 @@
  * `undefined`, like the old JSON-file version, so the API response and the UI do not change.
  */
 import bcrypt from "bcryptjs";
-import Fuse from "fuse.js";
 import shortid from "shortid";
 import { v4 } from "uuid";
 import type { User as UserRow } from "@prisma/client";
@@ -86,15 +85,35 @@ export const updateUserById = async (userId: string, edits: Partial<User>): Prom
   await prisma.user.update({ where: { id: userId }, data: { ...data, modifiedAt: new Date() } });
 };
 
-// Search: same fuzzy match (Fuse) over the same fields as the old JSON-file version.
-const cleanSearchQuery = (query: string) => query.replace(/[^a-zA-Z0-9]/g, "");
+// Search: a member matches when ANY of these (OR) contains what was typed:
+//   name (either order, spaces ignored: "홍길동", "길동 홍", "홍 길동"), username, e-mail,
+//   phone number (digits only: "01012345678" finds "010-1234-5678").
+const compact = (text: string) => text.toLowerCase().replace(/[\s\-()+._@]/g, "");
+const digitsOnly = (text: string) => text.replace(/\D/g, "");
 
+export const userMatchesQuery = (user: User, query: string): boolean => {
+  const q = compact(query);
+  if (q === "") return false;
+  const names = [
+    compact(`${user.lastName}${user.firstName}`),
+    compact(`${user.firstName}${user.lastName}`),
+    compact(user.lastName),
+    compact(user.firstName),
+  ];
+  if (names.some((name) => name.includes(q))) return true;
+  if (compact(user.username).includes(q)) return true;
+  if (user.email && compact(user.email).includes(q)) return true;
+  // only a phone-looking query (digits, spaces, hyphens, brackets, +) is compared with phone numbers
+  if (!/^[\d\s()+-]+$/.test(query)) return false;
+  const digits = digitsOnly(query);
+  return digits !== "" && digitsOnly(user.phoneNumber ?? "").includes(digits);
+};
+
+// Nothing typed (empty or only spaces) is "no filter": everybody is listed.
 export const searchUsers = async (query: string): Promise<User[]> => {
-  const items = await getAllUsers();
-  const fuse = new Fuse(items, {
-    keys: ["firstName", "lastName", "username", "email", "phoneNumber"],
-  });
-  return fuse.search(cleanSearchQuery(query)).map((result) => result.item);
+  const everybody = await getAllUsers();
+  if (compact(query ?? "") === "") return everybody;
+  return everybody.filter((user) => userMatchesQuery(user, query));
 };
 
 export const removeUserFromResults = (userId: User["id"], results: User[]): User[] =>

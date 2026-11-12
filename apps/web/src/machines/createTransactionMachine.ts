@@ -17,6 +17,11 @@ export interface CreateTransactionMachineSchema {
 const transactionDataMachine = dataMachine("transactionData").withConfig({
   services: {
     createData: async (ctx, event: any) => {
+      // the form already sent the transfer and the server approved: do not send it twice
+      if (event.result) {
+        authService.send("REFRESH");
+        return event.result;
+      }
       const payload = omit("type", event);
       const resp = await httpClient.post(`${API_BASE}/transactions`, payload);
       authService.send("REFRESH");

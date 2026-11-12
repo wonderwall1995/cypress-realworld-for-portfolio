@@ -7,16 +7,10 @@ export enum TransactionStatus {
   complete = "complete",
 }
 
-export enum TransactionRequestStatus {
-  pending = "pending",
-  accepted = "accepted",
-  rejected = "rejected",
-}
-
 export interface Transaction {
   id: string;
   uuid: string;
-  source: string; // Empty if Payment or Request; Populated with BankAccount ID
+  source: string; // the sender's bank account id (empty for an outside deposit)
   amount: number;
   description: string;
   privacyLevel: DefaultPrivacyLevel;
@@ -24,8 +18,6 @@ export interface Transaction {
   senderId: string;
   balanceAtCompletion?: number;
   status: TransactionStatus;
-  requestStatus?: TransactionRequestStatus | string;
-  requestResolvedAt?: Date | string;
   createdAt: Date;
   modifiedAt: Date;
 }
@@ -33,7 +25,7 @@ export interface Transaction {
 export interface FakeTransaction {
   id?: string;
   uuid?: string;
-  source?: string; // Empty if Payment or Request; Populated with BankAccount ID
+  source?: string; // the sender's bank account id (empty for an outside deposit)
   amount?: number;
   description?: string;
   privacyLevel?: DefaultPrivacyLevel;
@@ -41,8 +33,6 @@ export interface FakeTransaction {
   senderId: string;
   balanceAtCompletion?: number;
   status?: TransactionStatus;
-  requestStatus?: TransactionRequestStatus | string;
-  requestResolvedAt?: Date | string;
   createdAt?: Date;
   modifiedAt?: Date;
 }
@@ -54,12 +44,11 @@ export interface TransactionResponseItem extends Transaction {
   receiverAvatar: string;
   senderName: string;
   senderAvatar: string;
+  // The signed-in user's OWN bank account in this transaction and its balance right after the
+  // money moved (cents). Missing when the user has no account in it (someone else's transaction)
+  // or the money has not moved.
+  myAccount?: { bankName: string; balanceAfter?: number };
 }
-
-export type TransactionScenario = {
-  status: TransactionStatus;
-  requestStatus: TransactionRequestStatus | string;
-};
 
 export type TransactionPayload = Omit<Transaction, "id" | "uuid" | "createdAt" | "modifiedAt">;
 
@@ -67,10 +56,13 @@ export type TransactionCreatePayload = Partial<
   Pick<Transaction, "senderId" | "receiverId" | "description"> & {
     amount: string;
     transactionType: string;
+    // my account the money leaves + the receiver's account it goes to
+    myAccountId: string;
+    otherAccountId: string;
+    // payments only: the signed-in user's own password, asked again before money leaves
+    password: string;
   }
 >;
-
-export type TransactionUpdateActionPayload = Pick<Transaction, "id" | "requestStatus">;
 
 type TransactionQueryBase = {
   dateRangeStart?: string;

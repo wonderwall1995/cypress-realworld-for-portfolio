@@ -16,40 +16,35 @@ import type { Transaction as TransactionRow } from "@prisma/client";
 import prisma, { DbClient } from "./prisma";
 import {
   BankTransferType,
+  EXTERNAL_DEPOSIT_NAME,
+  EXTERNAL_DEPOSIT_SENDER_ID,
   Like,
   Comment,
+  NotificationType,
   PaymentNotificationStatus,
   Transaction,
   TransactionPayload,
   TransactionAmountFilterPayload,
   TransactionQueryPayload,
-  TransactionRequestStatus,
   TransactionResponseItem,
   TransactionStatus,
   User,
 } from "@rwa/shared";
 import {
   getAmountQueryFields,
-  getChargeAmount,
   getDateQueryFields,
-  getPayAppCreditedAmount,
   getQueryWithoutFilterFields,
-  getTransferAmount,
   hasAmountQueryFields,
   matchesDirectionAmountFilter,
   hasDateQueryFields,
-  hasSufficientFunds,
-  isPayment,
-  isRequestTransaction,
   isValidAmountDollars,
   MAX_AMOUNT_DOLLARS,
   MAX_BALANCE_CENTS,
 } from "@rwa/shared";
-import { canViewTransaction } from "./access";
-import { createBankTransfer } from "./banktransfer-db";
+import { loadUsableAccount, moveBetweenAccounts } from "./account-money";
 import { HttpError } from "./http-error";
-import { getContactIdsForUser } from "./contact-db";
 import { createPaymentNotification } from "./notification-db";
+import { publishNotifications } from "./notification-stream";
 
 // ---------------------------------------------------------------- mapping
 
@@ -66,8 +61,6 @@ const toTransaction = (row: TransactionRow): Transaction =>
     balanceAtCompletion: row.balanceAtCompletion ?? undefined,
     status: row.status,
     // stored as "" when empty; the API omits it for payments
-    requestStatus: row.requestStatus || undefined,
-    requestResolvedAt: row.requestResolvedAt || undefined,
     createdAt: row.createdAt,
     modifiedAt: row.modifiedAt,
   }) as Transaction;
@@ -129,7 +122,7 @@ const STATUS_VALUES = Object.values(TransactionStatus) as string[];
 const PRIVACY_VALUES = ["public", "private", "contacts"];
 
 /**
- * "Equal" filters from the query (status, requestStatus, privacyLevel).
+ * "Equal" filters from the query (status, privacyLevel).
  * receiverId and senderId are NOT accepted here: the list is always about the given user.
  * (The old code let them replace the user's id, so a member could list someone else's transactions.)
  * Returns null when a value can never match (the old code returned an empty list then).
@@ -139,7 +132,7 @@ const equalFilters = (query?: object): Record<string, string> | null => {
     query ? getQueryWithoutFilterFields(query as TransactionQueryPayload) : {}
   ) as Record<string, unknown>;
   const out: Record<string, string> = {};
-  for (const key of ["status", "requestStatus", "privacyLevel"]) {
+  for (const key of ["status", "privacyLevel"]) {
     const value = fields[key];
     if (value === undefined || value === "") continue;
     if (key === "status" && !STATUS_VALUES.includes(String(value))) return null;
@@ -257,7 +250,10 @@ export const formatTransactionsForApiResponse = async (
     const sender = userById.get(transaction.senderId);
     return {
       receiverName: fullName(receiver),
-      senderName: fullName(sender),
+      senderName:
+        transaction.senderId === EXTERNAL_DEPOSIT_SENDER_ID
+          ? EXTERNAL_DEPOSIT_NAME
+          : fullName(sender),
       receiverAvatar: receiver?.avatar ?? undefined,
       senderAvatar: sender?.avatar ?? undefined,
       likes: likesBy.get(transaction.id) ?? [],
@@ -282,117 +278,117 @@ export const getTransactionsForUserForApi = async (
 ): Promise<TransactionResponseItem[]> =>
   formatTransactionsForApiResponse(await getTransactionsForUserByObj(userId, query, applyAmount));
 
-// ---------------------------------------------------------------- feeds
+// ---------------------------------------------------------------- feed
 
 /**
- * Transactions of the user's contacts: each contact's list (newest first), joined, no duplicates.
- * A contact's private transactions are left out (see canViewTransaction). Both the Friends tab
- * and the contact part of the Everyone tab use this function.
+ * The "전체" feed seen by one member: every public transaction, plus the member's own outside
+ * deposits (those are private for everybody else). There is no friends list any more.
+ * Newest first, ready for the API.
  */
-export const getTransactionsForUserContacts = async (
-  userId: string,
-  query?: object
-): Promise<TransactionResponseItem[]> => {
-  const contactIds = await getContactIdsForUser(userId);
-  const lists: TransactionResponseItem[][] = [];
-  for (const contactId of contactIds) {
-    // the date filter is applied per friend; the amount filter belongs to the signed-in user, so it comes after
-    lists.push(await getTransactionsForUserForApi(contactId, query, false));
-  }
-  const visible = uniqBy("id", lists.flat()).filter((t) =>
-    canViewTransaction(userId, t, contactIds)
-  );
-  return applyAmountFilter(visible, userId, query);
-};
-
-const getNonContactPublicTransactionsForApi = async (
-  userId: string
-): Promise<TransactionResponseItem[]> => {
-  const contactsTransactionIds = new Set(
-    (await getTransactionsForUserContacts(userId)).map((t) => t.id)
-  );
-  const publicTransactions = (await getAllPublicTransactions()).filter(
-    (t) => !contactsTransactionIds.has(t.id)
-  );
+const getPublicFeedForApi = async (userId: string): Promise<TransactionResponseItem[]> => {
+  const myDeposits = (
+    await prisma.transaction.findMany({
+      where: { receiverId: userId, senderId: EXTERNAL_DEPOSIT_SENDER_ID },
+      orderBy: ORDER_STABLE,
+    })
+  ).map(toTransaction);
+  const publicTransactions = uniqBy("id", [...(await getAllPublicTransactions()), ...myDeposits]);
   return formatTransactionsForApiResponse(publicTransactions);
 };
 
-export const getPublicTransactionsDefaultSort = async (userId: string) => ({
-  contactsTransactions: await getTransactionsForUserContacts(userId),
-  publicTransactions: await getNonContactPublicTransactionsForApi(userId),
-});
+export const getPublicTransactionsDefaultSort = (userId: string) => getPublicFeedForApi(userId);
 
 export const getPublicTransactionsByQuery = async (
   userId: string,
   query: TransactionQueryPayload
-) => {
+): Promise<TransactionResponseItem[]> => {
+  const feed = await getPublicFeedForApi(userId);
   if (query && (hasDateQueryFields(query) || hasAmountQueryFields(query))) {
-    const publicTransactions = await getNonContactPublicTransactionsForApi(userId);
-
-    return {
-      contactsTransactions: await getTransactionsForUserContacts(userId, query),
-      publicTransactions: applyAmountFilter(
-        applyDateFilter(publicTransactions, query),
-        userId,
-        query
-      ),
-    };
+    return applyAmountFilter(applyDateFilter(feed, query), userId, query);
   }
-  return getPublicTransactionsDefaultSort(userId);
+  return feed;
+};
+
+// ---------------------------------------------------------------- bank accounts shown next to a transaction
+
+/**
+ * Adds `myAccount` to each item: the signed-in user's own bank account in that transaction
+ * (name and balance right after the money moved). Nobody sees the other side's account or balance.
+ */
+export const attachViewerAccount = async <T extends { id: string }>(
+  items: T[],
+  viewerId: string
+): Promise<(T & { myAccount?: { bankName: string; balanceAfter?: number } })[]> => {
+  if (items.length === 0) return items;
+  const rows = await prisma.transaction.findMany({
+    where: { id: { in: items.map((t) => t.id) } },
+    select: {
+      id: true,
+      source: true,
+      payerAccountId: true,
+      payeeAccountId: true,
+      payerBalanceAfter: true,
+      payeeBalanceAfter: true,
+    },
+  });
+  const accountIds = rows
+    .flatMap((r) => [r.payerAccountId, r.payeeAccountId, r.source])
+    .filter(Boolean);
+  const accounts = await prisma.bankAccount.findMany({
+    where: { id: { in: accountIds as string[] }, userId: viewerId },
+    select: { id: true, bankName: true },
+  });
+  const mine = new Map(accounts.map((a) => [a.id, a.bankName]));
+  const byId = new Map(rows.map((r) => [r.id, r]));
+
+  return items.map((original) => {
+    const row = byId.get(original.id);
+    if (!row) return original;
+    // `source` is the sender's account id: only the owner may see it
+    const item = row.source && !mine.has(row.source) ? { ...original, source: "" } : original;
+    if (row.payeeAccountId && mine.has(row.payeeAccountId)) {
+      const myAccount = {
+        bankName: mine.get(row.payeeAccountId)!,
+        balanceAfter: row.payeeBalanceAfter ?? undefined,
+      };
+      return { ...item, myAccount };
+    }
+    if (row.payerAccountId && mine.has(row.payerAccountId)) {
+      const myAccount = {
+        bankName: mine.get(row.payerAccountId)!,
+        balanceAfter: row.payerBalanceAfter ?? undefined,
+      };
+      return { ...item, myAccount };
+    }
+    return item;
+  });
 };
 
 // ---------------------------------------------------------------- money movement (inside one DB transaction)
 
-type Balanced = Pick<User, "id" | "balance">;
-
-const saveBalance = (tx: DbClient, userId: string, balance: number) =>
-  tx.user.update({ where: { id: userId }, data: { balance } });
+export interface TransactionAccounts {
+  /** my bank account: the money leaves it */
+  myAccountId?: string;
+  /** the receiver's bank account: the money goes into it */
+  otherAccountId?: string;
+}
 
 /**
- * The payer's balance goes down. If it is not enough, the missing part is taken from the
- * bank account (a completed withdrawal) and the balance becomes 0.
+ * A transfer: money moves at once from one of my bank accounts to one of the receiver's.
+ * There are no requests any more (nothing to ask, notify or accept).
+ * Everything happens in ONE database transaction, so a failure leaves nothing half done.
  */
-const debitPayAppBalance = async (tx: DbClient, user: Balanced, transaction: Transaction) => {
-  if (hasSufficientFunds(user as User, transaction)) {
-    await saveBalance(tx, user.id, getChargeAmount(user as User, transaction));
-    return;
-  }
-  const transferAmount = getTransferAmount(user as User, transaction);
-  if (transferAmount > 0) {
-    await createBankTransfer(
-      {
-        userId: user.id,
-        source: transaction.source,
-        amount: transferAmount,
-        type: BankTransferType.withdrawal,
-        transactionId: transaction.id,
-        status: "completed",
-        balanceBefore: user.balance,
-        balanceAfter: 0,
-        note: "withdrawal to cover a payment",
-      },
-      tx
-    );
-  }
-  await saveBalance(tx, user.id, 0);
-};
-
-const creditPayAppBalance = (tx: DbClient, user: Balanced, transaction: Transaction) => {
-  const newBalance = getPayAppCreditedAmount(user as User, transaction);
-  // the balance column is a 32-bit number: refuse instead of failing inside the database
-  if (newBalance > MAX_BALANCE_CENTS) {
-    throw new HttpError(400, "the receiver's balance would be too large");
-  }
-  return saveBalance(tx, user.id, newBalance);
-};
-
-export const createTransaction = (
+export const createTransaction = async (
   userId: User["id"],
-  transactionType: "payment" | "request",
-  transactionDetails: TransactionPayload
-): Promise<Transaction> =>
-  prisma.$transaction(async (tx) => {
-    // a payment or request is a whole number of dollars, 1 or more (never 0 or negative)
+  transactionType: "payment",
+  transactionDetails: TransactionPayload & TransactionAccounts
+): Promise<Transaction> => {
+  const made: NotificationType[] = []; // sent to open streams only AFTER the commit
+  const result = await prisma.$transaction(async (tx) => {
+    if (transactionType !== "payment") {
+      throw new HttpError(400, "only a transfer (payment) can be created");
+    }
+    // a transfer is a whole number of dollars, 1 or more (never 0 or negative)
     if (!isValidAmountDollars(transactionDetails.amount)) {
       throw new HttpError(
         400,
@@ -405,98 +401,55 @@ export const createTransaction = (
     if (!sender) throw new Error(`sender not found: ${userId}`);
     if (!receiver) throw new Error(`receiver not found: ${transactionDetails.receiverId}`);
 
+    const myAccount = await loadUsableAccount(tx, transactionDetails.myAccountId, sender.id, "my");
+    const otherAccount = await loadUsableAccount(
+      tx,
+      transactionDetails.otherAccountId,
+      receiver.id,
+      "the receiver's"
+    );
+
     const now = new Date();
+    const cents = transactionDetails.amount * 100;
     const row = await tx.transaction.create({
       data: {
         id: shortid(),
         uuid: v4(),
-        source: transactionDetails.source ?? "",
-        amount: transactionDetails.amount * 100,
+        source: myAccount.id,
+        amount: cents,
         description: transactionDetails.description,
         receiverId: transactionDetails.receiverId,
         senderId: userId,
         privacyLevel: transactionDetails.privacyLevel || sender.defaultPrivacyLevel || "public",
         status: TransactionStatus.pending,
-        requestStatus: transactionType === "request" ? TransactionRequestStatus.pending : "",
-        requestResolvedAt: "",
+        payerAccountId: myAccount.id,
+        payeeAccountId: otherAccount.id,
         createdAt: now,
         modifiedAt: now,
       },
     });
-    const transaction = toTransaction(row);
 
-    if (isPayment(transaction)) {
-      // balances are read before any change, like the old code (matters when sender == receiver)
-      await debitPayAppBalance(tx, sender, transaction);
-      await creditPayAppBalance(tx, receiver, transaction);
-      await tx.transaction.update({
-        where: { id: transaction.id },
-        data: { status: TransactionStatus.complete },
-      });
+    const after = await moveBetweenAccounts(tx, myAccount.id, otherAccount.id, cents);
+    await tx.transaction.update({
+      where: { id: row.id },
+      data: {
+        status: TransactionStatus.complete,
+        payerBalanceAfter: after.payerAfter,
+        payeeBalanceAfter: after.payeeAfter,
+      },
+    });
+    made.push(
       await createPaymentNotification(
-        transaction.receiverId,
-        transaction.id,
+        row.receiverId,
+        row.id,
         PaymentNotificationStatus.received,
         tx
-      );
-    } else {
-      await createPaymentNotification(
-        transaction.receiverId,
-        transaction.id,
-        PaymentNotificationStatus.requested,
-        tx
-      );
-    }
+      )
+    );
 
-    return toTransaction((await tx.transaction.findUnique({ where: { id: transaction.id } }))!);
+    return toTransaction((await tx.transaction.findUnique({ where: { id: row.id } }))!);
   });
 
-// Only these fields can be edited through the API.
-const EDITABLE = ["requestStatus", "status", "requestResolvedAt"] as const;
-
-/**
- * Edit a transaction.
- *
- * A request can be resolved once, while its requestStatus is "pending":
- *  - accepted: the receiver pays the sender, the transaction becomes complete, the sender is notified
- *  - rejected: only requestStatus changes. No money moves and the transaction stays pending
- * A request that is already accepted or rejected cannot be changed again (409), so the same
- * request can never move money twice. Payments only get the edited fields.
- */
-export const updateTransactionById = (
-  transactionId: string,
-  edits: Partial<Transaction>
-): Promise<void> =>
-  prisma.$transaction(async (tx) => {
-    const row = await tx.transaction.findUnique({ where: { id: transactionId } });
-    if (!row) throw new Error(`transaction not found: ${transactionId}`);
-    const transaction = toTransaction(row);
-
-    const sender = await tx.user.findUnique({ where: { id: transaction.senderId } });
-    const receiver = await tx.user.findUnique({ where: { id: transaction.receiverId } });
-
-    const data: Record<string, unknown> = {};
-    for (const key of EDITABLE) {
-      if (edits[key] !== undefined) data[key] = edits[key];
-    }
-
-    if (isRequestTransaction(transaction)) {
-      if (transaction.requestStatus !== TransactionRequestStatus.pending) {
-        throw new HttpError(409, `this request is already ${transaction.requestStatus}`);
-      }
-
-      if (edits.requestStatus === TransactionRequestStatus.accepted && sender && receiver) {
-        await debitPayAppBalance(tx, receiver, transaction);
-        await creditPayAppBalance(tx, sender, transaction);
-        data.status = TransactionStatus.complete;
-        await createPaymentNotification(
-          transaction.senderId,
-          transaction.id,
-          PaymentNotificationStatus.received,
-          tx
-        );
-      }
-    }
-
-    await tx.transaction.update({ where: { id: transactionId }, data });
-  });
+  await publishNotifications(made); // committed: tell the receiver's open streams
+  return result;
+};

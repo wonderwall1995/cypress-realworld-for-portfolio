@@ -81,7 +81,8 @@ const TransactionInfiniteList: React.FC<TransactionListProps> = ({
             onRowsRendered={onRowsRendered}
             height={isXsBreakpoint ? removePx(theme.spacing(74)) : removePx(theme.spacing(88))}
             width={isXsBreakpoint ? removePx(theme.spacing(38)) : removePx(theme.spacing(90))}
-            rowHeight={isXsBreakpoint ? removePx(theme.spacing(28)) : removePx(theme.spacing(16))}
+            // a row holds date, title, bank line, memo and likes: taller than before
+            rowHeight={isXsBreakpoint ? removePx(theme.spacing(36)) : removePx(theme.spacing(24))}
             rowRenderer={rowRenderer}
           />
         </div>

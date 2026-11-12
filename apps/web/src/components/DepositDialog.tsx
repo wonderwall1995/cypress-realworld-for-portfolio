@@ -14,6 +14,7 @@ import { Link as RouterLink } from "react-router-dom";
 import { BankAccount, MAX_AMOUNT_DOLLARS, formatAmount, isValidAmountDollars } from "@rwa/shared";
 import { httpClient } from "../utils/asyncUtils";
 import { API_BASE } from "../utils/apiUtils";
+import { apiErrorText } from "../utils/apiErrors";
 import { BANK_ACCOUNTS_CHANGED } from "../utils/bankAccountEvents";
 
 interface Props {
@@ -69,7 +70,7 @@ const DepositDialog: React.FC<Props> = ({ open, onClose, onDone }) => {
       onDone?.();
       onClose();
     } catch (e: any) {
-      setError(e?.response?.data?.error ?? "입금하지 못했습니다");
+      setError(apiErrorText(e, "입금하지 못했습니다."));
     } finally {
       setBusy(false);
     }

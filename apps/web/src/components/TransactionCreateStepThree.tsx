@@ -99,8 +99,7 @@ const TransactionCreateStepThree: React.FC<TransactionCreateStepThreeProps> = ({
             <Typography component="h2" variant="h6" color="primary" gutterBottom>
               {transactionDetails?.amount &&
                 formatAmount(parseInt(transactionDetails.amount, 10) * 100)}{" "}
-              {transactionDetails?.transactionType === "payment" ? "결제 완료" : "요청 완료"} (
-              {transactionDetails?.description})
+              이체 완료 ({transactionDetails?.description})
             </Typography>
           </Grid>
         </Grid>

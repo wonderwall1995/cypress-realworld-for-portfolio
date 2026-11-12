@@ -9,8 +9,9 @@ import {
   TransactionPayload,
 } from "@rwa/shared";
 import prisma from "../prisma";
+import { fundUser, createTx } from "./db-setup/accounts";
 import { createUser, getUserById, updateUserById } from "../user-db";
-import { createTransaction, getAllTransactions } from "../transaction-db";
+import { getAllTransactions } from "../transaction-db";
 import { createBankAccountForUser, getBankAccountsByUserId } from "../bankaccount-db";
 import { isBankAccountValidator, isTransactionPayloadValidator } from "../validators";
 import { resetDatabase } from "./db-setup/reset";
@@ -148,8 +149,8 @@ describe("services (the check inside, used by every caller)", () => {
       username: "ub",
       password: "s3cret",
     });
-    await updateUserById(a.id, { balance: aBalance });
-    await updateUserById(b.id, { balance: bBalance });
+    await fundUser(a.id, aBalance);
+    await fundUser(b.id, bBalance);
     return { a, b };
   };
 
@@ -162,18 +163,13 @@ describe("services (the check inside, used by every caller)", () => {
       privacyLevel: "public",
     }) as unknown as TransactionPayload;
 
-  it("a payment or request with 0, a negative, a decimal or too large amount is refused (400) and changes nothing", async () => {
+  it("a transfer with 0, a negative, a decimal or too large amount is refused (400) and changes nothing", async () => {
     const { a, b } = await twoUsers();
 
-    for (const type of ["payment", "request"] as const) {
-      for (const bad of [-50, 0, 1.5, NaN, MAX_AMOUNT_DOLLARS + 1, "5"]) {
-        await expect(
-          createTransaction(a.id, type, pay(b.id, bad)),
-          `${type} ${String(bad)}`
-        ).rejects.toMatchObject({
-          status: 400,
-        });
-      }
+    for (const bad of [-50, 0, 1.5, NaN, MAX_AMOUNT_DOLLARS + 1, "5"]) {
+      await expect(createTx(a.id, "payment", pay(b.id, bad)), String(bad)).rejects.toMatchObject({
+        status: 400,
+      });
     }
     expect(await getAllTransactions()).toHaveLength(0);
     expect((await getUserById(a.id))!.balance).toBe(10000);
@@ -182,13 +178,17 @@ describe("services (the check inside, used by every caller)", () => {
     expect(await prisma.notification.count()).toBe(0);
   });
 
-  it("the smallest ($1) and the largest allowed amount are accepted", async () => {
-    const { a, b } = await twoUsers(0, 0);
+  it("the smallest ($1) amount is accepted", async () => {
+    const { a, b } = await twoUsers(100, 0);
 
-    const small = await createTransaction(a.id, "request", pay(b.id, 1));
+    const small = await createTx(a.id, "payment", pay(b.id, 1));
     expect(small.amount).toBe(100);
+  });
 
-    const big = await createTransaction(a.id, "payment", pay(b.id, MAX_AMOUNT_DOLLARS));
+  it("the largest allowed amount is accepted", async () => {
+    const { a, b } = await twoUsers(MAX_AMOUNT_DOLLARS * 100, 0);
+
+    const big = await createTx(a.id, "payment", pay(b.id, MAX_AMOUNT_DOLLARS));
     expect(big.amount).toBe(MAX_AMOUNT_DOLLARS * 100);
     expect((await getUserById(b.id))!.balance).toBe(MAX_AMOUNT_DOLLARS * 100);
   });
@@ -196,7 +196,7 @@ describe("services (the check inside, used by every caller)", () => {
   it("a payment that would push the receiver's balance past the limit is refused and changes nothing", async () => {
     const { a, b } = await twoUsers(10000, MAX_BALANCE_CENTS - 500);
 
-    await expect(createTransaction(a.id, "payment", pay(b.id, 100))).rejects.toMatchObject({
+    await expect(createTx(a.id, "payment", pay(b.id, 100))).rejects.toMatchObject({
       status: 400,
     });
 

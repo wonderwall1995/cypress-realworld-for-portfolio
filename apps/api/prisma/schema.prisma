@@ -7,6 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// "contacts" is a leftover: there is no friends list any more, so it behaves like "private"
 enum PrivacyLevel {
   public
   private
@@ -50,18 +51,6 @@ model User {
   @@map("users")
 }
 
-model Contact {
-  id            String   @id
-  uuid          String   @unique
-  userId        String
-  contactUserId String
-  createdAt     DateTime
-  modifiedAt    DateTime
-
-  @@index([userId])
-  @@map("contacts")
-}
-
 model BankAccount {
   id            String   @id
   uuid          String   @unique
@@ -88,8 +77,12 @@ model Transaction {
   senderId            String
   balanceAtCompletion Int?
   status              TransactionStatus
-  requestStatus       String
-  requestResolvedAt   String
+  // Money goes from the payer's bank account to the payee's bank account.
+  // payer = sender, payee = receiver.
+  payerAccountId      String?
+  payeeAccountId      String?
+  payerBalanceAfter   Int? // payer's bank account balance right after the money moved (cents)
+  payeeBalanceAfter   Int? // payee's bank account balance right after the money moved (cents)
   createdAt           DateTime
   modifiedAt          DateTime
 
