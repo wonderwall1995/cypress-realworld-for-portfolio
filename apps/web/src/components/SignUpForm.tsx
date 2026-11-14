@@ -46,7 +46,7 @@ const StyledContainer = styled(Container)(({ theme }) => ({
 const validationSchema = object({
   firstName: string().required("이름을 입력하세요"),
   lastName: string().required("성을 입력하세요"),
-  username: string().required("사용자 이름을 입력하세요"),
+  username: string().required("사용자 ID를 입력하세요"),
   password: string().min(4, "비밀번호는 4자 이상이어야 합니다").required("비밀번호를 입력하세요"),
   phoneNumber: string()
     .required("연락처를 입력하세요")

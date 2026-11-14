@@ -17,7 +17,7 @@ test("0. 무작위 값으로 회원가입하고 로그인한다", async ({ page,
   // API 도구: 가입 직후, 서버가 이 계정을 로그인시켜 주는지 확인한다 (화면 로그인과는 별개의 확인)
   await expectLoginWorks(request, user);
 
-  // 화면에서 같은 계정으로 로그인하면 Main(주소 /)으로 가고 사이드바에 내 사용자 이름이 보인다 (공통 코드)
+  // 화면에서 같은 계정으로 로그인하면 Main(주소 /)으로 가고 사이드바에 내 사용자 ID가 보인다 (공통 코드)
   await signIn(page, user);
   await expect(page).toHaveURL("/");
   await expect(page.getByTestId("sidenav-username")).toBeVisible();

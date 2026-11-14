@@ -25,7 +25,7 @@ import { AuthMachineContext, AuthMachineEvents, AuthMachineSchema } from "../mac
 import { Alert } from "@mui/material";
 
 const validationSchema = object({
-  username: string().required("사용자 이름을 입력하세요"),
+  username: string().required("사용자 ID를 입력하세요"),
   password: string().min(4, "비밀번호는 4자 이상이어야 합니다").required("비밀번호를 입력하세요"),
 });
 
@@ -114,7 +114,7 @@ const SignInForm: React.FC<Props> = ({ authService }) => {
                     margin="normal"
                     fullWidth
                     id="username"
-                    label="사용자 이름"
+                    label="사용자 ID"
                     type="text"
                     autoFocus
                     data-testid="signin-username"
