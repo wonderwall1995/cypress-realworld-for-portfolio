@@ -62,7 +62,6 @@
     "docker:status": "docker compose ps",
     "server:up": "bash scripts/server-up.sh",
     "server:down": "bash scripts/server-down.sh",
-    "server:ssh": "bash scripts/ssh-server.sh",
     "codesandbox:start:api": "pnpm --filter @rwa/api start",
     "codesandbox:start": "NODE_ENV=development TSC_COMPILE_ON_ERROR=true concurrently pnpm:start:react pnpm:codesandbox:start:api",
     "postinstall": "husky install"

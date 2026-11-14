@@ -59,6 +59,3 @@ amplifytools.xcconfig
 
 # server security notes (not for the public repository)
 docs/aws-guide.md
-
-# local server access settings (address and key path of my own server)
-scripts/ssh-server.local
