@@ -5,7 +5,9 @@ const CI = !!process.env.CI;
 const BASE_URL = `http://localhost:${process.env.PORT || "7201"}`;
 
 export default defineConfig({
-  testDir: "./e2e",
+  testDir: "./tests/e2e",
+  // The Playwright default: a test file is named *.spec.ts (for example 000-demo-testing.spec.ts).
+  // Shared code (common/) and API tools (api/) have no .spec in the name: tests import them, they are not tests.
   fullyParallel: false, // the app shares one PostgreSQL database, so run tests one at a time
   forbidOnly: CI,
   retries: CI ? 2 : 0,
@@ -25,7 +27,8 @@ export default defineConfig({
   // Starts the Vite frontend (PORT) and Express API (VITE_BACKEND_PORT) before the tests
   webServer: {
     command: "pnpm start",
-    url: BASE_URL,
+    // Waits for the API too: "/api" goes through the Vite proxy, which answers 502 until Express is up
+    url: `${BASE_URL}/api/checkAuth`,
     reuseExistingServer: !CI,
     timeout: 120_000,
   },

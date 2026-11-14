@@ -5,7 +5,7 @@
 import shortid from "shortid";
 import { v4 } from "uuid";
 import prisma from "./prisma";
-import { BankAccount, isValidAccountNumber } from "@rwa/shared";
+import { BankAccount, isValidAccountNumber, MAX_BANK_ACCOUNTS } from "@rwa/shared";
 import { HttpError } from "./http-error";
 
 export const getBankAccountsByUserId = (userId: string) =>
@@ -23,6 +23,11 @@ export const createBankAccountForUser = async (
   }
   if (!isValidAccountNumber(accountDetails.accountNumber)) {
     throw new HttpError(400, "accountNumber must be 9 to 12 digits");
+  }
+
+  const count = await prisma.bankAccount.count({ where: { userId, visible: true } });
+  if (count >= MAX_BANK_ACCOUNTS) {
+    throw new HttpError(400, `a user can have at most ${MAX_BANK_ACCOUNTS} bank accounts`);
   }
 
   const now = new Date();

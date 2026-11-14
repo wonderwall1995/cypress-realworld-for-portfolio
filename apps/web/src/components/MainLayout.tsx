@@ -10,6 +10,7 @@ import {
 } from "xstate";
 import { Container, Grid, useMediaQuery, useTheme } from "@mui/material";
 
+import { FOOTER_HEIGHT } from "../demo/layout";
 import NavBar from "./NavBar";
 import NavDrawer from "./NavDrawer";
 import { DataContext, DataEvents, DataSchema } from "../machines/dataMachine";
@@ -41,7 +42,7 @@ const Root = styled("div")(({ theme }) => ({
 
   [`& .${classes.content}`]: {
     flexGrow: 1,
-    height: "100vh",
+    height: `calc(100vh - ${FOOTER_HEIGHT}px)`, // the demo footer takes the bottom of the window
     overflow: "auto",
   },
 

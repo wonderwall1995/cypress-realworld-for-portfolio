@@ -56,3 +56,6 @@ amplifytools.xcconfig
 
 # local environment (copy .env.example to .env)
 .env
+
+# server security notes (not for the public repository)
+docs/aws-guide.md

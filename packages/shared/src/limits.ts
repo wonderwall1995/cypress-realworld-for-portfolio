@@ -17,7 +17,10 @@ export const isValidAmountDollars = (value: unknown): value is number =>
 // Bank numbers stay text (they can start with 0) but only digits are allowed.
 export const ACCOUNT_NUMBER_PATTERN = /^\d{9,12}$/;
 
-export const isValidAccountNumber = (value: unknown): value is string =>
+// The most bank accounts one user can have (deleted accounts do not count).
+export const MAX_BANK_ACCOUNTS = 60;
+
+export const isValidAccountNumber =(value: unknown): value is string =>
   typeof value === "string" && ACCOUNT_NUMBER_PATTERN.test(value);
 
 // Phone number: digits, spaces, hyphens and parentheses, an optional leading "+".

@@ -108,7 +108,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     autoFocus
                     data-testid="signup-last-name"
                     error={(touched || value !== initialValue) && Boolean(error)}
-                    helperText={touched || value !== initialValue ? error : ""}
+                    helperText={(touched || value !== initialValue ? error : "") || " "}
                     {...field}
                   />
                 )}
@@ -125,7 +125,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     type="text"
                     data-testid="signup-first-name"
                     error={(touched || value !== initialValue) && Boolean(error)}
-                    helperText={touched || value !== initialValue ? error : ""}
+                    helperText={(touched || value !== initialValue ? error : "") || " "}
                     {...field}
                   />
                 )}
@@ -142,7 +142,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     type="text"
                     data-testid="signup-username"
                     error={(touched || value !== initialValue) && Boolean(error)}
-                    helperText={touched || value !== initialValue ? error : ""}
+                    helperText={(touched || value !== initialValue ? error : "") || " "}
                     {...field}
                   />
                 )}
@@ -161,7 +161,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     InputLabelProps={{ shrink: true }}
                     data-testid="signup-phone-number"
                     error={(touched || value !== initialValue) && Boolean(error)}
-                    helperText={touched || value !== initialValue ? error : ""}
+                    helperText={(touched || value !== initialValue ? error : "") || " "}
                     {...field}
                   />
                 )}
@@ -178,7 +178,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     id="password"
                     data-testid="signup-password"
                     error={(touched || value !== initialValue) && Boolean(error)}
-                    helperText={touched || value !== initialValue ? error : ""}
+                    helperText={(touched || value !== initialValue ? error : "") || " "}
                     {...field}
                   />
                 )}
@@ -195,7 +195,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     data-testid="signup-confirmPassword"
                     type="password"
                     error={(touched || value !== initialValue) && Boolean(error)}
-                    helperText={touched || value !== initialValue ? error : ""}
+                    helperText={(touched || value !== initialValue ? error : "") || " "}
                     {...field}
                   />
                 )}

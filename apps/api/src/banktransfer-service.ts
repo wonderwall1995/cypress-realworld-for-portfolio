@@ -64,6 +64,17 @@ export const moveMoney = (userId: string, input: MoveMoneyInput): Promise<BankTr
     if (!deposit && after < 0) throw new HttpError(400, "not enough balance");
     if (after > MAX_BALANCE_CENTS) throw new HttpError(400, "the balance would be too large");
 
+    // The user's own balance (the sum of all their accounts) is stored in the same size of number,
+    // so a deposit must not push that sum over the limit either.
+    if (deposit) {
+      const sums = await tx.$queryRaw<{ total: bigint | number | null }[]>`
+        SELECT COALESCE(SUM("balance"), 0) AS total FROM "bank_accounts"
+        WHERE "userId" = ${userId} AND "visible"`;
+      if (Number(sums[0]?.total ?? 0) + cents > MAX_BALANCE_CENTS) {
+        throw new HttpError(400, "the balance would be too large");
+      }
+    }
+
     // A deposit also shows up in the feeds as an "outside deposit" transaction (only its owner sees it):
     // sender = fixed text, receiver = the user, private, already complete.
     let transactionId: string | undefined;

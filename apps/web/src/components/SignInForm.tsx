@@ -19,8 +19,7 @@ import { string, object } from "yup";
 
 import RWALogo from "./SvgRwaLogo";
 import SourceCredit from "./SourceCredit";
-import UpdateNotesDialog from "./UpdateNotesDialog";
-import { StickyNote2 as NoteIcon } from "@mui/icons-material";
+import UpdateNotesDialog from "./UpdateNotesDialog";import { StickyNote2 as NoteIcon } from "@mui/icons-material";
 import { SignInPayload } from "@rwa/shared";
 import { AuthMachineContext, AuthMachineEvents, AuthMachineSchema } from "../machines/authMachine";
 import { Alert } from "@mui/material";
@@ -120,7 +119,7 @@ const SignInForm: React.FC<Props> = ({ authService }) => {
                     autoFocus
                     data-testid="signin-username"
                     error={(touched || value !== initialValue) && Boolean(error)}
-                    helperText={touched || value !== initialValue ? error : ""}
+                    helperText={(touched || value !== initialValue ? error : "") || " "}
                     {...field}
                   />
                 )}
@@ -136,7 +135,7 @@ const SignInForm: React.FC<Props> = ({ authService }) => {
                     id="password"
                     data-testid="signin-password"
                     error={touched && value !== initialValue && Boolean(error)}
-                    helperText={touched && value !== initialValue && touched ? error : ""}
+                    helperText={(touched && value !== initialValue && touched ? error : "") || " "}
                     {...field}
                   />
                 )}

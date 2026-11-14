@@ -1,0 +1,8 @@
+import { Page } from "@playwright/test";
+
+/** 로그인 화면에서 사용자 이름과 비밀번호를 입력하고 로그인 버튼을 누른다. */
+export async function signIn(page: Page, user: { username: string; password: string }) {
+  await page.getByTestId("signin-username").locator("input").fill(user.username);
+  await page.getByTestId("signin-password").locator("input").fill(user.password);
+  await page.getByTestId("signin-submit").click();
+}

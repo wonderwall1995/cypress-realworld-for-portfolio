@@ -31,6 +31,11 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: [
         {
+          // the demo runs the files of tests/e2e inside the page: the import of the real Playwright becomes our small runner
+          find: "@playwright/test",
+          replacement: path.resolve(__dirname, "src/demo/runner/playwright.ts"),
+        },
+        {
           find: "./runtimeConfig",
           replacement: "./runtimeConfig.browser", // ensures browser compatible version of AWS JS SDK is used
         },

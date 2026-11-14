@@ -24,6 +24,7 @@ import bankTransferRoutes from "./banktransfer-routes";
 import { HttpError } from "./http-error";
 import { closeAllStreams } from "./notification-stream";
 import testDataRoutes from "./testdata-routes";
+import snapshotRoutes from "./snapshot-routes";
 import { checkAuth0Jwt, verifyOktaToken, checkCognitoJwt, checkGoogleJwt } from "./helpers";
 import resolvers from "./graphql/resolvers";
 import { frontendPort, getBackendPort } from "./port-utils";
@@ -70,6 +71,8 @@ const api = express.Router();
 /* istanbul ignore next */
 if (process.env.NODE_ENV === "test" || process.env.NODE_ENV === "development") {
   api.use("/testData", testDataRoutes);
+  // the DB tab of the demo reads the snapshot here (read-only, development and test only)
+  api.use("/demoSnapshot", snapshotRoutes);
 }
 
 api.use(auth);
