@@ -105,6 +105,9 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     id="lastName"
                     label="성"
                     type="text"
+                    placeholder="성과 이름이 웹 데모 시연 특성상 공개됩니다. 주의해주세요!"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ "& input::placeholder": { fontSize: "0.85rem" } }}
                     autoFocus
                     data-testid="signup-last-name"
                     error={(touched || value !== initialValue) && Boolean(error)}
@@ -123,6 +126,9 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     id="firstName"
                     label="이름"
                     type="text"
+                    placeholder="성과 이름이 웹 데모 시연 특성상 공개됩니다. 주의해주세요!"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ "& input::placeholder": { fontSize: "0.85rem" } }}
                     data-testid="signup-first-name"
                     error={(touched || value !== initialValue) && Boolean(error)}
                     helperText={(touched || value !== initialValue ? error : "") || " "}
@@ -138,7 +144,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     required
                     fullWidth
                     id="username"
-                    label="사용자 이름"
+                    label="사용자 ID"
                     type="text"
                     data-testid="signup-username"
                     error={(touched || value !== initialValue) && Boolean(error)}
@@ -175,6 +181,9 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     fullWidth
                     label="비밀번호 (4자 이상)"
                     type="password"
+                    placeholder="비밀번호는 자신이 쓰던 것을 쓰면 안 됩니다!"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ "& input::placeholder": { color: "error.main", opacity: 1 } }}
                     id="password"
                     data-testid="signup-password"
                     error={(touched || value !== initialValue) && Boolean(error)}

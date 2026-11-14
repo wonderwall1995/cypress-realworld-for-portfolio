@@ -16,6 +16,14 @@ const STEP_DELAY = 600; // ms to stay on every step, so the viewer can follow
 const API_HOLD_DELAY = 1400; // ms to keep the answer of an API request on screen, so the viewer can read it
 const FILE_SWITCH_DELAY = 1400; // ms to stay when the run moves to another code file (the viewer reads the new file)
 
+// A loop repeats the same few lines many times (for example, 56 API requests). The viewer understands it
+// after a few rounds, so the run speeds up: a line that ran FAST_REPEATS times among the last FAST_WINDOW steps
+// is a loop, and the steps of a loop wait only a short time.
+const FAST_WINDOW = 12;
+const FAST_REPEATS = 3;
+const FAST_STEP_DELAY = 50; // ms
+const FAST_API_HOLD_DELAY = 100; // ms
+
 class StopSignal extends Error {}
 
 /** A judgement of a value in an API tool (an expect line): the expected value, the real value, and the result. */
@@ -72,6 +80,8 @@ class DemoController {
   private apiId = 0;
   private resumeWaiters: Array<() => void> = [];
   private loaded = new Map<string, RegisteredTest[]>();
+  private recent: string[] = []; // the last steps (file:line), to find a loop
+  private fast = false; // true while the run is in a loop
 
   getSnapshot = () => this.snapshot;
 
@@ -137,7 +147,7 @@ class DemoController {
     const live = this.snapshot.api;
     if (live) this.updateExchange(live.id, (item) => ({ ...item, ...info, pending: false }));
     await this.pausePoint(id);
-    await sleep(API_HOLD_DELAY);
+    await sleep(this.fast ? FAST_API_HOLD_DELAY : API_HOLD_DELAY);
     await this.pausePoint(id);
     this.check(id);
   }
@@ -164,6 +174,11 @@ class DemoController {
     const switchesFile =
       !!location && !!this.snapshot.activeFile && location.path !== this.snapshot.activeFile;
     if (location) {
+      // the same line three times among the last twelve steps: a loop, so the run speeds up
+      const key = `${location.path}:${location.line}`;
+      this.recent.push(key);
+      if (this.recent.length > FAST_WINDOW) this.recent.shift();
+      this.fast = this.recent.filter((item) => item === key).length >= FAST_REPEATS;
       this.set({
         activeFile: location.path,
         activeLine: location.line,
@@ -171,7 +186,7 @@ class DemoController {
       });
     }
     await this.pausePoint(id);
-    await sleep(switchesFile ? FILE_SWITCH_DELAY : STEP_DELAY);
+    await sleep(this.fast ? FAST_STEP_DELAY : switchesFile ? FILE_SWITCH_DELAY : STEP_DELAY);
     await this.pausePoint(id);
     this.check(id);
   }
@@ -179,6 +194,8 @@ class DemoController {
   private async run(index: number) {
     const id = ++this.runId;
     const test = demoQueue[index];
+    this.recent = [];
+    this.fast = false;
     this.set({
       state: "running",
       index,

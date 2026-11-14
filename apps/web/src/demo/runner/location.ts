@@ -3,7 +3,8 @@
  *
  * The runner reads the call stack when a test calls page.click(...) and so on. The browser runs the
  * JavaScript that Vite made from the .ts file, so the line in the stack belongs to that JavaScript.
- * The source map that Vite adds to the module turns it back into the line of the .ts file.
+ * The source map that Vite adds to the module (inside the file, or as a .map file next to it in a build)
+ * turns it back into the line of the .ts file.
  */
 export interface StepLocation {
   /** path from the repository root, for example tests/e2e/common/signup.ts */
@@ -14,10 +15,17 @@ export interface StepLocation {
 
 const FRAME = /(https?:\/\/[^\s()]+?):(\d+):(\d+)/;
 const BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const INLINE_MAP = /\/\/# sourceMappingURL=data:application\/json;(?:charset=[^;]+;)?base64,([A-Za-z0-9+/=]+)/;
+const EXTERNAL_MAP = /\/\/# sourceMappingURL=(\S+?)\s*$/;
 
-// one entry per generated line: [generated column, original line] pairs
+// one entry per generated line: [generated column, source index, original line] triples
 type LineTable = number[][][];
-const tables = new Map<string, Promise<LineTable | null>>();
+interface SourceMap {
+  table: LineTable;
+  /** the original files that the generated code came from (a built chunk holds many files) */
+  sources: string[];
+}
+const maps = new Map<string, Promise<SourceMap | null>>();
 
 const decodeVlq = (segment: string): number[] => {
   const values: number[] = [];
@@ -39,6 +47,7 @@ const decodeVlq = (segment: string): number[] => {
 
 const parseMappings = (mappings: string): LineTable => {
   const lines: LineTable = [];
+  let sourceIndex = 0;
   let sourceLine = 0;
   for (const lineText of mappings.split(";")) {
     const segments: number[][] = [];
@@ -48,8 +57,9 @@ const parseMappings = (mappings: string): LineTable => {
         const fields = decodeVlq(segment);
         column += fields[0];
         if (fields.length >= 4) {
+          sourceIndex += fields[1];
           sourceLine += fields[2];
-          segments.push([column, sourceLine]);
+          segments.push([column, sourceIndex, sourceLine]);
         }
       }
     }
@@ -58,33 +68,41 @@ const parseMappings = (mappings: string): LineTable => {
   return lines;
 };
 
-const loadTable = async (url: string): Promise<LineTable | null> => {
+// The source map is inside the file (the dev server) or next to it as a .map file (a build).
+const loadMap = async (url: string): Promise<SourceMap | null> => {
   const text = await (await fetch(url)).text();
-  const found = /\/\/# sourceMappingURL=data:application\/json;(?:charset=[^;]+;)?base64,([A-Za-z0-9+/=]+)/.exec(
-    text
-  );
-  if (!found) return null;
-  const json = new TextDecoder().decode(Uint8Array.from(atob(found[1]), (c) => c.charCodeAt(0)));
-  return parseMappings(JSON.parse(json).mappings);
+  let json: { mappings: string; sources?: string[] };
+  const inline = INLINE_MAP.exec(text);
+  if (inline) {
+    json = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(inline[1]), (c) => c.charCodeAt(0))));
+  } else {
+    const external = EXTERNAL_MAP.exec(text);
+    if (!external) return null;
+    json = await (await fetch(new URL(external[1], url).href)).json();
+  }
+  return { table: parseMappings(json.mappings), sources: json.sources ?? [] };
 };
 
-// the URL of a module outside the web root contains the repository path: .../tests/e2e/xxx.ts?t=123
-const repoPath = (url: string): string | null => {
-  const clean = decodeURIComponent(url).split("?")[0].split("#")[0];
+// a path of the repository that holds tests: .../tests/e2e/xxx.ts (the address of a dev module, or a source of a map)
+const repoPath = (text: string): string | null => {
+  const clean = decodeURIComponent(text).split("?")[0].split("#")[0];
   const at = clean.lastIndexOf("/tests/e2e/");
-  return at < 0 ? null : clean.slice(at + 1);
+  if (at >= 0) return clean.slice(at + 1);
+  return clean.startsWith("tests/e2e/") ? clean : null;
 };
 
 const toOriginal = async (url: string, line: number, column: number): Promise<StepLocation | null> => {
-  const path = repoPath(url);
-  if (!path) return null;
-  if (!tables.has(url)) tables.set(url, loadTable(url).catch(() => null));
-  const table = await tables.get(url)!;
-  const segments = table?.[line - 1];
-  if (!segments || segments.length === 0) return null;
+  const key = url.split("?")[0];
+  if (!maps.has(key)) maps.set(key, loadMap(key).catch(() => null));
+  const map = await maps.get(key)!;
+  const segments = map?.table[line - 1];
+  if (!map || !segments || segments.length === 0) return null;
   let best = segments[0];
   for (const segment of segments) if (segment[0] <= column - 1) best = segment;
-  return { path, line: best[1] + 1 };
+  // the dev server: one module per file, and the address has the path. A build: the source of the map has it
+  const path = repoPath(url) ?? repoPath(map.sources[best[1]] ?? "");
+  if (!path) return null;
+  return { path, line: best[2] + 1 };
 };
 
 /**
@@ -93,12 +111,21 @@ const toOriginal = async (url: string, line: number, column: number): Promise<St
  */
 export function captureCaller(): Promise<StepLocation | null> {
   const stack = new Error().stack ?? "";
+  const frames: { url: string; line: number; column: number }[] = [];
   for (const raw of stack.split("\n").slice(1)) {
     const match = FRAME.exec(raw);
     if (!match) continue;
     const [, url, line, column] = match;
     if (url.includes("/demo/runner/")) continue;
-    return toOriginal(url, Number(line), Number(column));
+    frames.push({ url, line: Number(line), column: Number(column) });
   }
-  return Promise.resolve(null);
+  // a frame of the runner or of the app (in a build, they are in other chunks) maps to a file outside
+  // tests/e2e: look at the next frame
+  return (async () => {
+    for (const frame of frames) {
+      const found = await toOriginal(frame.url, frame.line, frame.column);
+      if (found) return found;
+    }
+    return null;
+  })();
 }
