@@ -28,7 +28,7 @@ export function randomBankAccountInput() {
  * 1) 화면의 은행 계좌 양식(/bankaccounts/new)으로 만든다. 계좌 정보는 무작위다.
  *    계좌가 만들어지면 앱이 계좌 목록(/bankaccounts)으로 보내므로, 주소로 성공을 판정한다.
  * 2) API로 그 계좌가 실제로 있고 금액이 0인지 확인한다.
- * 만든 계좌의 정보를 돌려준다.
+ * 만든 계좌의 정보(API가 준 id 포함)를 돌려준다.
  */
 export async function createBankAccount(page: Page) {
   const account = randomBankAccountInput();
@@ -40,6 +40,6 @@ export async function createBankAccount(page: Page) {
   await page.getByTestId("bankaccount-submit").click();
   await expect(page).toHaveURL("/bankaccounts");
 
-  await expectNewBankAccount(page, account);
-  return account;
+  const found = await expectNewBankAccount(page, account);
+  return { ...account, id: found.id };
 }

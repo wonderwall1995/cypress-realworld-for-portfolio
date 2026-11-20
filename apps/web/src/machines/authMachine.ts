@@ -276,3 +276,10 @@ export const authService = interpret(authMachine)
     }
   })
   .start(resolvedState);
+
+// The saved state can be old: the balance (or the login itself) can have changed on the server
+// since it was saved, for example by an API call or in another tab. When the saved state says
+// "logged in", ask the server once more on every page load (GET /checkAuth).
+if (authService.state.matches("authorized")) {
+  authService.send("REFRESH");
+}

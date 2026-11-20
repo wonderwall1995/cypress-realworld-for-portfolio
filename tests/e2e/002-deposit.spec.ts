@@ -1,10 +1,38 @@
+/**
+ * ===== 테스트 코드 공통 머리말 =====
+ * 원본은 testcode.template.ts 이다. 모든 *.spec.ts 의 맨 위에 이 글을 똑같이 둔다. 고칠 때는 원본과 모든 사본을 함께 고친다.
+ *
+ * [세팅]
+ * - 도구: Playwright (TypeScript). 설정은 playwright.config.ts 에 있다.
+ * - 파일 이름: NNN-이름.spec.ts. 번호는 읽는 순서일 뿐, 실행 순서를 약속하지 않는다.
+ * - 제한 시간: 테스트 하나에 3분 (playwright.config.ts 의 기본값).
+ * - 서버: 테스트 전에 웹(Vite)과 API(Express)가 떠 있어야 한다. 이미 떠 있으면 그 서버를 쓴다.
+ * - 폴더: common/ 은 화면 동작 묶음, api/ 는 API 도구다. API 도구는 호출과 판정을 스스로 한다.
+ *
+ * [의도: 주요 테스트 코드 별 생성 목적]
+ * - 테스트 파일 하나는 목적 하나를 가진다. 그 목적을 test() 의 제목에 한 줄로 쓴다.
+ * - 파일은 서로 독립이다. 다른 파일의 결과나 실행 순서에 기대지 않는다. 그래서 파일들을 병렬로 돌릴 수 있어야 한다.
+ * - 공통 준비(로그인 등)는 common/ 코드로 한다. 그 기능 자체의 시험은 그 기능의 파일 하나만 맡는다. (예: 회원가입은 000-auth 만 시험한다)
+ *
+ * [설계 공통]
+ * - 시작: goToMain 으로 자기 계정을 준비하고 Main 에서 시작한다. 시험에 필요한 데이터는 자기가 만든다.
+ * - 판정: 한 동작을 화면(UI expect)과 서버(API expect) 두 곳에서 본다. 둘 다 맞아야 통과한다.
+ * - 속도: 소량은 화면으로 한다. 대량(연속 생성, 연속 삭제)은 API로 하고, 화면은 그 결과를 읽을 수 있는지만 본다.
+ * - 삭제: 앱의 화면 삭제는 숨김(soft delete)이다. 있음/없음은 visible 을 생각해서 본다. 완전 삭제는 API 도구로 한다.
+ * - 값: 입력 값은 무작위로 만든다. 경계값은 따로 정해서 시험한다.
+ * - 실패: 도구가 호출과 판정을 스스로 하므로, 실패한 줄이 곧 원인 지점이다.
+ * ===== 공통 머리말 끝 =====
+ */
+
 import { test, expect } from "@playwright/test";
+import { createBankAccountsWithApi } from "./api/create-bank-accounts";
+import { getBankAccountRows } from "./api/get-bank-account-rows";
 import { getBankAccounts } from "./api/get-bank-accounts";
-import { createBankAccount } from "./common/create-bank-account";
+import { hardDeleteBankAccountsWithApi } from "./api/hard-delete-bank-accounts";
 import { deposit, openDeposit } from "./common/deposit";
 import { goToMain } from "./common/go-to-main";
 
-const MIN_BANK_ACCOUNTS = 3; // 입금 시험을 하려면 계좌가 이만큼은 있어야 한다 (앱의 최대는 60개)
+const BANK_ACCOUNTS = 3; // 입금 시험에 쓰는 계좌 수 (앱의 최대는 60개)
 const DEPOSIT_DOLLARS = 100;
 
 // min 이상 max 이하의 무작위 정수 (달러). 입금 금액의 "구간" 시험에 쓴다
@@ -18,15 +46,17 @@ test("2. 입금: 계좌마다 입금하고, 경계값과 금액 구간을 시험
   // 페이지 확인: 지금 화면이 Main(주소 /)이다
   await expect(page).toHaveURL("/");
 
-  // 계좌는 앞 테스트(001)가 만들어 둔다. 이 파일만 따로 돌릴 때를 위해, 3개보다 적으면 모자란 만큼 만든다 (3개 이상이면 건너뜀)
-  // 계좌 하나를 만들 때마다 그 계좌가 실제로 있고 금액이 0인지 API로 확인한다 (공통 코드가 한꺼번에 한다)
-  let accounts = await getBankAccounts(page);
-  while (accounts.length < MIN_BANK_ACCOUNTS) {
-    await createBankAccount(page);
-    accounts = await getBankAccounts(page);
+  // 준비: 깨끗한 상태에서 자기 계좌를 만든다. 앞 실행이 남긴 계좌 행이 있으면 API로 완전히 지운다
+  // 계좌 만들기 자체는 001이 시험하므로, 여기서는 API로 빠르게 3개를 만든다
+  if ((await getBankAccountRows(page)).total > 0) {
+    await hardDeleteBankAccountsWithApi(page);
   }
+  await createBankAccountsWithApi(page, BANK_ACCOUNTS);
+  await page.reload(); // API로 만든 계좌를 화면이 다시 읽게 한다
+  const accounts = await getBankAccounts(page);
+  expect(accounts.length).toBe(BANK_ACCOUNTS);
 
-  // 계좌마다 "지금 있어야 할 금액"(센트)을 적어 둔다. 처음 값은 입금 전 금액이다 (이번에 만든 계좌는 0)
+  // 계좌마다 "지금 있어야 할 금액"(센트)을 적어 둔다. 처음 값은 입금 전 금액이다 (새 계좌라 0)
   const expected = new Map(accounts.map((account) => [account.id, account.balance]));
 
   // 이 계좌의 금액이 expected와 같은지 화면과 API로 확인한다
@@ -37,13 +67,10 @@ test("2. 입금: 계좌마다 입금하고, 경계값과 금액 구간을 시험
     await page.goto("/bankaccounts");
     await expect(page.getByTestId(`bankaccount-balance-${accountId}`)).toContainText(money(expectedCents));
 
-    // API 확인: 서버가 알고 있는 이 계좌의 금액도 같다
-    const response = await page.request.get("/api/bankAccounts");
-    expect(response.ok()).toBeTruthy();
-    const body = await response.json();
-    const found = body.results.find((item: { id: string }) => item.id === accountId);
+    // API 확인: 서버가 알고 있는 이 계좌의 금액도 같다 (API 도구)
+    const found = (await getBankAccounts(page)).find((account) => account.id === accountId);
     expect(found !== undefined).toBe(true);
-    expect(found.balance).toBe(expectedCents);
+    expect(found!.balance).toBe(expectedCents);
   };
 
   // 입금하고, expected를 올린 뒤, 화면과 API의 금액을 확인한다
@@ -103,4 +130,8 @@ test("2. 입금: 계좌마다 입금하고, 경계값과 금액 구간을 시험
   //   최대 입금액은 입력으로는 맞지만, 이 사용자의 총 잔액이 한도(2,147,483,647센트)를 넘게 되므로 서버가 거절한다.
   await expectDepositRefused(first, "21474837");
   await expectDepositRefusedByServer(first, 21474836);
+
+  // 정리: 이 시험이 만든 계좌를 API로 완전히 지운다. 금액이 있는 계좌는 화면에서 삭제할 수 없으므로 API 도구를 쓴다
+  await hardDeleteBankAccountsWithApi(page);
+  expect(await getBankAccountRows(page)).toEqual({ total: 0, visible: 0, hidden: 0 });
 });

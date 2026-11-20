@@ -8,6 +8,8 @@ export default defineConfig({
   testDir: "./tests/e2e",
   // The Playwright default: a test file is named *.spec.ts (for example 000-demo-testing.spec.ts).
   // Shared code (common/) and API tools (api/) have no .spec in the name: tests import them, they are not tests.
+  // testcode.template.ts is not a test either: it is the template of a new test file.
+  timeout: 3 * 60_000, // the default time limit of one test: 3 minutes (Playwright's own default is 30 seconds)
   fullyParallel: false, // the app shares one PostgreSQL database, so run tests one at a time
   forbidOnly: CI,
   retries: CI ? 2 : 0,
