@@ -1,5 +1,5 @@
 import { expect, Page } from "@playwright/test";
-import { randomBankAccountInput } from "../common/create-bank-account";
+import { randomBankAccountInput } from "../fixture/random-bank-account";
 import { getBankAccounts } from "./get-bank-accounts";
 
 /**

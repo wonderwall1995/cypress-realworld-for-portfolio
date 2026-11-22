@@ -2,7 +2,7 @@ import { DemoFileKind } from "./queue";
 
 /**
  * The look of the code files by kind. The accordion tabs, the IDE tab and the line that runs use it.
- *   test (tests/e2e/*.spec.ts): green   common (tests/e2e/common): ivory   api (tests/e2e/api): purple
+ *   test (tests/e2e/*.spec.ts): green   common (tests/e2e/common): ivory   api (tests/e2e/api): purple   fixture (tests/e2e/fixture): blue grey
  * "ring" is the rgb of the soft ring that a tab shows when the code changes to it.
  * "lineBg" and "lineBorder" are the highlight of the line that runs now (on the black code area).
  * The green one is the original highlight of the test code, the other kinds use their own color.
@@ -57,5 +57,17 @@ export const KIND_LOOK: Record<
     ring: "123, 31, 162",
     lineBg: "rgba(123, 31, 162, 0.6)",
     lineBorder: "#ce93d8",
+  },
+  fixture: {
+    label: "Fixture",
+    activeBg: "#546e7a",
+    activeText: "#ffffff",
+    activeBorder: "#37474f",
+    idleBg: "#eceff1",
+    idleText: "#37474f",
+    idleBorder: "#b0bec5",
+    ring: "84, 110, 122",
+    lineBg: "rgba(84, 110, 122, 0.55)",
+    lineBorder: "#90a4ae",
   },
 };

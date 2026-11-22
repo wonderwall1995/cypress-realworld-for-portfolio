@@ -7,7 +7,7 @@
  * - 파일 이름: NNN-이름.spec.ts. 번호는 읽는 순서일 뿐, 실행 순서를 약속하지 않는다.
  * - 제한 시간: 테스트 하나에 3분 (playwright.config.ts 의 기본값).
  * - 서버: 테스트 전에 웹(Vite)과 API(Express)가 떠 있어야 한다. 이미 떠 있으면 그 서버를 쓴다.
- * - 폴더: common/ 은 화면 동작 묶음, api/ 는 API 도구다. API 도구는 호출과 판정을 스스로 한다.
+ * - 폴더: common/ 은 화면 동작 묶음, api/ 는 API 도구, fixture/ 는 테스트에 쓰는 값을 만드는 도구다. 만드는 법은 [도구 약속]을 따른다.
  *
  * [의도: 주요 테스트 코드 별 생성 목적]
  * - 테스트 파일 하나는 목적 하나를 가진다. 그 목적을 test() 의 제목에 한 줄로 쓴다.
@@ -20,28 +20,44 @@
  * - 속도: 소량은 화면으로 한다. 대량(연속 생성, 연속 삭제)은 API로 하고, 화면은 그 결과를 읽을 수 있는지만 본다.
  * - 삭제: 앱의 화면 삭제는 숨김(soft delete)이다. 있음/없음은 visible 을 생각해서 본다. 완전 삭제는 API 도구로 한다.
  * - 값: 입력 값은 무작위로 만든다. 경계값은 따로 정해서 시험한다.
- * - 실패: 도구가 호출과 판정을 스스로 하므로, 실패한 줄이 곧 원인 지점이다.
+ * - 실패: 도구는 자기 동작이 됐는지 스스로 확인하므로, 실패한 줄이 곧 원인 지점이다.
+ *
+ * [도구 약속] (api/, common/, fixture/ 에 도구를 만들 때 지킨다. 기존 도구는 손볼 때 맞춘다)
+ * - 받는 것: 첫 번째 인자는 언제나 page 다. API 요청은 page.request 로 보낸다. 따로 떨어진 request 는 쓰지 않는다.
+ * - 판정: 동작 도구(만들기, 지우기, 입금 등)는 그 동작이 됐는지만 확인한다. 그 밖의 판정은 이름이 expect 로 시작하는 도구나 spec 의 expect 줄에 둔다.
+ * - 돌려주는 것: 만드는 도구는 만든 것(id 포함)을, 읽는 도구는 읽은 값을 돌려준다. 값이 여럿이면 순서가 아니라 이름 붙은 묶음({ A, B, C })으로 돌려준다.
+ * - 이름: 동사로 시작한다(create, get, delete, expect 등). API 도구는 끝에 WithApi, 화면 판정 도구는 끝에 OnScreen 을 붙인다. 화면 동작 도구는 붙이지 않는다.
+ * - 단계: 도구의 몸체를 test.step("[종류] 도구 이름", ...) 으로 감싼다. 종류는 common, api, fixture 중 하나다. 기록기가 이 단계로 도구별 성공/실패를 모은다.
+ * - 예외: 값만 만드는 함수(fixture/ 의 random 등)는 page 를 받지 않고 단계로 감싸지 않는다.
  * ===== 공통 머리말 끝 =====
  */
 
 import { test, expect } from "@playwright/test";
 import { createBankAccountsWithApi } from "./api/create-bank-accounts";
+import { expectProfileBalanceIsAccountSumWithApi } from "./api/expect-profile-balance";
 import { getBankAccountRows } from "./api/get-bank-account-rows";
 import { getBankAccounts } from "./api/get-bank-accounts";
 import { hardDeleteBankAccountsWithApi } from "./api/hard-delete-bank-accounts";
 import { deposit, openDeposit } from "./common/deposit";
+import { expectProfileBalanceOnScreen } from "./common/expect-profile-balance-on-screen";
 import { goToMain } from "./common/go-to-main";
+import { random } from "./fixture/random";
 
 const BANK_ACCOUNTS = 3; // 입금 시험에 쓰는 계좌 수 (앱의 최대는 60개)
 const DEPOSIT_DOLLARS = 100;
 
-// min 이상 max 이하의 무작위 정수 (달러). 입금 금액의 "구간" 시험에 쓴다
-const random = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-const money = (cents: number) => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+// 화면의 금액 글자: 소수점 없는 달러 ($1,234). 앱은 센트로 저장하지만 화면에는 달러만 보인다
+const money = (cents: number) =>
+  (cents / 100).toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
 
-test("2. 입금: 계좌마다 입금하고, 경계값과 금액 구간을 시험한다", async ({ page, request }) => {
+test("2. 입금: 계좌마다 입금하고, 경계값과 금액 구간을 시험한다", async ({ page }) => {
   // Main이 아니면 API로 계정을 만들고 화면에서 로그인해서 Main으로 간다 (공통 코드)
-  await goToMain(page, request);
+  await goToMain(page);
 
   // 페이지 확인: 지금 화면이 Main(주소 /)이다
   await expect(page).toHaveURL("/");
@@ -65,7 +81,9 @@ test("2. 입금: 계좌마다 입금하고, 경계값과 금액 구간을 시험
 
     // 화면 확인: 은행 계좌 목록에 이 계좌의 금액이 표시된다
     await page.goto("/bankaccounts");
-    await expect(page.getByTestId(`bankaccount-balance-${accountId}`)).toContainText(money(expectedCents));
+    await expect(page.getByTestId(`bankaccount-balance-${accountId}`)).toHaveText(
+      `잔액: ${money(expectedCents)}`
+    );
 
     // API 확인: 서버가 알고 있는 이 계좌의 금액도 같다 (API 도구)
     const found = (await getBankAccounts(page)).find((account) => account.id === accountId);
@@ -131,7 +149,20 @@ test("2. 입금: 계좌마다 입금하고, 경계값과 금액 구간을 시험
   await expectDepositRefused(first, "21474837");
   await expectDepositRefusedByServer(first, 21474836);
 
+  // 프로필 잔액: 입금이 모두 끝난 뒤, 내 잔액은 계좌 금액의 합이다
+  //   기대 합계는 서버 값이 아니라 이 시험이 넣은 금액(expected)으로 계산한다. 서버와 화면이 같이 틀려도 잡아낸다
+  const expectedSum = [...expected.values()].reduce((sum, cents) => sum + cents, 0);
+  //   서버 판정: 프로필 잔액 = 계좌 금액의 합 (API 도구), 그리고 그 합이 넣은 금액의 합과 같다
+  const sum = await expectProfileBalanceIsAccountSumWithApi(page);
+  expect(sum).toBe(expectedSum);
+  //   화면 판정: 사이드바에 그 금액이 보인다 (공통 코드)
+  await expectProfileBalanceOnScreen(page, sum);
+
   // 정리: 이 시험이 만든 계좌를 API로 완전히 지운다. 금액이 있는 계좌는 화면에서 삭제할 수 없으므로 API 도구를 쓴다
   await hardDeleteBankAccountsWithApi(page);
   expect(await getBankAccountRows(page)).toEqual({ total: 0, visible: 0, hidden: 0 });
+  //   계좌가 없어지면 프로필 잔액도 0으로 돌아온다 (서버와 화면)
+  expect(await expectProfileBalanceIsAccountSumWithApi(page)).toBe(0);
+  await page.reload();
+  await expectProfileBalanceOnScreen(page, 0);
 });

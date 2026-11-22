@@ -35,7 +35,8 @@ const subCodesOf = (file: DemoFile): DemoFile[] => {
   const found = Array.from(new Set(paths))
     .map((path) => e2eSnapshot.find((item) => item.path === path))
     .filter((item): item is DemoFile => !!item);
-  const rank = (item: DemoFile) => (item.kind === "api" ? 0 : item.kind === "common" ? 1 : 2);
+  const rank = (item: DemoFile) =>
+    item.kind === "api" ? 0 : item.kind === "common" ? 1 : item.kind === "fixture" ? 2 : 3;
   return found.sort((a, b) => rank(a) - rank(b));
 };
 

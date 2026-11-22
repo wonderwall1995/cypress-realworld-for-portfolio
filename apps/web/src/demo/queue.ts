@@ -1,7 +1,7 @@
 /**
  * The queue of demo tests. Every *.spec.ts file directly in tests/e2e is one test, in file name order (000, 001, ...).
  * CI runs the same files with the real Playwright: one file, two readers.
- * A test can import shared code from tests/e2e/common and API tools from tests/e2e/api.
+ * A test can import shared code from tests/e2e/common, API tools from tests/e2e/api and fixture code (the values that tests use) from tests/e2e/fixture.
  * Those files are shown as extra tabs of the test.
  */
 // Vite reads the glob options in the source text, so they are written inline (not in a variable)
@@ -22,10 +22,10 @@ const everyE2eFile: Record<string, string> = import.meta.glob("../../../../tests
   eager: true,
 });
 
-// shared code (tests/e2e/common) and API tools (tests/e2e/api): tests import them, the demo shows them as tabs
+// shared code (tests/e2e/common), API tools (tests/e2e/api) and fixture code (tests/e2e/fixture): tests import them, the demo shows them as tabs
 // @ts-ignore
 const sharedFiles: Record<string, string> = import.meta.glob(
-  ["../../../../tests/e2e/common/*.ts", "../../../../tests/e2e/api/*.ts"],
+  ["../../../../tests/e2e/common/*.ts", "../../../../tests/e2e/api/*.ts", "../../../../tests/e2e/fixture/*.ts"],
   {
     query: "?raw",
     import: "default",
@@ -35,8 +35,8 @@ const sharedFiles: Record<string, string> = import.meta.glob(
 
 const REPO_PREFIX = "../../../../";
 
-/** "test": a test of tests/e2e. "common": shared code of tests/e2e/common. "api": an API tool of tests/e2e/api. */
-export type DemoFileKind = "test" | "common" | "api";
+/** "test": a test of tests/e2e. "common": shared code of tests/e2e/common. "api": an API tool of tests/e2e/api. "fixture": fixture code of tests/e2e/fixture (it makes the values that tests use). */
+export type DemoFileKind = "test" | "common" | "api" | "fixture";
 
 export interface DemoFile {
   /** file name, for example signup.ts */
@@ -57,7 +57,13 @@ export interface DemoTest extends DemoFile {
 }
 
 const kindOf = (key: string): DemoFileKind =>
-  key.includes("/tests/e2e/api/") ? "api" : key.includes("/tests/e2e/common/") ? "common" : "test";
+  key.includes("/tests/e2e/api/")
+    ? "api"
+    : key.includes("/tests/e2e/common/")
+      ? "common"
+      : key.includes("/tests/e2e/fixture/")
+        ? "fixture"
+        : "test";
 
 const toFile = (key: string, code: string): DemoFile => ({
   name: key.split("/").pop() as string,
@@ -92,8 +98,8 @@ const importedSharedFiles = (file: DemoFile): DemoFile[] => {
     }
   };
   visit(file);
-  // API tools come before the common code (the tabs and the list show them in this order); the order of the imports stays inside a kind
-  const rank = (shared: DemoFile) => (shared.kind === "api" ? 0 : 1);
+  // API tools, then the common code, then the fixture code (the tabs and the list show them in this order); the order of the imports stays inside a kind
+  const rank = (shared: DemoFile) => (shared.kind === "api" ? 0 : shared.kind === "common" ? 1 : 2);
   return Array.from(found.values()).sort((a, b) => rank(a) - rank(b));
 };
 

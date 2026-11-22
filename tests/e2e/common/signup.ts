@@ -1,36 +1,5 @@
 import { expect, Page } from "@playwright/test";
-
-/** 가입에 쓰는 무작위 값 한 벌 */
-export interface RandomUser {
-  lastName: string;
-  firstName: string;
-  username: string;
-  phoneNumber: string;
-  password: string;
-}
-
-const randomInt = (max: number) => Math.floor(Math.random() * max);
-
-// 영어 소문자 난수 (첫 글자는 대문자)
-const randomEnglish = (length: number) => {
-  const letters = Array.from({ length }, () => String.fromCharCode(97 + randomInt(26))).join("");
-  return letters[0].toUpperCase() + letters.slice(1);
-};
-
-// 한글 난수: 가(U+AC00)부터 힣(U+D7A3)까지의 글자
-const randomKorean = (length: number) =>
-  Array.from({ length }, () => String.fromCharCode(0xac00 + randomInt(0xd7a3 - 0xac00 + 1))).join("");
-
-// 숫자 난수 네 자리 (앞자리가 0이어도 네 자리)
-const randomFourDigits = () => String(randomInt(10000)).padStart(4, "0");
-
-export const randomUser = (): RandomUser => ({
-  lastName: randomEnglish(6),
-  firstName: randomEnglish(6),
-  username: randomKorean(3),
-  phoneNumber: `010-${randomFourDigits()}-${randomFourDigits()}`,
-  password: randomFourDigits(),
-});
+import { randomUser, RandomUser } from "../fixture/random-user";
 
 /**
  * 로그인 화면에서 회원가입 화면으로 가서, 무작위 값으로 가입한다. 가입이 끝나 로그인 화면으로 돌아오면 끝난다.
