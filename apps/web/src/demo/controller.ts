@@ -11,6 +11,8 @@ import {
   takeRegisteredTests,
 } from "./runner/playwright";
 import { StepLocation } from "./runner/location";
+import { authService } from "../machines/authMachine";
+import { history } from "../utils/historyUtils";
 
 const STEP_DELAY = 600; // ms to stay on every step, so the viewer can follow
 const API_HOLD_DELAY = 1400; // ms to keep the answer of an API request on screen, so the viewer can read it
@@ -67,6 +69,32 @@ export interface DemoSnapshot {
 
 const IDLE: DemoSnapshot = { state: "idle", index: 0 };
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+const RESET_WAIT_LIMIT = 10_000; // ms: the longest wait for a login or logout that is on its way to end
+
+// The states of the login machine that end by themselves (a request is on its way). LOGOUT is sent after they end.
+const BUSY_AUTH_STATES = ["loading", "signup", "updating", "logout"];
+
+/**
+ * Makes the page like a NEW browser before every test: nobody is logged in and the screen is the sign-in page.
+ * The real Playwright opens a new browser (no login) for every test and closes it at the end.
+ * The demo cannot close its own window (the viewer is watching it), so it logs out in the same window instead:
+ * like pressing the logout button. No reload: the footer and the code panel stay on screen.
+ */
+async function resetLikeNewBrowser(): Promise<void> {
+  const until = Date.now() + RESET_WAIT_LIMIT;
+  const busy = () => BUSY_AUTH_STATES.some((state) => authService.state.matches(state));
+  while (busy() && Date.now() < until) await sleep(100);
+  if (!authService.state.matches("unauthorized")) {
+    authService.send("LOGOUT");
+    while (!authService.state.matches("unauthorized") && Date.now() < until) await sleep(100);
+    if (!authService.state.matches("unauthorized")) {
+      throw new Error("시연 준비 실패: 테스트 시작 전에 로그아웃하지 못했습니다");
+    }
+  }
+  if (history.location.pathname !== "/signin") history.push("/signin");
+  await sleep(150);
+}
 
 /**
  * The controller of the test demo. It lives outside React and above every screen (sign in, main...),
@@ -219,7 +247,12 @@ class DemoController {
         tests = takeRegisteredTests();
         this.loaded.set(test.path, tests);
       }
-      for (const registered of tests) await registered.fn(createFixtures());
+      for (const registered of tests) {
+        // every test starts like the real Playwright: a new browser with no login (see resetLikeNewBrowser)
+        await resetLikeNewBrowser();
+        this.check(id);
+        await registered.fn(createFixtures());
+      }
       this.check(id);
       clearHighlight();
       if (index + 1 < demoQueue.length) {
