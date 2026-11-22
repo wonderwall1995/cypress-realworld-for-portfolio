@@ -223,11 +223,13 @@ enum PlatformRunStatus {
   @@schema("testschema")
 }
 
+// spec: a test file. common: screen actions (tests/e2e/common). api: API tools (tests/e2e/api).
+// fixture: the code that makes or reads the values that tests use (tests/e2e/fixture)
 enum CodeKind {
   spec
   common
   api
-  util
+  fixture
 
   @@schema("testschema")
 }

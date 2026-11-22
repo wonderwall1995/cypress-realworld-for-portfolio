@@ -29,7 +29,7 @@ LLM이 다른 LLM에게 넘기는 설계 문서다. Web(Playwright) 쪽에서 Us
 | Fixture | 실행 번호별 난수 값. 서버가 만들고 DB에 저장한다. |
 | 이름표 (test_case) | 테스트를 가리키는 짧은 이름. 예: `deposit`. Web과 App이 같은 테스트에 같은 이름표를 쓴다. 파일 이름과는 따로다. |
 | Blocked | 무효가 된 번호. 기록은 남지만 통계에서 뺀다. |
-| 코드 종류 (kind) | `spec`(테스트 본문), `common`(재사용 업무 동작), `api`(API 검증 도구), `util`(번호, Fixture, 기록을 다루는 코드) |
+| 코드 종류 (kind) | `spec`(테스트 본문), `common`(재사용 업무 동작), `api`(API 검증 도구), `fixture`(테스트에 쓰는 값을 만들거나 받아 오는 코드, 번호와 기록을 다루는 코드) |
 
 ## 3. 결정 사항
 
@@ -94,17 +94,17 @@ LLM이 다른 LLM에게 넘기는 설계 문서다. Web(Playwright) 쪽에서 Us
 - 번호를 열고 결과를 기록하는 쓰기 API는 공개 웹에서 닫는다. 아무나 번호를 올리거나 Blocked로 만들지 못하게 하기 위해서다.
 
 ### 3.11 기록 방식
-- Web: Playwright에 원래 있는 Reporter 기능을 쓴다(외부 서비스가 아니다). 공통/API/util 함수는 이름 붙은 단계(`test.step`)로 감싸고, Reporter가 단계의 시작, 끝, 성공/실패, 걸린 시간을 서버에 보낸다.
+- Web: Playwright에 원래 있는 Reporter 기능을 쓴다(외부 서비스가 아니다). 공통/API/fixture 함수는 이름 붙은 단계(`test.step`)로 감싸고, Reporter가 단계의 시작, 끝, 성공/실패, 걸린 시간을 서버에 보낸다.
 - App: 같은 역할의 기록기를 Dart로 따로 만든다. 같은 서버 API를 쓰고, 같은 이름표와 같은 종류(kind) 값을 쓴다.
 
 ### 3.12 Web 쪽 파일 배치
 - 기존 spec 파일 이름(`000-auth.spec.ts` 등)은 바꾸지 않는다. 각 테스트에 이름표를 붙인다(예: Playwright tag `@deposit`).
-- `tests/e2e/util/`: 번호, Fixture, 기록을 다루는 클라이언트 코드.
+- `tests/e2e/fixture/`: 테스트에 쓰는 값을 만드는 코드와, 번호, Fixture, 기록을 다루는 클라이언트 코드. 지금은 무작위 값 도구(`random.ts`, `random-user.ts`, `random-bank-account.ts`)가 있다. Fixture가 들어오면 이 무작위 값은 서버에서 받는 값으로 바뀐다.
 - `tests/e2e/starter.spec.ts`: 맨 먼저 한 번 도는 준비 테스트(Playwright setup project). 번호를 열거나 합류하고 Fixture를 받고, 필요하면 기다린다. DB 기능이 맞게 동작하는지도 함께 점검한다. starter가 실패하면 나머지 테스트는 돌지 않는다.
 
 ## 4. 테이블 (testschema)
 
-Prisma 설계 파일: `apps/api/prisma/schema.prisma`. DB 변경 파일: `apps/api/prisma/migrations/20261122000000_add_testschema/migration.sql`.
+Prisma 설계 파일: `apps/api/prisma/schema.prisma`. DB 변경 파일: `apps/api/prisma/migrations/20261122000000_add_testschema/migration.sql`, `20261123000000_rename_codekind_util_to_fixture/migration.sql`(종류 값 util을 fixture로 바꿈).
 
 ### test_run: 실행 번호
 | 칸 | 형 | 뜻 |
@@ -145,7 +145,7 @@ PK는 (run_no, test_case, item)이다. 같은 키로 값이 두 개 생기지 �
 | id | serial, PK | |
 | run_no | int, FK -> test_run | Grafana가 번호로 바로 묶어 셀 수 있게 둔다 |
 | platform_run_id | int, FK -> platform_run | |
-| kind | `spec` / `common` / `api` / `util` | |
+| kind | `spec` / `common` / `api` / `fixture` | |
 | test_case | text | 이름표 |
 | name | text | 테스트 제목 또는 함수 이름 (예: `createBankAccount`) |
 | file | text | 파일 이름 |
@@ -168,7 +168,8 @@ PK는 (run_no, test_case, item)이다. 같은 키로 값이 두 개 생기지 �
 | EC2 서버 DB에 적용 | 안 함 |
 | 서버 API (번호 열기/합류, Fixture 주기, 신호, 결과 기록, 10분 규칙, 읽기 전용 최신 Fixture) | 안 함. 만드는 방법을 User에게 묻고 진행할 예정 |
 | Fixture 규칙 목록 (서버) | 안 함 |
-| `tests/e2e/util/`, `starter.spec.ts`, Playwright Reporter | 안 함 |
+| `tests/e2e/fixture/` | 폴더와 무작위 값 도구만 있음 (common, spec에서 옮김). 번호, Fixture, 기록 코드는 안 함 |
+| `starter.spec.ts`, Playwright Reporter | 안 함 |
 | 기존 spec에 이름표 붙이기, 난수를 Fixture로 바꾸기 | 안 함 |
 | Chrome 하나로 정식 실행하도록 Playwright 설정 변경 | 안 함 |
 | App(Flutter) 쪽 기록기와 테스트 | 안 함 |
@@ -181,7 +182,7 @@ PK는 (run_no, test_case, item)이다. 같은 키로 값이 두 개 생기지 �
 - Web과 같은 테스트에는 같은 이름표를 쓴다. 이름표 목록은 서버의 Fixture 규칙 목록과 같다.
 - 테스트는 차례대로 돌리되, 각 테스트는 자기 데이터를 스스로 만들고 지운다(독립).
 - 테스트 하나가 끝날 때마다 결과를 보낸다(신호를 겸한다). 10분 넘게 신호가 없으면 번호가 Blocked가 된다.
-- 결과의 kind 값은 `spec` / `common` / `api` / `util` 넷 중 하나다. App 코드도 이 네 종류에 맞춰 나눈다.
+- 결과의 kind 값은 `spec` / `common` / `api` / `fixture` 넷 중 하나다. App 코드도 이 네 종류에 맞춰 나눈다.
 - 서버가 `waiting`을 알려 주면 기다린다. 기다린 뒤에도 같은 번호와 같은 Fixture를 쓴다.
 - 일부 테스트만 돌릴 때는 번호를 받지 않고 결과를 DB에 올리지 않는다.
 - 중간에 멈추면 그 번호는 Web 결과까지 포함해 Blocked가 된다. 사람이 멈출 때는 가능하면 Blocked 신호를 보내고 끝낸다.
