@@ -42,9 +42,10 @@ const cut = {
 } as const;
 
 /**
- * One row of the drop-down. Left 60%: bank name and the last 4 digits (cut with "..." when long).
- * Right 40%: "잔액 $500.00" (only for my own accounts; the other side's balance is never shown).
- * Without a balance the account information gets the whole row.
+ * One row of the drop-down: bank name, the masked account number (····1234), then the balance on the right.
+ * - The bank name is shown in full. Only when the row is too narrow is the NAME cut with "...".
+ * - The masked number, the reason and the balance are never cut: they always stay whole.
+ * - The balance is only known for my own accounts; the other side's balance is never shown.
  */
 const AccountRow: React.FC<{
   account: AccountChoice;
@@ -56,15 +57,20 @@ const AccountRow: React.FC<{
     <Box sx={{ display: "flex", alignItems: "center", width: "100%", minWidth: 0, gap: 1 }}>
       <Box
         data-testid={`${testId}-info`}
-        sx={{ flex: hasBalance ? "0 0 60%" : "1 1 auto", minWidth: 0, ...cut }}
+        sx={{ flex: "1 1 auto", minWidth: 0, display: "flex", alignItems: "baseline", gap: 0.5 }}
       >
-        {account.bankName} ····{account.last4}
-        {reason && ` (${reason})`}
+        <Box component="span" data-testid={`${testId}-bank-name`} sx={{ minWidth: 0, ...cut }}>
+          {account.bankName}
+        </Box>
+        <Box component="span" sx={{ flexShrink: 0, whiteSpace: "nowrap" }}>
+          ····{account.last4}
+          {reason && ` (${reason})`}
+        </Box>
       </Box>
       {hasBalance && (
         <Box
           data-testid={`${testId}-balance`}
-          sx={{ flex: "1 1 0", minWidth: 0, textAlign: "right", ...cut }}
+          sx={{ flexShrink: 0, textAlign: "right", whiteSpace: "nowrap" }}
         >
           잔액 {formatAmount(account.balance!)}
         </Box>

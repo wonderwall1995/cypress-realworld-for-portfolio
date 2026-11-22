@@ -155,19 +155,7 @@ const TransactionCreateStepTwo: React.FC<TransactionCreateStepTwoProps> = ({
 
   return (
     <StyledPaper className={classes.paper} elevation={0}>
-      <Box display="flex" height={200} alignItems="center" justifyContent="center">
-        <Grid container direction="column" justifyContent="flex-start" alignItems="center">
-          <Grid item>
-            <Avatar src={receiver.avatar} />
-          </Grid>
-          <Grid item>
-            <Typography component="h2" variant="h6" color="primary" gutterBottom>
-              {receiver.lastName} {receiver.firstName}
-            </Typography>
-          </Grid>
-        </Grid>
-      </Box>
-      <Container maxWidth="xs">
+      <Container maxWidth="xs" sx={{ marginTop: 3 }}>
         <Formik
           initialValues={initialValues}
           validationSchema={validationSchema}
@@ -180,69 +168,99 @@ const TransactionCreateStepTwo: React.FC<TransactionCreateStepTwoProps> = ({
         >
           {({ isValid, isSubmitting, values }) => (
             <Form className={classes.form} data-testid="transaction-create-form">
-              <Field name="amount">
-                {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
-                  <TextField
-                    variant="outlined"
-                    margin="dense"
-                    fullWidth
-                    required
-                    autoFocus
-                    id={"transaction-create-amount-input"}
-                    type="text"
-                    placeholder="금액 (1달러 이상, 정수)"
-                    data-testid={"transaction-create-amount-input"}
-                    error={(touched || value !== initialValue) && Boolean(error)}
-                    helperText={touched || value !== initialValue ? error : ""}
-                    InputProps={{
-                      inputComponent: NumberFormatCustom as any,
-                      inputProps: { id: "amount" },
-                    }}
-                    {...field}
-                  />
-                )}
-              </Field>
-              <Field name="description">
-                {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
-                  <TextField
-                    variant="outlined"
-                    margin="dense"
-                    fullWidth
-                    required
-                    id={"transaction-create-description-input"}
-                    type="text"
-                    placeholder="메모를 입력하세요"
-                    data-testid={"transaction-create-description-input"}
-                    error={(touched || value !== initialValue) && Boolean(error)}
-                    helperText={touched || value !== initialValue ? error : ""}
-                    {...field}
-                  />
-                )}
-              </Field>
-              <AccountSelect
-                label="내 은행 계좌 (이체할 돈이 나가는 계좌)"
-                testId="transaction-create-my-account"
-                accounts={myAccounts}
-                value={myAccountId}
-                onChange={setMyAccountId}
-              />
-              <AccountSelect
-                label={`${receiver.lastName} ${receiver.firstName}님의 은행 계좌 (이체할 때 받는 계좌)`}
-                testId="transaction-create-other-account"
-                accounts={otherAccounts}
-                value={otherAccountId}
-                onChange={setOtherAccountId}
-              />
-              {payNotEnough(values.amount) && (
-                <Typography
-                  variant="caption"
-                  color="error"
-                  component="p"
-                  data-testid="transaction-create-not-enough"
-                >
-                  선택한 계좌의 잔액({formatAmount(myAccount!.balance ?? 0)})이 부족합니다
+              {/* card 1: what I send (amount, memo, the account the money leaves) */}
+              <Paper
+                variant="outlined"
+                sx={{ padding: 2 }}
+                data-testid="transaction-create-send-card"
+              >
+                <Typography component="h2" variant="subtitle1" fontWeight={700} gutterBottom>
+                  내가 보내는 이체
                 </Typography>
-              )}
+                <Field name="amount">
+                  {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
+                    <TextField
+                      variant="outlined"
+                      margin="dense"
+                      fullWidth
+                      required
+                      autoFocus
+                      id={"transaction-create-amount-input"}
+                      type="text"
+                      placeholder="금액 (1달러 이상, 정수)"
+                      data-testid={"transaction-create-amount-input"}
+                      error={(touched || value !== initialValue) && Boolean(error)}
+                      helperText={touched || value !== initialValue ? error : ""}
+                      InputProps={{
+                        inputComponent: NumberFormatCustom as any,
+                        inputProps: { id: "amount" },
+                      }}
+                      {...field}
+                    />
+                  )}
+                </Field>
+                <Field name="description">
+                  {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
+                    <TextField
+                      variant="outlined"
+                      margin="dense"
+                      fullWidth
+                      required
+                      id={"transaction-create-description-input"}
+                      type="text"
+                      placeholder="메모를 입력하세요"
+                      data-testid={"transaction-create-description-input"}
+                      error={(touched || value !== initialValue) && Boolean(error)}
+                      helperText={touched || value !== initialValue ? error : ""}
+                      {...field}
+                    />
+                  )}
+                </Field>
+                <AccountSelect
+                  label="내 은행 계좌 (이체할 돈이 나가는 계좌)"
+                  testId="transaction-create-my-account"
+                  accounts={myAccounts}
+                  value={myAccountId}
+                  onChange={setMyAccountId}
+                />
+                {payNotEnough(values.amount) && (
+                  <Typography
+                    variant="caption"
+                    color="error"
+                    component="p"
+                    data-testid="transaction-create-not-enough"
+                  >
+                    선택한 계좌의 잔액({formatAmount(myAccount!.balance ?? 0)})이 부족합니다
+                  </Typography>
+                )}
+              </Paper>
+              {/* card 2: what the other person will receive (who, into which account) */}
+              <Paper
+                variant="outlined"
+                sx={{ padding: 2, marginTop: 2 }}
+                data-testid="transaction-create-receive-card"
+              >
+                <Typography component="h2" variant="subtitle1" fontWeight={700} gutterBottom>
+                  상대가 받게 될 정보
+                </Typography>
+                <Box display="flex" alignItems="center" gap={1.5} marginBottom={1}>
+                  <Avatar src={receiver.avatar} />
+                  <Typography
+                    variant="h6"
+                    color="primary"
+                    data-testid="transaction-create-receiver-name"
+                  >
+                    {receiver.lastName} {receiver.firstName}
+                  </Typography>
+                </Box>
+                <AccountSelect
+                  label="받는 계좌 (이체한 돈이 들어가는 계좌)"
+                  testId="transaction-create-other-account"
+                  accounts={otherAccounts}
+                  value={otherAccountId}
+                  onChange={setOtherAccountId}
+                />
+              </Paper>
               <Grid
                 container
                 spacing={2}

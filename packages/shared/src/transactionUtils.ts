@@ -48,10 +48,17 @@ export const bankLabel = (bankName: string) =>
 export const getFakeAmount = (min: number = 1000, max: number = 50000) =>
   parseInt(faker.finance.amount(min, max), 10);
 
+// Money is kept in cents, but the screen shows whole dollars ($512, not $512.00): deposits and transfers are whole
+// dollars only. If a value ever has cents, they are still shown ($512.5) so nothing is hidden.
 /* istanbul ignore next */
 export const formatAmount = (amount: number) =>
   toDecimal(dinero({ amount, currency: USD }), ({ value }) =>
-    Number(value).toLocaleString("en-US", { style: "currency", currency: "USD" })
+    Number(value).toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })
   );
 
 /* istanbul ignore next */
