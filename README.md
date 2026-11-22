@@ -5,8 +5,8 @@
 <p align="center">
   <!-- We use two SVGs here so that this displays correctly
     on Github. This might not look right in other Markdown previewers. -->
-  <img alt="Cypress Real World App Logo" src="./src/svgs/rwa-logo-light.svg#gh-dark-mode-only" />
-  <img alt="Cypress Real World App Logo" src="./src/svgs/rwa-logo.svg#gh-light-mode-only" />
+  <img alt="Cypress Real World App Logo" src="./apps/web/src/svgs/rwa-logo-light.svg#gh-dark-mode-only" />
+  <img alt="Cypress Real World App Logo" src="./apps/web/src/svgs/rwa-logo.svg#gh-light-mode-only" />
 </p>
 
 <p align="center">
@@ -14,7 +14,7 @@ A payment application used as a portfolio project for <strong>end-to-end testing
 </p>
 
 <p align="center">
-  <img style='width: 70%' alt="Cypress Real World App" src="./public/img/rwa-readme-screenshot.png" />
+  <img style='width: 70%' alt="Cypress Real World App" src="./apps/web/public/img/rwa-readme-screenshot.png" />
 </p>
 
 > 💬 **Note from maintainers**
@@ -42,6 +42,66 @@ This repository is a personal fork of the [Cypress Real World App](https://githu
 - **오직 비상업적 목적**(개인 학습, 포트폴리오)으로만 사용하며, Cypress.io와 제휴·보증·후원 관계가 없습니다. Cypress 로고와 상표는 사용하지 않습니다.
 - 제가 수정한 부분도 동일하게 MIT 라이선스로 공유합니다.
 - 소프트웨어는 어떠한 보증도 없이 "있는 그대로" 제공됩니다. 자세한 내용은 [LICENSE](LICENSE)를 참고하세요.
+
+---
+
+# Web - App 자동화 테스트 예제 프로젝트
+
+Cypress.io 팀 웹 데모 대상, Web과 App 자동화 테스트 구현 시연
+
+| 구분                 | 링크                                                                     |
+| -------------------- | ------------------------------------------------------------------------ |
+| Web Repo (이 저장소) | https://github.com/wonderwall1995/cypress-realworld-for-portfolio        |
+| App Repo             | https://github.com/wonderwall1995/cypress-realworld-for-portfolio-mobile |
+| Web 배포 링크        | https://demo.hwk-resume.web.chickenkiller.com/                           |
+| 이력서               | https://resume-hwk.ltwayne0.workers.dev/main                             |
+
+<!-- 실행 방법, 기술 스택, 폴더 구조 같은 안내는 이 아래에 직접 채운다. -->
+
+## 문제 프레임
+
+실질적인 목표는 **자동화 테스트 코드의 구조**를 자신이 어떻게 다루는지 보이고 싶었습니다.
+원래 존재하던 **Cypress.io 측에서 MIT 라이선스로 배포 중인 웹 데모를 개량.**
+기능 개선을 Web Repo에서 마치고, Web에서의 기능을 따와 Flutter Native 앱으로도 구현했습니다.
+
+## 설계
+
+테스트 코드는 배포된 Web에서 실제 어떻게 실행되는지 **Playwright 실행을 모방**하여 진행합니다.
+배포된 웹에서 개별 테스트 코드에 대한 조회와 테스트 진행에 대한 시연을 보는 것이 가능합니다.
+시연은 data-testid 색인된 UI 대상으로 자동화 테스트가 진행되며, 동시에 API 테스트 코드를 통한 검증을 혼합합니다. UI/UX 자동화 코드가 변경에 취약한 점이나, API 테스트 코드가 렌더링되는 UI 대상으로는 검증이 미비할 수 있는 점을 **UI/UX 및 API 자동화 테스트 방식이 혼합된 테스트 코드를 하나로 작성**함으로써 보완하는 시도입니다.
+
+App에서의 자동화 테스트는 Appium + Wdio(드라이버) 방식으로 구현되었으며,
+Web 측의 데모 제품과 기능이 대부분 일치합니다.
+테스트에 사용되는 값(Fixture)을 사용하는 면에서는 Prisma + PostgreSQL 측에 **자동화 테스트를 위한 DB 내, Fixture를 생성할 때 이를 기록**하고 테스트 코드에 특정되는 Row 값을 Fixture로서 삽입하는 방식으로 Web과 App에서의 자동화 테스트 시나리오가 깨지지 않게끔 시도했습니다.
+
+Web에서의 Playwright 사용으로 크게 세 개의 테스트 코드를 나눠둔 상태입니다.
+하나는 .ts 확장자를 가지는 '공용 테스트', 같은 .ts 확장자를 가지는 'API 테스트' 그리고 실제 Playwright CLI 명령어로 실행시키는 .spec.ts 테스트 코드로 나뉩니다.
+개별 .spec.ts 코드는 **Playwright가 가지는 병렬적 실행이 가능하다는 장점을 활용**, .spec.ts **테스트 코드 간 병목이나 종속성을 가급적 배제한 상태**로 테스트를 실행합니다.
+
+## 아쉬운 점
+
+앞서 거론된 **공용 테스트** 코드, **API 테스트** 코드의 경우에도
+실패와 성공에 대해서 따로 세심하게 기록을 하면 좋겠다는 생각도 있습니다.
+조금 더 해볼 수 있다면 Grafana와 Test Record가 든 스키마 혹은 테이블 측면을 연결.
+**개별 .spec 테스트 코드 이외의 코드들도 실제 성공 및 실패 여부를 그려내는 것**도 해보면 좋지 않을까,
+그런 아쉬움이 있습니다. - **현재 과다 스펙이라 여겨진 구상**입니다.
+
+## 회고 (KPT)
+
+### Keep
+
+- 재직 중에 경험치 못한 API 테스트 코드의 구현 방식을 본 프로젝트에서 학습할 수 있었습니다.
+- UI/UX 및 API 자동화 테스트 가지는 단점을 상호 보완하는 시도가 좋았다고 판단됩니다.
+
+### Problem
+
+1. Mocking이나 데이터 흐름 테스트에 대한 요소도 익혀 나가야 할 것 같습니다.
+2. Jmeter와 같은 테스트 도구로 비기능적인 부분을 테스트하면 좋겠다는 생각이 있습니다.
+
+### Try
+
+- App에는 Web과 동일 기능을 가지는 것 이외, 독자적인 기능을 추후에 넣는 것도 필요할 것 같습니다.
+- 복잡한 테스트를 적용하기엔 아직 웹 앱 데모의 개발 내용이 많지 않아 추후에 시도해보고자 합니다.
 
 ---
 
@@ -129,7 +189,7 @@ pnpm test:report   # open the last HTML report
 
 | Type | Location                                                                                                                 |
 | ---- | ------------------------------------------------------------------------------------------------------------------------ |
-| e2e  | [e2e](./e2e) (Playwright)                                                                                                |
+| e2e  | [`tests/e2e`](./tests/e2e) (Playwright)                                                                                  |
 | unit | [`apps/api/src/__tests__`](./apps/api/src/__tests__), [`packages/shared/src/__tests__`](./packages/shared/src/__tests__) |
 
 Unit tests run with `pnpm test:unit`.
@@ -155,10 +215,11 @@ Unit tests run with `pnpm test:unit`.
 | dev:google     | Starts backend in watch mode and frontend; [Uses Google](#google)          |
 | start          | Starts backend and frontend                                                |
 | types          | Validates types                                                            |
-| db:seed        | Generates fresh database seeds for json files in /data                     |
-| start:empty    | Starts backend and frontend with empty database seed                       |
-| tsnode         | Customized ts-node command                                                 |
-| list:dev:users | Provides id and username for users in the dev database                     |
+| docker:up      | Starts PostgreSQL and the app in Docker                                    |
+| docker:down    | Stops the Docker containers (the database volume is kept)                  |
+| prisma:migrate | Creates or updates the database tables (Prisma migrations)                 |
+| test:unit      | Runs the unit tests (API and shared package)                               |
+| lint           | Runs ESLint and the Prettier check                                         |
 
 For a complete list of scripts see [package.json](./package.json)
 
@@ -204,7 +265,7 @@ Prerequisites include an [Amazon Cognito][cognito] account. Environment variable
   - The user pool must have an app client configured, with:
     - enabled auth flow `ALLOW_USER_PASSWORD_AUTH`, only for programmatic login flavor of test.
     - The `cy.origin()` flavor of test only requires auth flow `ALLOW_USER_SRP_AUTH`, and does not require `ALLOW_USER_PASSWORD_AUTH`.
-  - The user pool must have a user corresponding to the `AWS_COGNITO` env vars mentioned below, and the user's Confirmation Status must be `Confirmed`. If it is `Force Reset Password`, then use a browser to log in once at `http://localhost:3000` while `pnpm dev:cognito` is running to reset their password.
+  - The user pool must have a user corresponding to the `AWS_COGNITO` env vars mentioned below, and the user's Confirmation Status must be `Confirmed`. If it is `Force Reset Password`, then use a browser to log in once at `http://localhost:7201` while `pnpm dev:cognito` is running to reset their password.
 
 The test knobs are in a few places:
 
