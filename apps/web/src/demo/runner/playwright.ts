@@ -7,19 +7,23 @@
  *
  * Supported syntax:
  *   test(title, async ({ page, request }) => { ... })
+ *   test.step(title, async () => { ... })     (runs the body and gives back its value; the demo shows no step name yet)
  *   page.goto(path)                       (moves inside the app, it does not reload the page)
+ *   page.reload()                         (the screen and the login read the server again; the window is not reloaded)
  *   page.url()                            (the address of the page now)
  *   page.getByTestId(id), page.getByRole("heading" | "button" | "link", { name }), page.locator(css)
  *   locator.locator(css), locator.fill(text), locator.click()
  *   request.get(url), request.post(url, { data }), request.delete(url)   -> response.status(), response.ok(), response.json()
  *   page.request                          (the same API tool, it has the login of the page)
  *   await expect(locator).toBeVisible(), await expect(locator).toBeHidden()
- *   await expect(locator).toContainText("text"), await expect(locator).toBeDisabled(), await expect(locator).toHaveCount(n)
+ *   await expect(locator).toContainText("text"), await expect(locator).toBeDisabled(), await expect(locator).toBeEnabled()
+ *   await expect(locator).toHaveCount(n), await expect(locator).toHaveText("text")   (the whole text, spaces squeezed)
  *   await expect(page).toHaveURL("/signin")     (a text is resolved against the address of the app; a RegExp is also fine)
- *   expect(value).toBe(expected), expect(value).toBeTruthy()
+ *   expect(value).toBe(expected), expect(value).toEqual(expected), expect(value).toBeTruthy()
  * Anything else stops the demo with a clear message: add it here first, then use it in a test.
  */
 import { history } from "../../utils/historyUtils";
+import { authService } from "../../machines/authMachine";
 import { captureCaller, StepLocation } from "./location";
 
 const WAIT_LIMIT = 5000; // like Playwright, a step waits up to 5 seconds for its element
@@ -220,6 +224,14 @@ class LocatorExpectation {
     highlight(element);
   }
 
+  /** Passes when the element is there and enabled (a button that can be pressed). */
+  async toBeEnabled(): Promise<void> {
+    const where = captureCaller();
+    await beforeStep(where);
+    const element = await this.locator.until((e) => isVisible(e) && !isDisabled(e), "켜진(활성)");
+    highlight(element);
+  }
+
   /** Passes when the text of the element has the given text inside (it waits, like the real Playwright). */
   async toContainText(expected: string): Promise<void> {
     const where = captureCaller();
@@ -231,6 +243,24 @@ class LocatorExpectation {
       if (Date.now() > deadline) {
         throw new Error(
           `시간 초과: ${WAIT_LIMIT / 1000}초 안에 글자에 "${expected}" 이(가) 들어가지 않았습니다 (지금 글자: "${(element.textContent ?? "").trim()}")`
+        );
+      }
+      await sleep(50);
+    }
+  }
+
+  /** Passes when the whole text of the element is the given text (spaces squeezed, like the real Playwright). */
+  async toHaveText(expected: string): Promise<void> {
+    const where = captureCaller();
+    await beforeStep(where);
+    const element = await this.locator.until(isVisible, "보이는");
+    highlight(element);
+    const squeeze = (text: string) => text.replace(/s+/g, " ").trim();
+    const deadline = Date.now() + WAIT_LIMIT;
+    while (squeeze(element.textContent ?? "") !== squeeze(expected)) {
+      if (Date.now() > deadline) {
+        throw new Error(
+          `시간 초과: ${WAIT_LIMIT / 1000}초 안에 글자가 "${expected}" 이(가) 되지 않았습니다 (지금 글자: "${squeeze(element.textContent ?? "")}")`
         );
       }
       await sleep(50);
@@ -288,6 +318,21 @@ class PageExpectation {
 
 const show = (value: unknown) => (value === undefined ? "undefined" : JSON.stringify(value));
 
+// the same value, also inside objects and arrays (like toEqual of the real Playwright: keys with undefined are ignored)
+const deepEqual = (a: unknown, b: unknown): boolean => {
+  if (Object.is(a, b)) return true;
+  if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const keys = (value: object) =>
+    Object.keys(value).filter((key) => (value as Record<string, unknown>)[key] !== undefined);
+  const keysA = keys(a);
+  const keysB = keys(b);
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every((key) =>
+    deepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key])
+  );
+};
+
 class ValueExpectation {
   constructor(private actual: unknown) {}
   toBe(expected: unknown) {
@@ -296,6 +341,19 @@ class ValueExpectation {
     hooks?.expectation?.({ matcher: "toBe", expected: show(expected), actual: show(this.actual), passed, where: captureCaller() });
     if (!passed) {
       throw new Error(`expect(${show(this.actual)}).toBe(${show(expected)}) 실패`);
+    }
+  }
+  toEqual(expected: unknown) {
+    const passed = deepEqual(this.actual, expected);
+    hooks?.expectation?.({
+      matcher: "toEqual",
+      expected: show(expected),
+      actual: show(this.actual),
+      passed,
+      where: captureCaller(),
+    });
+    if (!passed) {
+      throw new Error(`expect(${show(this.actual)}).toEqual(${show(expected)}) 실패`);
     }
   }
   toBeTruthy() {
@@ -339,6 +397,33 @@ export class Page {
       await sleep(100);
       history.push(url);
     }
+    await sleep(150);
+  }
+
+  /**
+   * Like a reload of the real Playwright: the screen shows fresh data from the server.
+   * The demo lives in this window, so the window is NOT reloaded. Instead it does what a reload makes the app do:
+   * 1) when someone is logged in, the app asks the server again who is logged in (GET /checkAuth, as on a page load),
+   *    so the user data (for example the balance) is fresh;
+   * 2) the screen of the address is left for a moment and opened again, so it loads its lists again.
+   */
+  async reload(): Promise<void> {
+    const where = captureCaller();
+    await beforeStep(where);
+    if (authService.state.matches("authorized")) {
+      authService.send("REFRESH");
+      const deadline = Date.now() + WAIT_LIMIT;
+      while (!authService.state.matches("authorized")) {
+        if (Date.now() > deadline) {
+          throw new Error(`시간 초과: 새로고침 뒤 ${WAIT_LIMIT / 1000}초 안에 로그인 정보를 다시 읽지 못했습니다`);
+        }
+        await sleep(50);
+      }
+    }
+    const { pathname, search, hash } = history.location;
+    history.push(pathname === "/" ? "/bankaccounts" : "/");
+    await sleep(100);
+    history.push(`${pathname}${search}${hash}`);
     await sleep(150);
   }
 
@@ -435,6 +520,13 @@ const registry: RegisteredTest[] = [];
 export function test(title: string, fn: RegisteredTest["fn"]) {
   registry.push({ title, fn });
 }
+
+/**
+ * Like test.step of the real Playwright: runs the body and gives back what it returns; an error goes up unchanged.
+ * The tools of tests/e2e wrap their body in a step ("[kind] tool name") so a reporter can record each tool.
+ * The demo does not show the step name yet: the lines inside the step are shown as before.
+ */
+test.step = async <T>(_title: string, body: () => T | Promise<T>): Promise<T> => body();
 
 /** the tests that were registered since the last call */
 export const takeRegisteredTests = () => registry.splice(0);
