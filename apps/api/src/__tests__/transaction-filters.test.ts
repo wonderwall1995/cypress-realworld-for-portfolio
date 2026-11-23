@@ -381,6 +381,27 @@ describe("deposit / withdrawal filters and date range (PostgreSQL)", () => {
       expect((await rejected({ withdrawalMax: "500" })).fields).toEqual([]);
     });
 
+    it("a day that does not exist is refused, also with a time; the last real days are fine", async () => {
+      for (const bad of [
+        "2027-02-29",
+        "2028-02-30",
+        "2027-04-31",
+        "2027-13-01",
+        "2027-00-10",
+        "2027-01-00",
+        "2027-02-29T00:00:00.000Z",
+        "2027-02-30T23:59:59.999+09:00",
+      ]) {
+        expect((await rejected({ dateRangeStart: bad })).fields, bad).toContain("dateRangeStart");
+        expect((await rejected({ dateRangeEnd: bad })).fields, bad).toContain("dateRangeEnd");
+      }
+      for (const good of ["2027-02-28", "2028-02-29", "2027-04-30", "2027-12-31"]) {
+        expect((await rejected({ dateRangeStart: good })).fields, good).toEqual([]);
+      }
+      // what a browser in Korea sends for the first moment of 1 March (the UTC day is 28 February)
+      expect((await rejected({ dateRangeStart: "2027-02-28T15:00:00.000Z" })).fields).toEqual([]);
+    });
+
     it("date range: either side may be missing, start not after end, the same moment is fine", async () => {
       const a = "2026-03-10T00:00:00.000Z";
       const b = "2026-03-10T23:59:59.999Z";

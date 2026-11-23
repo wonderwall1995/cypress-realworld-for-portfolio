@@ -112,6 +112,7 @@ model Like {
   createdAt     DateTime
   modifiedAt    DateTime
 
+  @@unique([userId, transactionId]) // one like per member and transaction
   @@index([transactionId])
   @@map("likes")
   @@schema("public")

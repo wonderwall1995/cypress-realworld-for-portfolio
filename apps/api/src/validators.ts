@@ -104,8 +104,17 @@ const minNotAboveMax = (minName: string, maxName: string) =>
       return true;
     });
 
+// Date.parse moves a day that does not exist (2027-02-30) to the next month, so the written day is checked too
+const isRealDay = (value: string) => {
+  const written = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!written) return true; // not written as YYYY-MM-DD: Date.parse alone decides
+  const [year, month, day] = written.slice(1).map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+};
+
 const isDateValue = (value: unknown) =>
-  typeof value === "string" && !Number.isNaN(Date.parse(value));
+  typeof value === "string" && !Number.isNaN(Date.parse(value)) && isRealDay(value);
 
 export const transactionFilterValidators = [
   centsQuery("depositMin"),
@@ -163,7 +172,11 @@ export const isTransactionPublicQSValidator = [
   ...transactionFilterValidators,
 ];
 
-export const isCommentValidator = body("content").isString().trim();
+export const isCommentValidator = body("content")
+  .isString()
+  .trim()
+  .notEmpty()
+  .withMessage("content is required");
 
 export const isNotificationsBodyValidator = [
   body("items.*.type").isIn(NotificationsTypeValues).trim(),
