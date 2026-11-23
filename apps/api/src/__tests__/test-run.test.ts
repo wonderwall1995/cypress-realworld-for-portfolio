@@ -172,7 +172,7 @@ describe("fixture values", () => {
     expect(app.fixtures.transfer["A.firstName"]).toBe(web.fixtures.transfer["A.firstName"]);
   });
 
-  it("every value fits its partition and the rules of the app (108 numbers = every combination)", () => {
+  it("every value fits its partition and the rules of the app (numbers 1 to 108)", () => {
     const korean = /^[가-힣]+$/;
     for (let runNo = 1; runNo <= 108; runNo += 1) {
       const values: Record<string, string> = {};

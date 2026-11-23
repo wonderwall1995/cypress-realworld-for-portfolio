@@ -12,7 +12,8 @@ const BASE_URL = `http://localhost:${process.env.PORT || "7201"}`;
 const NUMBERED = process.env.TEST_RUN === "1";
 const RUN_FILES = ["starter.spec.ts", "finisher.spec.ts"]; // the first and the last step of a numbered run, not tests
 // A run number belongs to a run of ALL tests: choosing files or titles is refused before a number is opened
-const ALLOWED = ["--reporter=", "--output=", "--headed", "--list"];
+// (no --reporter: it would replace tests/test-run-reporter.ts, which keeps the number alive and blocks a stopped run)
+const ALLOWED = ["--output=", "--headed", "--list"];
 const chosen = process.argv.slice(process.argv.indexOf("test") + 1);
 if (
   NUMBERED &&
@@ -40,7 +41,8 @@ export default defineConfig({
   timeout: 3 * 60_000, // the default time limit of one test: 3 minutes (Playwright's own default is 30 seconds)
   fullyParallel: false, // the app shares one PostgreSQL database, so run tests one at a time
   forbidOnly: CI,
-  retries: CI ? 2 : 0,
+  // a numbered run never retries: a user name belongs to one number, so a second try could not sign up again
+  retries: CI && !NUMBERED ? 2 : 0,
   workers: 1,
   reporter: [
     CI ? ["github"] : ["list"],
