@@ -33,7 +33,8 @@
  */
 
 import { test, expect } from "@playwright/test";
-import { createFundedUserWithApi, FundedUser } from "./api/create-funded-user";
+import { FundedUser } from "./api/create-funded-user";
+import { createUsersWithApi } from "./api/create-users";
 import { expectProfileBalanceIsAccountSumWithApi } from "./api/expect-profile-balance";
 import { getMyBalanceWithApi } from "./api/get-my-balance";
 import { hardDeleteBankAccountsWithApi } from "./api/hard-delete-bank-accounts";
@@ -43,6 +44,7 @@ import { expectProfileBalanceOnScreen } from "./common/expect-profile-balance-on
 import { signIn } from "./common/signin";
 import { confirmTransfer, fillTransfer, openTransferTo, transfer } from "./common/transfer";
 import { random } from "./fixture/random";
+import { fixtureValue, runFixtures } from "./fixture/run-fixtures";
 
 const START_DOLLARS = 1000; // 세 사람이 처음에 각자 계좌에 가진 돈
 const MAX_AMOUNT_DOLLARS = 21_474_836; // 앱이 한 번에 받는 이체 금액의 최대 (센트 칸이 담을 수 있는 크기)
@@ -68,10 +70,10 @@ test("3. 이체: 돈은 정확히 옮겨지고, 잘못된 이체는 화면과 �
 }) => {
   // 시작: 세 사람을 API로 준비한다 (가입, 로그인, 은행 계좌, 입금). 받는 사람 B, C를 먼저, 보내는 사람 A를 마지막에 만든다.
   //   준비 도구는 브라우저의 로그인을 그 사람으로 바꾼다. 그래서 받는 사람의 준비는 A가 화면에 로그인하기 전에 끝낸다
-  const B = await createFundedUserWithApi(page, START_DOLLARS);
-  const C = await createFundedUserWithApi(page, START_DOLLARS);
-  const A = await createFundedUserWithApi(page, START_DOLLARS);
-  const cycleDollars = random(1, 500); // 한 바퀴 돌릴 금액 (무작위)
+  //   정식 실행이면 이 번호의 Fixture 값으로, 번호 없는 실행이면 무작위 값으로 만든다
+  const { A, B, C } = await createUsersWithApi(page, ["B", "C", "A"], START_DOLLARS, "transfer");
+  const fixtures = runFixtures("transfer");
+  const cycleDollars = fixtures ? Number(fixtureValue(fixtures, "cycleDollars")) : random(1, 500); // 한 바퀴 돌릴 금액
 
   // A는 로그인 화면에서 로그인한다 (공통 코드). Main으로 가고, 사이드바 잔액이 처음 금액이다
   await page.goto("/signin");
@@ -153,9 +155,12 @@ test("3. 이체: 돈은 정확히 옮겨지고, 잘못된 이체는 화면과 �
   });
   expect(balances.A + balances.B + balances.C).toBe(3 * START_DOLLARS * 100);
 
-  // 8) 정리: 세 사람의 은행 계좌를 API로 완전히 지운다 (다른 파일에 영향을 남기지 않는다)
-  for (const who of [A, B, C]) {
-    await loginWithApi(page, who.user);
-    await hardDeleteBankAccountsWithApi(page);
+  // 8) 정리: 번호 없는 실행이면 세 사람의 은행 계좌를 API로 완전히 지운다.
+  //    정식 실행이면 남긴다: 나중 실행이 이 번호의 A, B, C로 로그인해 예전 유저도 잘 보이는지 확인한다 (리그레션)
+  if (!fixtures) {
+    for (const who of [A, B, C]) {
+      await loginWithApi(page, who.user);
+      await hardDeleteBankAccountsWithApi(page);
+    }
   }
 });

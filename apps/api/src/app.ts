@@ -21,6 +21,7 @@ import likeRoutes from "./like-routes";
 import commentRoutes from "./comment-routes";
 import notificationRoutes from "./notification-routes";
 import bankTransferRoutes from "./banktransfer-routes";
+import { Prisma } from "@prisma/client";
 import { HttpError } from "./http-error";
 import { closeAllStreams } from "./notification-stream";
 import testDataRoutes from "./testdata-routes";
@@ -77,6 +78,15 @@ if (process.env.NODE_ENV === "test" || process.env.NODE_ENV === "development") {
 
 // the DB tab of the demo reads the snapshot here (read-only, every NODE_ENV)
 api.use("/demoSnapshot", snapshotRoutes);
+
+// Run numbers and fixtures for the test runners (every NODE_ENV; writes need TEST_RUN_SECRET).
+// Loaded only when the Prisma client of this server knows the testschema tables: an older client
+// (a container that has not run "prisma generate" yet) would stop the whole server.
+if (Prisma.dmmf.datamodel.models.some((model) => model.name === "TestRun")) {
+  api.use("/testRuns", require("./test-run-routes").default);
+} else {
+  console.warn("[testRuns] closed: run prisma generate to open the test-run routes");
+}
 
 api.use(auth);
 

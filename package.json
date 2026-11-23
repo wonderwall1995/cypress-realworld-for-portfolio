@@ -44,6 +44,7 @@
     "test:unit": "pnpm -r --if-present test",
     "test:unit:ci": "pnpm -r --if-present test:ci",
     "test": "playwright test",
+    "test:run": "cross-env TEST_RUN=1 playwright test",
     "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
     "test:report": "playwright show-report",

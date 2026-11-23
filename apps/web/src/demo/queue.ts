@@ -1,19 +1,20 @@
 /**
- * The queue of demo tests. Every *.spec.ts file directly in tests/e2e is one test, in file name order (000, 001, ...).
+ * The queue of demo tests. Every numbered *.spec.ts file directly in tests/e2e is one test, in file name order (000, 001, ...).
+ * starter.spec.ts has no number: it prepares a numbered run of the real Playwright and is not a demo test.
  * CI runs the same files with the real Playwright: one file, two readers.
  * A test can import shared code from tests/e2e/common, API tools from tests/e2e/api and fixture code (the values that tests use) from tests/e2e/fixture.
  * Those files are shown as extra tabs of the test.
  */
 // Vite reads the glob options in the source text, so they are written inline (not in a variable)
 // @ts-ignore (import.meta.glob is a Vite feature)
-const testFiles: Record<string, string> = import.meta.glob("../../../../tests/e2e/*.spec.ts", {
+const testFiles: Record<string, string> = import.meta.glob("../../../../tests/e2e/[0-9]*.spec.ts", {
   query: "?raw",
   import: "default",
   eager: true,
 });
 // the same files as modules (not text): importing one runs it, with "@playwright/test" replaced by the runner
 // @ts-ignore
-const testLoaders: Record<string, () => Promise<unknown>> = import.meta.glob("../../../../tests/e2e/*.spec.ts");
+const testLoaders: Record<string, () => Promise<unknown>> = import.meta.glob("../../../../tests/e2e/[0-9]*.spec.ts");
 // every .ts file inside tests/e2e (also the sub folders): the IDE tab shows them as a snapshot of the folder
 // @ts-ignore
 const everyE2eFile: Record<string, string> = import.meta.glob("../../../../tests/e2e/**/*.ts", {
