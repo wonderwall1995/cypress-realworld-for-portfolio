@@ -66,6 +66,11 @@ export const isUserValidator = [
   check("defaultPrivacyLevel").optional({ checkFalsy: true }).isIn(["public", "private"]),
 ];
 
+// Extra rule for a profile change only: a name may be left out, but not emptied (the screen refuses it too).
+export const isProfileNameValidator = ["firstName", "lastName"].map((name) =>
+  body(name).optional().isString().trim().notEmpty().withMessage(`${name} is required`)
+);
+
 // Extra rule for sign-up only: a phone number is required (settings can still change it later).
 export const isSignUpValidator = [
   body("phoneNumber")

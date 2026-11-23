@@ -23,6 +23,7 @@ import {
   searchValidation,
   userFieldsValidator,
   isUserValidator,
+  isProfileNameValidator,
   isSignUpValidator,
 } from "./validators";
 const router = express.Router();
@@ -127,7 +128,11 @@ router.patch(
   ensureAuthenticated,
   trimEmptyableFields,
   userFieldsValidator,
-  validateMiddleware([shortIdValidation("userId"), ...isUserValidator]),
+  validateMiddleware([
+    shortIdValidation("userId"),
+    ...isUserValidator,
+    ...isProfileNameValidator,
+  ]),
   asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
