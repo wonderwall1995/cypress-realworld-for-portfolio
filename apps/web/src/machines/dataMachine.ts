@@ -60,12 +60,20 @@ export const dataMachine = (machineId: string) =>
             onDone: { target: "success" },
             onError: { target: "failure", actions: "setMessage" },
           },
+          // a press while the list is being read again must not be lost: it is saved first, then the list is read
+          on: {
+            UPDATE: "updating",
+          },
         },
         updating: {
           invoke: {
             src: "updateData",
             onDone: { target: "loading" },
             onError: { target: "failure", actions: "setMessage" },
+          },
+          // the same for a second press while the first one is being saved (both requests are sent)
+          on: {
+            UPDATE: "updating",
           },
         },
         creating: {
