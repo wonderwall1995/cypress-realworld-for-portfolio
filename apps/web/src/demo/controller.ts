@@ -5,6 +5,7 @@ import {
   ApiResponseInfo,
   ExpectationInfo,
   clearHighlight,
+  clearRoutes,
   createFixtures,
   RegisteredTest,
   setRunnerHooks,
@@ -255,6 +256,7 @@ class DemoController {
       }
       this.check(id);
       clearHighlight();
+      clearRoutes();
       if (index + 1 < demoQueue.length) {
         await this.run(index + 1); // the next test starts by itself
       } else {
@@ -263,6 +265,7 @@ class DemoController {
     } catch (error) {
       if (error instanceof StopSignal || id !== this.runId) return;
       clearHighlight();
+      clearRoutes();
       this.set({
         state: "finished",
         error: error instanceof Error ? error.message : String(error),
@@ -276,6 +279,7 @@ class DemoController {
     if (!canStart || demoQueue.length === 0) return;
     this.releaseWaiters();
     clearHighlight();
+    clearRoutes();
     void this.run(0);
   };
 
@@ -292,6 +296,7 @@ class DemoController {
     this.runId += 1;
     this.releaseWaiters();
     clearHighlight();
+    clearRoutes();
     this.snapshot = IDLE;
     this.listeners.forEach((listener) => listener());
   };
@@ -301,6 +306,7 @@ class DemoController {
     this.runId += 1;
     this.releaseWaiters();
     clearHighlight();
+    clearRoutes();
     void this.run(index);
   };
 

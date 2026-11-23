@@ -11,6 +11,8 @@
  *   page.goto(path)                       (moves inside the app, it does not reload the page)
  *   page.reload()                         (the screen and the login read the server again; the window is not reloaded)
  *   page.url()                            (the address of the page now)
+ *   page.route(glob, (route) => route.fulfill({ json })), page.unroute(glob)
+ *                                         (mocking: the app gets this answer; page.request still talks to the real server)
  *   page.getByTestId(id), page.getByRole("heading" | "button" | "link", { name }), page.locator(css)
  *   locator.locator(css), locator.fill(text), locator.click(), locator.press("Enter")   (only Enter)
  *   request.get(url), request.post(url, { data }), request.patch(url, { data }), request.delete(url)   -> response.status(), response.ok(), response.json()
@@ -24,6 +26,7 @@
  */
 import { history } from "../../utils/historyUtils";
 import { authService } from "../../machines/authMachine";
+import { httpClient } from "../../utils/asyncUtils";
 import { captureCaller, StepLocation } from "./location";
 
 const WAIT_LIMIT = 5000; // like Playwright, a step waits up to 5 seconds for its element
@@ -76,6 +79,7 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
 
 const beforeStep = async (where: Promise<StepLocation | null>) => {
   await hooks?.step(await where);
+  if (routeFailure) throw routeFailure;
 };
 
 // ---- the blue frame around the element that the current step works on ----
@@ -139,6 +143,59 @@ const guarded = <T extends object>(target: T, label: string): T =>
       return Reflect.get(object, property, receiver);
     },
   });
+
+// ---- mocking: page.route ----
+// The app sends its requests with httpClient (axios). The tools of the tests (page.request) use fetch, so a mock never
+// touches them: the same split as the real Playwright, where page.route does not see page.request.
+class Route {
+  answer: { json: unknown } | null = null;
+  fulfill(options: { json: unknown }): void {
+    const other = Object.keys(options).find((key) => key !== "json");
+    if (other) throw unsupported(`route.fulfill({ ${other} })`);
+    this.answer = { json: options.json };
+  }
+}
+type RouteHandler = (route: Route) => unknown;
+let routes: { glob: string; handler: RouteHandler }[] = [];
+let routeFailure: Error | null = null; // the app hides a failed request, so the next step reports it
+
+/** Takes every mock away (a new test, the end or the stop of the demo): the app talks to the real server again. */
+export const clearRoutes = () => {
+  routes = [];
+  routeFailure = null;
+};
+
+// "**" is any text, "*" is any text without "/"
+const matchesGlob = (glob: string, url: string) => {
+  const literal = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = glob
+    .split("**")
+    .map((part) => part.split("*").map(literal).join("[^/]*"))
+    .join(".*");
+  return new RegExp(`^${pattern}$`).test(url);
+};
+
+httpClient.interceptors.request.use((config) => {
+  if (routes.length === 0) return config;
+  const url = new URL(httpClient.getUri(config), window.location.origin).href;
+  // the newest mock wins, like the real Playwright
+  const found = [...routes].reverse().find(({ glob }) => matchesGlob(glob, url));
+  if (!found) return config;
+  config.adapter = async () => {
+    const route = new Route();
+    try {
+      await found.handler(guarded(route, "route"));
+      if (!route.answer) throw unsupported("page.route 안에서 fulfill 하지 않는 것");
+    } catch (error) {
+      routeFailure = error as Error;
+      throw error;
+    }
+    // a copy, like a real answer: the app must not share objects with the test
+    const data = JSON.parse(JSON.stringify(route.answer.json));
+    return { data, status: 200, statusText: "OK", headers: {}, config };
+  };
+  return config;
+});
 
 export class Locator {
   constructor(readonly find: () => Element[], private description: string) {}
@@ -400,6 +457,19 @@ export class Page {
     return window.location.href;
   }
 
+  /** Mocking: from now on the app gets the answer of the handler for this address. Nothing goes to the server. */
+  async route(glob: string, handler: RouteHandler): Promise<void> {
+    if (typeof glob !== "string") throw unsupported("page.route(글자가 아닌 주소)");
+    await beforeStep(captureCaller());
+    routes.push({ glob, handler });
+  }
+
+  /** Ends the mocks of this address. */
+  async unroute(glob: string): Promise<void> {
+    await beforeStep(captureCaller());
+    routes = routes.filter((item) => item.glob !== glob);
+  }
+
   async goto(url: string): Promise<void> {
     const where = captureCaller();
     await beforeStep(where);
@@ -552,7 +622,10 @@ test.step = async <T>(_title: string, body: () => T | Promise<T>): Promise<T> =>
 /** the tests that were registered since the last call */
 export const takeRegisteredTests = () => registry.splice(0);
 
-export const createFixtures = () => ({
-  page: guarded(new Page(), "page"),
-  request: guarded(new ApiRequest(), "request"),
-});
+export const createFixtures = () => {
+  clearRoutes(); // a new page has no mocks
+  return {
+    page: guarded(new Page(), "page"),
+    request: guarded(new ApiRequest(), "request"),
+  };
+};
