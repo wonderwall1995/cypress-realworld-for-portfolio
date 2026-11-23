@@ -19,10 +19,11 @@ export async function openTransferTo(page: Page, receiver: { id: string; usernam
  */
 export async function fillTransfer(page: Page, input: { dollars: number | string; memo: string }) {
   return test.step("[common] fillTransfer", async () => {
-    await page
-      .getByTestId("transaction-create-amount-input")
-      .locator("input")
-      .fill(String(input.dollars));
+    // 먼저 비우고 쓴다: 금액 칸은 쉼표를 넣어 주는 칸이라, 값을 한 번에 바꾸면 끝자리가 같을 때
+    // (예: 21474837 -> 187) 쉼표를 지우려는 것으로 잘못 알고 앞 금액으로 되돌린다
+    const amount = page.getByTestId("transaction-create-amount-input").locator("input");
+    await amount.fill("");
+    await amount.fill(String(input.dollars));
     await page
       .getByTestId("transaction-create-description-input")
       .locator("input")
