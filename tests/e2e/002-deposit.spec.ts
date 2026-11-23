@@ -45,6 +45,7 @@ import { random } from "./fixture/random";
 
 const BANK_ACCOUNTS = 3; // 입금 시험에 쓰는 계좌 수 (앱의 최대는 60개)
 const DEPOSIT_DOLLARS = 100;
+const MAX_DEPOSIT_DOLLARS = 21_474_836; // 앱이 한 번에 받는 입금액의 최대
 
 // 화면의 금액 글자: 소수점 없는 달러 ($1,234). 앱은 센트로 저장하지만 화면에는 달러만 보인다
 const money = (cents: number) =>
@@ -146,8 +147,26 @@ test("2. 입금: 계좌마다 입금하고, 경계값과 금액 구간을 시험
   // 최대값: 한 번에 넣을 수 있는 최대 입금액은 21,474,836달러다.
   //   한 단계 위(21,474,837달러)는 입력 단계에서 거절된다.
   //   최대 입금액은 입력으로는 맞지만, 이 사용자의 총 잔액이 한도(2,147,483,647센트)를 넘게 되므로 서버가 거절한다.
-  await expectDepositRefused(first, "21474837");
-  await expectDepositRefusedByServer(first, 21474836);
+  await expectDepositRefused(first, String(MAX_DEPOSIT_DOLLARS + 1));
+  await expectDepositRefusedByServer(first, MAX_DEPOSIT_DOLLARS);
+
+  // 같은 금액을 서버에 직접 보내도 거절한다. 화면이 막는 것만으로는 서버가 막는다는 증명이 아니다
+  //   1보다 작거나 정수가 아닌 금액은 입력 검사에서(422), 한도를 넘는 금액은 잔액 검사에서(400) 거절하고, 계좌 금액은 그대로다
+  const answered: Record<string, number> = {};
+  for (const amount of [-1, 0, 1.5, MAX_DEPOSIT_DOLLARS + 1, MAX_DEPOSIT_DOLLARS]) {
+    const response = await page.request.post("/api/bankTransfers", {
+      data: { bankAccountId: first, amount, type: "deposit" },
+    });
+    answered[`${amount}달러`] = response.status();
+  }
+  expect(answered).toEqual({
+    "-1달러": 422,
+    "0달러": 422,
+    "1.5달러": 422,
+    "21474837달러": 400,
+    "21474836달러": 400,
+  });
+  await expectBalance(first);
 
   // 프로필 잔액: 입금이 모두 끝난 뒤, 내 잔액은 계좌 금액의 합이다
   //   기대 합계는 서버 값이 아니라 이 시험이 넣은 금액(expected)으로 계산한다. 서버와 화면이 같이 틀려도 잡아낸다
@@ -165,4 +184,14 @@ test("2. 입금: 계좌마다 입금하고, 경계값과 금액 구간을 시험
   expect(await expectProfileBalanceIsAccountSumWithApi(page)).toBe(0);
   await page.reload();
   await expectProfileBalanceOnScreen(page, 0);
+
+  // 최대값의 안쪽: 잔액이 0이면 최대 입금액이 한 번에 들어간다. 거기에 1달러를 더 넣으면 총 잔액 한도를 넘어 서버가 거절한다
+  await createBankAccountsWithApi(page, 1);
+  await page.reload();
+  const [empty] = await getBankAccounts(page);
+  expected.set(empty.id, empty.balance);
+  await depositAndExpect(empty.id, MAX_DEPOSIT_DOLLARS);
+  await expectDepositRefusedByServer(empty.id, 1);
+  expect(await expectProfileBalanceIsAccountSumWithApi(page)).toBe(MAX_DEPOSIT_DOLLARS * 100);
+  await hardDeleteBankAccountsWithApi(page);
 });

@@ -35,12 +35,14 @@
 import { test, expect } from "@playwright/test";
 import { createUsersWithApi } from "./api/create-users";
 import { getMeWithApi, Me } from "./api/get-me";
+import { getMyBalanceWithApi } from "./api/get-my-balance";
 import { hardDeleteBankAccountsWithApi } from "./api/hard-delete-bank-accounts";
+import { loginWithApi } from "./api/login";
 import { signIn } from "./common/signin";
 import { fillUserSettings, openUserSettings, saveUserSettings } from "./common/user-settings";
 import { Profile, randomProfile } from "./fixture/random-profile";
 
-const START_DOLLARS = 100; // A가 처음에 계좌에 넣은 돈 (이 시험은 돈을 보지 않는다)
+const START_DOLLARS = 100; // 두 사람이 처음에 계좌에 넣은 돈. 정보를 고쳐도 잔액은 그대로여야 한다
 
 // 서버의 내 정보를 설정 화면의 모양으로 바꾼다 (비운 값은 서버에서 null, 화면에서 빈 글자다)
 const profileOf = (me: Me): Profile => ({
@@ -53,14 +55,15 @@ const profileOf = (me: Me): Profile => ({
 test("6. 사용자 설정: 정보를 고치고 되돌릴 수 있고, 잘못된 정보는 화면과 서버 모두에서 거절된다", async ({
   page,
 }) => {
-  // 준비 (API): A를 만든다. 가입할 때의 정보가 처음 값이다. 가입에는 이메일이 없으므로 비어 있다
-  const { A } = await createUsersWithApi(page, ["A"], START_DOLLARS);
-  const original: Profile = {
-    lastName: A.user.lastName,
-    firstName: A.user.firstName,
+  // 준비 (API): A와 남(B)을 만든다. 가입할 때의 정보가 처음 값이다. 가입에는 이메일이 없으므로 비어 있다
+  const { A, B } = await createUsersWithApi(page, ["B", "A"], START_DOLLARS);
+  const signedUp = ({ user }: typeof A): Profile => ({
+    lastName: user.lastName,
+    firstName: user.firstName,
     email: "",
-    phoneNumber: A.user.phoneNumber,
-  };
+    phoneNumber: user.phoneNumber,
+  });
+  const original = signedUp(A);
   const changed = randomProfile();
   const fullName = page.getByTestId("sidenav-user-full-name");
 
@@ -91,13 +94,12 @@ test("6. 사용자 설정: 정보를 고치고 되돌릴 수 있고, 잘못된 �
     (
       await page.request.patch(`/api/users/${userId}`, { data: { ...original, ...change } })
     ).status();
-  const someoneElse: string = (await (await page.request.get("/api/users")).json()).results[0].id;
   const answered = {
     emptyFirstName: await sent(A.user.id, { firstName: "" }),
     blankLastName: await sent(A.user.id, { lastName: "   " }),
     wrongEmail: await sent(A.user.id, { email: "not-an-email" }),
     wrongPhone: await sent(A.user.id, { phoneNumber: "abc" }),
-    someoneElse: await sent(someoneElse, {}),
+    someoneElse: await sent(B.user.id, {}),
   };
   expect(answered).toEqual({
     emptyFirstName: 422,
@@ -111,6 +113,7 @@ test("6. 사용자 설정: 정보를 고치고 되돌릴 수 있고, 잘못된 �
   const untouched = await getMeWithApi(page);
   expect(profileOf(untouched)).toEqual(original);
   expect(untouched.username).toBe(A.user.username);
+  expect(await getMyBalanceWithApi(page)).toBe(START_DOLLARS * 100);
 
   // 4) 수정 (화면): 이름, 이메일, 전화번호를 고쳐 저장하면 사이드바의 이름이 바뀐다
   await saveUserSettings(page, changed);
@@ -127,6 +130,13 @@ test("6. 사용자 설정: 정보를 고치고 되돌릴 수 있고, 잘못된 �
   await expect(fullName).toHaveText(`${original.lastName} ${original.firstName}`);
   expect(profileOf(await getMeWithApi(page))).toEqual(original);
 
-  // 정리: A의 은행 계좌를 API로 완전히 지운다
-  await hardDeleteBankAccountsWithApi(page);
+  // 7) 거절된 요청은 남의 정보를 바꾸지 않았다 (서버). 화면 시험이 끝났으므로 B로 로그인해서 B의 정보를 읽는다
+  await loginWithApi(page, B.user);
+  expect(profileOf(await getMeWithApi(page))).toEqual(signedUp(B));
+
+  // 정리: 두 사람의 은행 계좌를 API로 완전히 지운다
+  for (const who of [B, A]) {
+    await loginWithApi(page, who.user);
+    await hardDeleteBankAccountsWithApi(page);
+  }
 });

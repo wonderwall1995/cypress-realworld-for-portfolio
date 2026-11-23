@@ -48,10 +48,10 @@ test("0. 무작위 값으로 회원가입하고 로그인한다", async ({ page 
   const user = await signUpWithRandomUser(page);
   await expect(page).toHaveURL("/signin");
 
-  // 화면에서 같은 계정으로 로그인하면 Main(주소 /)으로 가고 사이드바에 내 사용자 ID가 보인다 (공통 코드)
+  // 화면에서 같은 계정으로 로그인하면 Main(주소 /)으로 가고 사이드바에 가입한 그 사용자 ID가 보인다 (공통 코드)
   await signIn(page, user);
   await expect(page).toHaveURL("/");
-  await expect(page.getByTestId("sidenav-username")).toBeVisible();
+  await expect(page.getByTestId("sidenav-username")).toHaveText(`@${user.username}`);
 
   // 서버 판정 (API 도구): 화면이 Main으로 간 것만으로는 부족하다. 서버가 지금 이 브라우저를 가입한 그 사용자로 로그인시켰는지 묻는다
   await expectLoggedInAsWithApi(page, user);
