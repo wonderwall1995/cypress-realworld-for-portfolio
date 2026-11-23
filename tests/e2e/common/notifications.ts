@@ -8,10 +8,10 @@ export async function openNotifications(page: Page) {
   });
 }
 
-/** 공통 코드: 알림 화면에서 알림 하나의 "확인"을 누른다. 그 알림이 목록에서 사라지면 끝난다. */
+/** 공통 코드: 알림 화면에서 알림 하나의 "확인"을 누른다. 그 알림의 "확인"이 사라지면 끝난다 (알림은 남는다). */
 export async function confirmNotification(page: Page, notificationId: string) {
   return test.step("[common] confirmNotification", async () => {
     await page.getByTestId(`notification-mark-read-${notificationId}`).click();
-    await expect(page.getByTestId(`notification-list-item-${notificationId}`)).toBeHidden();
+    await expect(page.getByTestId(`notification-mark-read-${notificationId}`)).toBeHidden();
   });
 }

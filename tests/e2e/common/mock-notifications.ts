@@ -1,6 +1,6 @@
 import { Page, test } from "@playwright/test";
 
-const NOTIFICATIONS_URL = "**/api/notifications"; // 화면이 알림 목록을 읽는 주소
+const NOTIFICATIONS_URL = "**/api/notifications**"; // 화면이 알림 목록을 읽는 주소
 
 /**
  * 공통 코드: 모킹. 화면이 알림 목록을 읽을 때 서버 대신 가짜 알림 count개를 준다 (좋아요 알림).

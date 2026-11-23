@@ -45,6 +45,9 @@ import { random } from "./fixture/random";
 const START_DOLLARS = 1000; // 세 사람이 처음에 계좌에 넣은 돈
 const MAX_BADGE = 99; // 종에 숫자로 보이는 최대 개수. 넘으면 "99+"로 보인다
 
+const UNREAD_OPACITY = "1"; // 읽지 않은 알림은 또렷하고,
+const READ_OPACITY = "0.65"; // 읽은 알림은 흐리다
+
 // 알림의 종류
 const kindOf = (item: NotificationInfo) => {
   if (item.commentId) return "댓글";
@@ -52,7 +55,7 @@ const kindOf = (item: NotificationInfo) => {
   return item.status === "received" ? "받은 이체" : "모르는 알림";
 };
 
-test("8. 알림: 일어난 일이 맞는 사람에게 알려지고, 확인하면 사라지며, 종은 99개까지 센다", async ({
+test("8. 알림: 일어난 일이 맞는 사람에게 알려지고, 확인하면 흐려져 남으며, 종은 안 읽은 것만 99까지 센다", async ({
   page,
 }) => {
   // 준비 (API): 세 사람을 만든다. 새 사람이라 알림이 없다
@@ -106,6 +109,17 @@ test("8. 알림: 일어난 일이 맞는 사람에게 알려지고, 확인하면
   const bell = page.getByTestId("nav-top-notifications-count");
   const items = page.locator('[data-testid^="notification-list-item-"]');
   const itemOf = ({ id }: NotificationInfo) => page.getByTestId(`notification-list-item-${id}`);
+  const confirmOf = ({ id }: NotificationInfo) => page.getByTestId(`notification-mark-read-${id}`);
+  // 읽은 알림: 목록에 남아 있고, 흐리고, "확인"이 없다. 읽지 않은 알림: 또렷하고 "확인"이 있다
+  const expectRead = async (item: NotificationInfo) => {
+    await expect(itemOf(item)).toHaveCSS("opacity", READ_OPACITY);
+    await expect(itemOf(item)).toBeVisible();
+    await expect(confirmOf(item)).toHaveCount(0);
+  };
+  const expectUnread = async (item: NotificationInfo) => {
+    await expect(itemOf(item)).toHaveCSS("opacity", UNREAD_OPACITY);
+    await expect(confirmOf(item)).toBeVisible();
+  };
 
   // 4) A가 화면에서 로그인하면 종은 3이고, 목록에 누가 무엇을 했는지 보인다
   await page.goto("/signin");
@@ -117,6 +131,9 @@ test("8. 알림: 일어난 일이 맞는 사람에게 알려지고, 확인하면
   await expect(itemOf(payment)).toContainText(`${nameOf(B)}님이 이체했습니다.`);
   await expect(itemOf(like)).toContainText(`${nameOf(C)}님이 거래에 좋아요를 눌렀습니다.`);
   await expect(itemOf(comment)).toContainText(`${nameOf(C)}님이 거래에 댓글을 남겼습니다.`);
+  await expectUnread(payment);
+  await expectUnread(like);
+  await expectUnread(comment);
 
   // 5) 통신 중에 누른 "확인"도 잃지 않는다. 알림의 통신을 모두 붙잡아 두고 두 개를 잇달아 누른다
   //    첫 번째는 목록을 다시 읽는 중에(화면을 나갔다 오면 다시 읽는다), 두 번째는 첫 번째를 저장하는 중에 누른 것이 된다
@@ -131,21 +148,31 @@ test("8. 알림: 일어난 일이 맞는 사람에게 알려지고, 확인하면
   await page.getByTestId("sidenav-home").click();
   await expect(page).toHaveURL("/");
   await openNotifications(page);
-  await page.getByTestId(`notification-mark-read-${payment.id}`).click();
-  await page.getByTestId(`notification-mark-read-${like.id}`).click();
+  await confirmOf(payment).click();
+  await confirmOf(like).click();
   await expect(bell).toHaveText("3"); // 아직 아무 답도 오지 않았다
-  //    통신을 풀면 두 개가 모두 저장되어 사라진다. 새로고침해도 남은 하나만 보이고, 서버도 같다
+  //    통신을 풀면 두 개가 모두 저장되어, 사라지지 않고 흐려진다. 종은 안 읽은 하나만 센다
   release();
-  await expect(itemOf(payment)).toBeHidden();
-  await expect(itemOf(like)).toBeHidden();
+  await expectRead(payment);
+  await expectRead(like);
   await expect(bell).toHaveText("1");
   await page.unroute("**/api/notifications**");
   await page.reload();
   await expect(bell).toHaveText("1");
-  await expect(items).toHaveCount(1);
-  await expect(itemOf(comment)).toBeVisible();
-  const left = await getMyNotificationsWithApi(page);
-  expect(left.map((item) => item.id)).toEqual([comment.id]);
+  //    새로고침해도 셋이 그대로 보이고, 읽은 것과 안 읽은 것이 구별된다
+  await expect(items).toHaveCount(3);
+  await expectRead(payment);
+  await expectRead(like);
+  await expectUnread(comment);
+  //    서버도 같다: 안 읽은 것은 하나이고, 읽은 것까지 달라고 하면 생긴 순서 그대로 셋이 온다
+  const unread = await getMyNotificationsWithApi(page);
+  expect(unread.map((item) => item.id)).toEqual([comment.id]);
+  const history = await getMyNotificationsWithApi(page, "read");
+  expect(history.map(({ id, isRead }) => ({ id, isRead }))).toEqual([
+    { id: comment.id, isRead: false },
+    { id: like.id, isRead: true },
+    { id: payment.id, isRead: true },
+  ]);
 
   // ============================================================================================
   // 모킹: 알림 99개와 100개는 실제로 만들기 힘들다. 화면이 받는 답만 가짜로 바꿔 종의 경계를 본다
@@ -160,17 +187,32 @@ test("8. 알림: 일어난 일이 맞는 사람에게 알려지고, 확인하면
     await expect(bell).toHaveText(text);
     await expect(items).toHaveCount(count);
   }
-  //    가짜는 화면에만 있다. 서버의 알림은 그대로 하나다
+  //    하나도 없으면 "0"과 빈 목록 안내가 보인다 (화면을 나갔다 오면 다시 읽는다)
+  await mockNotificationsOnPage(page, 0);
+  await page.getByTestId("sidenav-home").click();
+  await expect(page).toHaveURL("/");
+  await openNotifications(page);
+  await expect(items).toHaveCount(0);
+  await expect(bell).toHaveText("0");
+  await expect(page.getByTestId("empty-list-header")).toContainText("알림 내역이 없습니다");
+  //    가짜는 화면에만 있다. 서버의 안 읽은 알림은 그대로 하나다
   expect((await getMyNotificationsWithApi(page)).length).toBe(1);
 
-  // 7) 모킹을 끝내면 화면은 다시 진짜 하나를 보여 준다. 그것까지 확인하면 종은 0이고 빈 목록 안내가 보인다
+  // 7) 모킹을 끝내면 화면은 다시 진짜 셋을 보여 준다. 남은 하나까지 확인하면 종은 0이고, 셋 다 흐려져 남는다
   await unmockNotificationsOnPage(page);
   await page.reload();
   await expect(bell).toHaveText("1");
   await confirmNotification(page, comment.id);
   await expect(bell).toHaveText("0");
-  await expect(page.getByTestId("empty-list-header")).toContainText("알림 내역이 없습니다");
+  await expect(items).toHaveCount(3);
+  for (const item of [comment, like, payment]) {
+    await expectRead(item);
+  }
   expect((await getMyNotificationsWithApi(page)).length).toBe(0);
+
+  // 8) 읽은 알림도 남에게는 보이지 않는다 (서버). C에게는 아무것도 없다
+  await loginWithApi(page, C.user);
+  expect((await getMyNotificationsWithApi(page, "read")).length).toBe(0);
 
   // 정리: 세 사람의 은행 계좌를 API로 완전히 지운다 (거래와 알림을 지우는 API는 없어서 기록은 남는다)
   for (const who of [A, B, C]) {
