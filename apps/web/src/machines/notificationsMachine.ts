@@ -1,4 +1,4 @@
-import { isEmpty, omit } from "lodash/fp";
+import { omit } from "lodash/fp";
 import { dataMachine } from "./dataMachine";
 import { httpClient } from "../utils/asyncUtils";
 import { API_BASE } from "../utils/apiUtils";
@@ -8,10 +8,10 @@ let lastSave: Promise<unknown> = Promise.resolve();
 
 export const notificationsMachine = dataMachine("notifications").withConfig({
   services: {
-    fetchData: async (ctx, event: any) => {
-      const payload = omit("type", event);
+    // the read ones too: the list keeps showing them, and the bell counts only the unread ones
+    fetchData: async () => {
       const resp = await httpClient.get(`${API_BASE}/notifications`, {
-        params: !isEmpty(payload) && event.type === "FETCH" ? payload : undefined,
+        params: { include: "read" },
       });
       return resp.data;
     },

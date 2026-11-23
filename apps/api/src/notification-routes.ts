@@ -2,7 +2,7 @@
 
 import express from "express";
 import { createNotifications, updateNotificationById } from "./notification-db";
-import { getUnreadNotificationsForApi } from "./notification-api";
+import { getNotificationHistoryForApi, getUnreadNotificationsForApi } from "./notification-api";
 import { openNotificationStream, publishNotifications } from "./notification-stream";
 import { asyncHandler } from "./async-handler";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
@@ -15,13 +15,16 @@ const router = express.Router();
 
 // Routes
 
-//GET /notifications/
+//GET /notifications/ - the unread ones. With ?include=read the newest read ones come too.
 router.get(
   "/",
   ensureAuthenticated,
   asyncHandler(async (req, res) => {
     /* istanbul ignore next */
-    const notifications = await getUnreadNotificationsForApi(req.user?.id!);
+    const notifications =
+      req.query.include === "read"
+        ? await getNotificationHistoryForApi(req.user?.id!)
+        : await getUnreadNotificationsForApi(req.user?.id!);
 
     res.status(200);
     res.json({ results: notifications });
