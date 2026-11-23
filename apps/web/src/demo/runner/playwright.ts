@@ -10,6 +10,7 @@
  *   test.step(title, async () => { ... })     (runs the body and gives back its value; the demo shows no step name yet)
  *   page.goto(path)                       (moves inside the app, it does not reload the page)
  *   page.reload()                         (the screen and the login read the server again; the window is not reloaded)
+ *   page.goBack()                         (back inside the app; it stops the demo when the step before is outside the app)
  *   page.url()                            (the address of the page now)
  *   page.route(glob, (route) => route.fulfill({ json })), page.unroute(glob)
  *                                         (mocking: the app gets this answer; page.request still talks to the real server)
@@ -143,6 +144,15 @@ const guarded = <T extends object>(target: T, label: string): T =>
       return Reflect.get(object, property, receiver);
     },
   });
+
+// ---- page.goBack ----
+// How many steps back surely stay inside the app: one more for every new address, one less for every move in the
+// history. The demo lives in this window, so going back must never leave the app (that would close the demo).
+let stepsInApp = 0;
+history.listen((_location: unknown, action: string) => {
+  if (action === "PUSH") stepsInApp += 1;
+  else if (action === "POP") stepsInApp -= 1;
+});
 
 // ---- mocking: page.route ----
 // The app sends its requests with httpClient (axios). The tools of the tests (page.request) use fetch, so a mock never
@@ -511,6 +521,14 @@ export class Page {
     history.push(pathname === "/" ? "/bankaccounts" : "/");
     await sleep(100);
     history.push(`${pathname}${search}${hash}`);
+    await sleep(150);
+  }
+
+  /** Back to the screen before, like the back button of the browser. It never leaves this window (see stepsInApp). */
+  async goBack(): Promise<void> {
+    await beforeStep(captureCaller());
+    if (stepsInApp <= 0) throw unsupported("앱 밖으로 나가는 page.goBack");
+    history.goBack();
     await sleep(150);
   }
 
