@@ -13,7 +13,7 @@
  *   page.url()                            (the address of the page now)
  *   page.getByTestId(id), page.getByRole("heading" | "button" | "link", { name }), page.locator(css)
  *   locator.locator(css), locator.fill(text), locator.click(), locator.press("Enter")   (only Enter)
- *   request.get(url), request.post(url, { data }), request.delete(url)   -> response.status(), response.ok(), response.json()
+ *   request.get(url), request.post(url, { data }), request.patch(url, { data }), request.delete(url)   -> response.status(), response.ok(), response.json()
  *   page.request                          (the same API tool, it has the login of the page)
  *   await expect(locator).toBeVisible(), await expect(locator).toBeHidden()
  *   await expect(locator).toContainText("text"), await expect(locator).toBeDisabled(), await expect(locator).toBeEnabled()
@@ -500,6 +500,10 @@ export class ApiRequest {
 
   async post(url: string, options: { data?: unknown } = {}): Promise<ApiResponse> {
     return this.send("POST", url, captureCaller(), JSON.stringify(options.data ?? {}));
+  }
+
+  async patch(url: string, options: { data?: unknown } = {}): Promise<ApiResponse> {
+    return this.send("PATCH", url, captureCaller(), JSON.stringify(options.data ?? {}));
   }
 
   private async send(method: string, url: string, where: Promise<StepLocation | null>, body?: string): Promise<ApiResponse> {
