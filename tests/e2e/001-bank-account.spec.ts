@@ -34,12 +34,14 @@
 
 import { test, expect } from "@playwright/test";
 import { createBankAccountsWithApi } from "./api/create-bank-accounts";
+import { expectProfileBalanceIsAccountSumWithApi } from "./api/expect-profile-balance";
 import { getBankAccountRows } from "./api/get-bank-account-rows";
 import { getBankAccounts } from "./api/get-bank-accounts";
 import { hardDeleteBankAccountsWithApi } from "./api/hard-delete-bank-accounts";
 import { createBankAccount } from "./common/create-bank-account";
 import { deleteBankAccount } from "./common/delete-bank-account";
 import { expectBankAccountListCount, expectBankAccountOnScreen } from "./common/expect-bank-account-on-screen";
+import { deposit } from "./common/deposit";
 import { goToMain } from "./common/go-to-main";
 import { random } from "./fixture/random";
 
@@ -119,7 +121,23 @@ test("1. 은행 계좌: 소량은 화면으로, 대량은 API로, 59~61번째 �
   await expectBankAccountListCount(page, MAX_BANK_ACCOUNTS);
   expect((await getBankAccountRows(page)).visible).toBe(MAX_BANK_ACCOUNTS);
 
-  // 4) 대량(연속 삭제) + 정리: API로 숨긴 행까지 모두 완전히 지우고, 화면은 빈 목록을 읽을 수 있는지만 본다
+  // 4) 거절: 잔액이 있는 계좌의 삭제. 삭제하면 그 돈이 사라지므로 막아야 한다
+  //    준비: 계좌 하나에 1달러를 넣는다 (공통 코드)
+  const [rich] = await getBankAccounts(page);
+  await deposit(page, rich.id, 1);
+  //    화면: 그 계좌의 삭제 버튼이 꺼진다
+  await page.goto("/bankaccounts");
+  await expect(
+    page.locator(`[data-testid="bankaccount-list-item-${rich.id}"] [data-testid="bankaccount-delete"]`)
+  ).toBeDisabled();
+  //    서버: 같은 삭제를 직접 보내도 거절한다 (400). 계좌는 그대로 보이고 돈도 그대로다
+  const deleteRefused = await page.request.delete(`/api/bankAccounts/${rich.id}`);
+  expect(deleteRefused.status()).toBe(400);
+  expect((await getBankAccounts(page)).find((account) => account.id === rich.id)?.balance).toBe(100);
+  expect((await getBankAccountRows(page)).visible).toBe(MAX_BANK_ACCOUNTS);
+  expect(await expectProfileBalanceIsAccountSumWithApi(page)).toBe(100);
+
+  // 5) 대량(연속 삭제) + 정리: API로 숨긴 행까지 모두 완전히 지우고, 화면은 빈 목록을 읽을 수 있는지만 본다
   //    이 시험이 만든 데이터를 남기지 않는다 (다른 파일은 자기 계좌를 스스로 만든다)
   await hardDeleteBankAccountsWithApi(page);
   await expectBankAccountListCount(page, 0);
