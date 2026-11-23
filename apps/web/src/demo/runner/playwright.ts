@@ -12,7 +12,7 @@
  *   page.reload()                         (the screen and the login read the server again; the window is not reloaded)
  *   page.url()                            (the address of the page now)
  *   page.getByTestId(id), page.getByRole("heading" | "button" | "link", { name }), page.locator(css)
- *   locator.locator(css), locator.fill(text), locator.click()
+ *   locator.locator(css), locator.fill(text), locator.click(), locator.press("Enter")   (only Enter)
  *   request.get(url), request.post(url, { data }), request.delete(url)   -> response.status(), response.ok(), response.json()
  *   page.request                          (the same API tool, it has the login of the page)
  *   await expect(locator).toBeVisible(), await expect(locator).toBeHidden()
@@ -195,6 +195,20 @@ export class Locator {
     element.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true, button: 0 }));
     (element as HTMLElement).click();
   }
+
+  /** Only "Enter": the key event reaches the element, and an input then submits its form (like a real browser). */
+  async press(key: string): Promise<void> {
+    if (key !== "Enter") throw unsupported(`locator.press("${key}")`);
+    const where = captureCaller();
+    await beforeStep(where);
+    const element = await this.until((e) => isVisible(e) && !isDisabled(e), "키를 누를 수 있는");
+    highlight(element);
+    (element as HTMLElement).focus();
+    const init = { key, code: key, bubbles: true, cancelable: true };
+    const goesOn = element.dispatchEvent(new KeyboardEvent("keydown", init));
+    if (goesOn && element instanceof HTMLInputElement) element.form?.requestSubmit();
+    element.dispatchEvent(new KeyboardEvent("keyup", init));
+  }
 }
 
 class LocatorExpectation {
@@ -253,7 +267,7 @@ class LocatorExpectation {
   async toHaveText(expected: string): Promise<void> {
     const where = captureCaller();
     await beforeStep(where);
-    const element = await this.locator.until(isVisible, "보이는");
+    let element = await this.locator.until(isVisible, "보이는");
     highlight(element);
     const squeeze = (text: string) => text.replace(/s+/g, " ").trim();
     const deadline = Date.now() + WAIT_LIMIT;
@@ -264,6 +278,9 @@ class LocatorExpectation {
         );
       }
       await sleep(50);
+      // the screen can draw the element again (a new one): look at the one that is there now
+      const now = this.locator.find()[0];
+      if (now && isVisible(now)) element = now;
     }
   }
 
