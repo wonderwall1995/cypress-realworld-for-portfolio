@@ -12,8 +12,8 @@
  *   page.reload()                         (the screen and the login read the server again; the window is not reloaded)
  *   page.goBack()                         (back inside the app; it stops the demo when the step before is outside the app)
  *   page.url()                            (the address of the page now)
- *   page.route(glob, (route) => route.fulfill({ json })), page.unroute(glob)
- *                                         (mocking: the app gets this answer; page.request still talks to the real server)
+ *   page.route(glob, (route) => route.fulfill({ json }) or route.continue()), page.unroute(glob)
+ *                                         (the app gets this answer, or the real one later; page.request always talks to the real server)
  *   page.getByTestId(id), page.getByRole("heading" | "button" | "link", { name }), page.locator(css)
  *   locator.locator(css), locator.fill(text), locator.click(), locator.press("Enter")   (only Enter)
  *   request.get(url), request.post(url, { data }), request.patch(url, { data }), request.delete(url)   -> response.status(), response.ok(), response.json()
@@ -158,7 +158,11 @@ history.listen((_location: unknown, action: string) => {
 // The app sends its requests with httpClient (axios). The tools of the tests (page.request) use fetch, so a mock never
 // touches them: the same split as the real Playwright, where page.route does not see page.request.
 class Route {
-  answer: { json: unknown } | null = null;
+  answer: { json: unknown } | "real" | null = null;
+  /** Sends the request to the real server (a handler that waits first holds the request until then). */
+  continue(): void {
+    this.answer = "real";
+  }
   fulfill(options: { json: unknown }): void {
     const other = Object.keys(options).find((key) => key !== "json");
     if (other) throw unsupported(`route.fulfill({ ${other} })`);
@@ -167,12 +171,16 @@ class Route {
 }
 type RouteHandler = (route: Route) => unknown;
 let routes: { glob: string; handler: RouteHandler }[] = [];
+let heldRequests: (() => void)[] = []; // lets go of the requests whose handler is still waiting
 let routeFailure: Error | null = null; // the app hides a failed request, so the next step reports it
 
 /** Takes every mock away (a new test, the end or the stop of the demo): the app talks to the real server again. */
 export const clearRoutes = () => {
   routes = [];
   routeFailure = null;
+  // a request that a stopped test held must not hang: the screen would wait for it for ever
+  heldRequests.forEach((letGo) => letGo());
+  heldRequests = [];
 };
 
 // "**" is any text, "*" is any text without "/"
@@ -191,15 +199,23 @@ httpClient.interceptors.request.use((config) => {
   // the newest mock wins, like the real Playwright
   const found = [...routes].reverse().find(({ glob }) => matchesGlob(glob, url));
   if (!found) return config;
+  const send = config.adapter ?? httpClient.defaults.adapter!;
   config.adapter = async () => {
     const route = new Route();
     try {
-      await found.handler(guarded(route, "route"));
-      if (!route.answer) throw unsupported("page.route 안에서 fulfill 하지 않는 것");
+      const letGo = new Promise<void>((resolve) => {
+        heldRequests.push(() => {
+          route.continue();
+          resolve();
+        });
+      });
+      await Promise.race([found.handler(guarded(route, "route")), letGo]);
+      if (!route.answer) throw unsupported("page.route 안에서 fulfill 도 continue 도 하지 않는 것");
     } catch (error) {
       routeFailure = error as Error;
       throw error;
     }
+    if (route.answer === "real") return send(config);
     // a copy, like a real answer: the app must not share objects with the test
     const data = JSON.parse(JSON.stringify(route.answer.json));
     return { data, status: 200, statusText: "OK", headers: {}, config };
