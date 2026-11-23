@@ -33,6 +33,8 @@
  */
 import { test, expect } from "@playwright/test";
 import { createUsersWithApi } from "./api/create-users";
+import { getCommentsWithApi } from "./api/get-comments";
+import { getLikesWithApi } from "./api/get-likes";
 import { getMyTransactionsWithApi, myTransactionsUrl } from "./api/get-my-transactions";
 import { getPublicTransactionsWithApi } from "./api/get-public-transactions";
 import { hardDeleteBankAccountsWithApi } from "./api/hard-delete-bank-accounts";
@@ -103,6 +105,36 @@ test("7. 거래 공개 범위: 공개 거래는 모두에게, 비공개 거래�
     expect(response.status()).toBe(200);
     const answered: { id: string }[] = (await response.json()).results;
     expect(answered.map((item) => nameOf(item.id))).toEqual(["C의 입금"]);
+  }
+
+  //    목록에 없는 거래를 id로 직접 찾아가도 막힌다. C에게 A와 B의 비공개 거래는 없는 거래와 같다 (404)
+  const paths = (id: string) => [
+    `/api/transactions/${id}`,
+    `/api/likes/${id}`,
+    `/api/comments/${id}`,
+  ];
+  for (const path of paths(secret.id)) {
+    const response = await page.request.get(path);
+    expect(response.status()).toBe(404);
+  }
+  const like = await page.request.post(`/api/likes/${secret.id}`);
+  expect(like.status()).toBe(404);
+  const comment = await page.request.post(`/api/comments/${secret.id}`, {
+    data: { content: "남의 거래에 쓰는 댓글" },
+  });
+  expect(comment.status()).toBe(404);
+  //    같은 C가 공개 거래는 열 수 있다. 위의 404는 비공개라서다
+  for (const path of paths(open.id)) {
+    const response = await page.request.get(path);
+    expect(response.status()).toBe(200);
+  }
+  //    A와 B는 그 비공개 거래를 열 수 있고, 거절된 요청은 좋아요도 댓글도 남기지 않았다
+  for (const who of [A, B]) {
+    await loginWithApi(page, who.user);
+    const detail = await page.request.get(`/api/transactions/${secret.id}`);
+    expect(detail.status()).toBe(200);
+    expect((await getLikesWithApi(page, secret.id)).length).toBe(0);
+    expect((await getCommentsWithApi(page, secret.id)).length).toBe(0);
   }
 
   // ============================================================================================
