@@ -21,6 +21,7 @@
  *   await expect(locator).toBeVisible(), await expect(locator).toBeHidden()
  *   await expect(locator).toContainText("text"), await expect(locator).toBeDisabled(), await expect(locator).toBeEnabled()
  *   await expect(locator).toHaveCount(n), await expect(locator).toHaveText("text")   (the whole text, spaces squeezed)
+ *   await expect(locator).toHaveCSS("opacity", "1")   (one style value, as the browser computes it)
  *   await expect(page).toHaveURL("/signin")     (a text is resolved against the address of the app; a RegExp is also fine)
  *   expect(value).toBe(expected), expect(value).toEqual(expected), expect(value).toBeTruthy()
  * Anything else stops the demo with a clear message: add it here first, then use it in a test.
@@ -311,6 +312,17 @@ class LocatorExpectation {
       }
       await sleep(50);
     }
+  }
+
+  /** Passes when the element has this style value, as the browser computes it. */
+  async toHaveCSS(name: string, expected: string): Promise<void> {
+    const where = captureCaller();
+    await beforeStep(where);
+    const element = await this.locator.until(
+      (found) => getComputedStyle(found).getPropertyValue(name) === expected,
+      `모양 ${name} 이(가) ${expected} 이어야 함`
+    );
+    highlight(element);
   }
 
   /** Passes when the element is there and disabled (a button that cannot be pressed). */
