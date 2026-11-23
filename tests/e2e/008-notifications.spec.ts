@@ -118,11 +118,28 @@ test("8. 알림: 일어난 일이 맞는 사람에게 알려지고, 확인하면
   await expect(itemOf(like)).toContainText(`${nameOf(C)}님이 거래에 좋아요를 눌렀습니다.`);
   await expect(itemOf(comment)).toContainText(`${nameOf(C)}님이 거래에 댓글을 남겼습니다.`);
 
-  // 5) 두 개를 확인하면 그때마다 종이 하나씩 줄고, 새로고침해도 남은 하나만 보인다. 서버도 같다
-  await confirmNotification(page, payment.id);
-  await expect(bell).toHaveText("2");
-  await confirmNotification(page, like.id);
+  // 5) 통신 중에 누른 "확인"도 잃지 않는다. 알림의 통신을 모두 붙잡아 두고 두 개를 잇달아 누른다
+  //    첫 번째는 목록을 다시 읽는 중에(화면을 나갔다 오면 다시 읽는다), 두 번째는 첫 번째를 저장하는 중에 누른 것이 된다
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/notifications**", async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.getByTestId("sidenav-home").click();
+  await expect(page).toHaveURL("/");
+  await openNotifications(page);
+  await page.getByTestId(`notification-mark-read-${payment.id}`).click();
+  await page.getByTestId(`notification-mark-read-${like.id}`).click();
+  await expect(bell).toHaveText("3"); // 아직 아무 답도 오지 않았다
+  //    통신을 풀면 두 개가 모두 저장되어 사라진다. 새로고침해도 남은 하나만 보이고, 서버도 같다
+  release();
+  await expect(itemOf(payment)).toBeHidden();
+  await expect(itemOf(like)).toBeHidden();
   await expect(bell).toHaveText("1");
+  await page.unroute("**/api/notifications**");
   await page.reload();
   await expect(bell).toHaveText("1");
   await expect(items).toHaveCount(1);
