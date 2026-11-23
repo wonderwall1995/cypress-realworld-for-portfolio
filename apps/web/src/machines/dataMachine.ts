@@ -71,7 +71,7 @@ export const dataMachine = (machineId: string) =>
             onDone: { target: "loading" },
             onError: { target: "failure", actions: "setMessage" },
           },
-          // the same for a second press while the first one is being saved (both requests are sent)
+          // the same for a second press while the first one is being saved (both are saved)
           on: {
             UPDATE: "updating",
           },

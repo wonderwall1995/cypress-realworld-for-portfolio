@@ -3,6 +3,9 @@ import { dataMachine } from "./dataMachine";
 import { httpClient } from "../utils/asyncUtils";
 import { API_BASE } from "../utils/apiUtils";
 
+// one save at a time: the list is read again only after the last one, so it never shows an older answer
+let lastSave: Promise<unknown> = Promise.resolve();
+
 export const notificationsMachine = dataMachine("notifications").withConfig({
   services: {
     fetchData: async (ctx, event: any) => {
@@ -14,8 +17,10 @@ export const notificationsMachine = dataMachine("notifications").withConfig({
     },
     updateData: async (ctx, event: any) => {
       const payload = omit("type", event);
-      const resp = await httpClient.patch(`${API_BASE}/notifications/${payload.id}`, payload);
-      return resp.data;
+      const save = () => httpClient.patch(`${API_BASE}/notifications/${payload.id}`, payload);
+      const saving = lastSave.then(save, save);
+      lastSave = saving;
+      return (await saving).data;
     },
   },
 });
