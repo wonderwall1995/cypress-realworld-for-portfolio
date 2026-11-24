@@ -4,8 +4,8 @@
 
 - 속성: `data-testid` (Playwright `getByTestId()` 기본 속성)
 - `${...}`가 들어간 id는 동적 값입니다. 접두사로 찾으세요. 예: `[data-testid^="transaction-item-"]`
-- 합계: 파일 39개, test id 143개 (동적 47개)
-- id가 없는 상호작용 요소: 0개 (맨 아래 참고)
+- 합계: 파일 47개, test id 220개 (동적 49개)
+- id가 없는 상호작용 요소: 6개 (맨 아래 참고)
 
 ## 사용 예시
 
@@ -15,12 +15,13 @@ await page.getByTestId("sidenav-signout").click();
 
 ## src/components/AccountSelect.tsx
 
-| 줄  | test id             | 종류                | 요소        | 컴포넌트      | 연결 방식  | UI 특징     |
-| --- | ------------------- | ------------------- | ----------- | ------------- | ---------- | ----------- |
-| 57  | `${testId}-info`    | 동적 (testId)       | `Box`       | AccountRow    | attribute  | text="····" |
-| 65  | `${testId}-balance` | 동적 (testId)       | `Box`       | AccountRow    | attribute  | text="잔액" |
-| 86  | `${testId}-value`   | 동적 (testId)       | `TextField` | AccountSelect | inputProps | onChange    |
-| 112 | `${testId}-${a.id}` | 동적 (testId, a.id) | `MenuItem`  | AccountSelect | attribute  | -           |
+| 줄  | test id               | 종류                | 요소        | 컴포넌트      | 연결 방식  | UI 특징        |
+| --- | --------------------- | ------------------- | ----------- | ------------- | ---------- | -------------- |
+| 58  | `${testId}-info`      | 동적 (testId)       | `Box`       | AccountRow    | attribute  | -              |
+| 62  | `${testId}-bank-name` | 동적 (testId)       | `Box`       | AccountRow    | attribute  | component=span |
+| 71  | `${testId}-balance`   | 동적 (testId)       | `Box`       | AccountRow    | attribute  | text="잔액"    |
+| 92  | `${testId}-value`     | 동적 (testId)       | `TextField` | AccountSelect | inputProps | onChange       |
+| 118 | `${testId}-${a.id}`   | 동적 (testId, a.id) | `MenuItem`  | AccountSelect | attribute  | -              |
 
 ## src/components/AlertBar.tsx
 
@@ -73,6 +74,111 @@ await page.getByTestId("sidenav-signout").click();
 | --- | --------------------------------- | ----------------- | ---------- | --------------- | --------- | ------- |
 | 12  | `comment-list-item-${comment.id}` | 동적 (comment.id) | `ListItem` | CommentListItem | attribute | -       |
 
+## src/components/DbSnapshot.tsx
+
+| 줄  | test id               | 종류 | 요소         | 컴포넌트   | 연결 방식 | UI 특징                                |
+| --- | --------------------- | ---- | ------------ | ---------- | --------- | -------------------------------------- |
+| 79  | `demo-db-area`        | 정적 | `Box`        | DbSnapshot | attribute | -                                      |
+| 84  | `demo-db-time`        | 정적 | `Typography` | DbSnapshot | attribute | -                                      |
+| 87  | `demo-db-refresh`     | 정적 | `Button`     | DbSnapshot | attribute | onClick, text="새로 찍기"              |
+| 93  | `demo-db-error`       | 정적 | `Typography` | DbSnapshot | attribute | text="스냅샷을 가져오지 못했습니다:"   |
+| 101 | `demo-db-tablelist`   | 정적 | `Box`        | DbSnapshot | attribute | -                                      |
+| 108 | `demo-db-table-item`  | 정적 | `Box`        | DbSnapshot | attribute | onClick, type=button, component=button |
+| 147 | `demo-db-grid`        | 정적 | `Box`        | DbSnapshot | attribute | -                                      |
+| 169 | `demo-db-row`         | 정적 | `tr`         | DbSnapshot | attribute | -                                      |
+| 192 | `demo-db-page-info`   | 정적 | `Typography` | DbSnapshot | attribute | text="· – / 행"                        |
+| 196 | `demo-db-page-prev`   | 정적 | `Button`     | DbSnapshot | attribute | onClick, text="이전"                   |
+| 204 | `demo-db-page-number` | 정적 | `Typography` | DbSnapshot | attribute | text="/"                               |
+| 207 | `demo-db-page-next`   | 정적 | `Button`     | DbSnapshot | attribute | onClick, text="다음"                   |
+
+## src/components/DemoAccordion.tsx
+
+| 줄  | test id                 | 종류 | 요소           | 컴포넌트      | 연결 방식 | UI 특징                                                      |
+| --- | ----------------------- | ---- | -------------- | ------------- | --------- | ------------------------------------------------------------ |
+| 177 | `demo-accordion`        | 정적 | `Box`          | DemoAccordion | attribute | -                                                            |
+| 193 | `demo-accordion-resize` | 정적 | `Box`          | DemoAccordion | attribute | -                                                            |
+| 220 | `demo-accordion-fold`   | 정적 | `Button`       | DemoAccordion | attribute | onClick                                                      |
+| 232 | `demo-file-name`        | 정적 | `Typography`   | DemoAccordion | attribute | -                                                            |
+| 243 | `demo-cards-toggle`     | 정적 | `Button`       | DemoAccordion | attribute | onClick, text="테스트 별 코드 확인"                          |
+| 265 | `demo-view-demo`        | 정적 | `ToggleButton` | DemoAccordion | attribute | text="시연"                                                  |
+| 268 | `demo-view-ide`         | 정적 | `ToggleButton` | DemoAccordion | attribute | text="IDE"                                                   |
+| 271 | `demo-view-db`          | 정적 | `ToggleButton` | DemoAccordion | attribute | text="DB"                                                    |
+| 286 | `demo-code-row`         | 정적 | `Box`          | DemoAccordion | attribute | -                                                            |
+| 300 | `demo-code-area`        | 정적 | `Box`          | DemoAccordion | attribute | -                                                            |
+| 304 | `demo-code`             | 정적 | `Box`          | DemoAccordion | attribute | -                                                            |
+| 362 | `demo-message-row`      | 정적 | `Box`          | DemoAccordion | attribute | -                                                            |
+| 364 | `demo-error`            | 정적 | `Typography`   | DemoAccordion | attribute | text="실패:"                                                 |
+| 369 | `demo-finished`         | 정적 | `Typography`   | DemoAccordion | attribute | text="시연이 끝났습니다. ■를 누르면 처음 상태로 돌아갑니다." |
+| 380 | `demo-tab`              | 정적 | `Button`       | DemoAccordion | attribute | onClick                                                      |
+| 425 | `demo-next`             | 정적 | `Typography`   | DemoAccordion | attribute | text="다음 테스트:"                                          |
+
+## src/components/DemoApiPanel.tsx
+
+| 줄  | test id                  | 종류 | 요소         | 컴포넌트     | 연결 방식 | UI 특징                                                                      |
+| --- | ------------------------ | ---- | ------------ | ------------ | --------- | ---------------------------------------------------------------------------- |
+| 58  | `demo-api-panel`         | 정적 | `Box`        | DemoApiPanel | attribute | -                                                                            |
+| 74  | `demo-api-toggle`        | 정적 | `IconButton` | DemoApiPanel | attribute | onClick                                                                      |
+| 86  | `demo-api-summary`       | 정적 | `Typography` | DemoApiPanel | attribute | -                                                                            |
+| 98  | `demo-api-summary`       | 정적 | `Typography` | DemoApiPanel | attribute | text="아직 보낸 요청이 없습니다. 시연이 이 코드를 실행하면 요청이 여기에 남" |
+| 105 | `demo-api-body`          | 정적 | `Box`        | DemoApiPanel | attribute | -                                                                            |
+| 108 | `demo-api-method`        | 정적 | `Typography` | DemoApiPanel | attribute | -                                                                            |
+| 115 | `demo-api-url`           | 정적 | `Typography` | DemoApiPanel | attribute | -                                                                            |
+| 123 | `demo-api-send`          | 정적 | `Box`        | DemoApiPanel | attribute | -                                                                            |
+| 135 | `demo-api-request-body`  | 정적 | `Box`        | DemoApiPanel | attribute | component=pre                                                                |
+| 144 | `demo-api-expect-empty`  | 정적 | `Typography` | DemoApiPanel | attribute | -                                                                            |
+| 149 | `demo-api-expect`        | 정적 | `Box`        | DemoApiPanel | attribute | -                                                                            |
+| 174 | `demo-api-waiting`       | 정적 | `Typography` | DemoApiPanel | attribute | text="서버의 답을 기다립니다…"                                               |
+| 179 | `demo-api-status`        | 정적 | `Typography` | DemoApiPanel | attribute | -                                                                            |
+| 182 | `demo-api-time`          | 정적 | `Typography` | DemoApiPanel | attribute | text="ms"                                                                    |
+| 194 | `demo-api-response-body` | 정적 | `Box`        | DemoApiPanel | attribute | component=pre                                                                |
+
+## src/components/DemoCards.tsx
+
+| 줄  | test id                  | 종류 | 요소   | 컴포넌트  | 연결 방식 | UI 특징                                |
+| --- | ------------------------ | ---- | ------ | --------- | --------- | -------------------------------------- |
+| 36  | `demo-cards`             | 정적 | `Box`  | DemoCards | attribute | -                                      |
+| 57  | `demo-card`              | 정적 | `Box`  | DemoCards | attribute | onClick, type=button, component=button |
+| 106 | `demo-card-dependencies` | 정적 | `Box`  | DemoCards | attribute | -                                      |
+| 116 | `demo-card-dependency`   | 정적 | `span` | DemoCards | attribute | -                                      |
+
+## src/components/DemoFooter.tsx
+
+| 줄  | test id         | 종류          | 요소         | 컴포넌트   | 연결 방식 | UI 특징                   |
+| --- | --------------- | ------------- | ------------ | ---------- | --------- | ------------------------- |
+| 50  | `demo-footer`   | 정적          | `Box`        | DemoFooter | attribute | component=footer          |
+| 68  | `demo-prev`     | 정적          | `IconButton` | DemoFooter | attribute | onClick                   |
+| 77  | `demo-start`    | 정적          | `Button`     | DemoFooter | attribute | onClick, text="시연 시작" |
+| 87  | `demo-toggle`   | 정적          | `IconButton` | DemoFooter | attribute | onClick                   |
+| 97  | `demo-stop`     | 정적          | `IconButton` | DemoFooter | attribute | onClick                   |
+| 112 | `demo-forward`  | 정적          | `IconButton` | DemoFooter | attribute | onClick                   |
+| 125 | `demo-progress` | 정적          | `Box`        | DemoFooter | attribute | -                         |
+| 154 | `${testid}`     | 동적 (testid) | `Box`        | TestIdArea | attribute | -                         |
+
+## src/components/DemoIde.tsx
+
+| 줄  | test id                   | 종류 | 요소         | 컴포넌트 | 연결 방식 | UI 특징                                |
+| --- | ------------------------- | ---- | ------------ | -------- | --------- | -------------------------------------- |
+| 76  | `demo-ide-file-item`      | 정적 | `Box`        | row      | attribute | onClick, type=button, component=button |
+| 114 | `demo-ide-running`        | 정적 | `span`       | row      | attribute | text="●"                               |
+| 126 | `demo-ide-area`           | 정적 | `Box`        | DemoIde  | attribute | -                                      |
+| 131 | `demo-ide-summary`        | 정적 | `Typography` | DemoIde  | attribute | text="스냅샷 · 파일 개"                |
+| 145 | `demo-ide-filelist`       | 정적 | `Box`        | DemoIde  | attribute | -                                      |
+| 154 | `demo-ide-line`           | 정적 | `Box`        | DemoIde  | attribute | -                                      |
+| 155 | `demo-ide-folder`         | 정적 | `Typography` | DemoIde  | attribute | text="/"                               |
+| 165 | `demo-ide-line`           | 정적 | `Box`        | DemoIde  | attribute | -                                      |
+| 172 | `demo-ide-path`           | 정적 | `Typography` | DemoIde  | attribute | -                                      |
+| 189 | `demo-ide-code`           | 정적 | `Box`        | DemoIde  | attribute | -                                      |
+| 203 | `demo-ide-lines`          | 정적 | `Typography` | DemoIde  | attribute | text="· 줄"                            |
+| 208 | `demo-ide-subcodes`       | 정적 | `Box`        | DemoIde  | attribute | -                                      |
+| 212 | `demo-ide-subcodes-title` | 정적 | `Typography` | DemoIde  | attribute | -                                      |
+| 218 | `demo-ide-subcode`        | 정적 | `Box`        | DemoIde  | attribute | onClick, type=button, component=button |
+
+## src/components/DemoNotice.tsx
+
+| 줄  | test id       | 종류 | 요소       | 컴포넌트   | 연결 방식 | UI 특징 |
+| --- | ------------- | ---- | ---------- | ---------- | --------- | ------- |
+| 21  | `demo-notice` | 정적 | `Snackbar` | DemoNotice | attribute | -       |
+
 ## src/components/DepositDialog.tsx
 
 | 줄  | test id                          | 종류        | 요소        | 컴포넌트      | 연결 방식  | UI 특징                                                                         |
@@ -98,7 +204,7 @@ await page.getByTestId("sidenav-signout").click();
 
 | 줄  | test id | 종류 | 요소   | 컴포넌트   | 연결 방식 | UI 특징 |
 | --- | ------- | ---- | ------ | ---------- | --------- | ------- |
-| 109 | `main`  | 정적 | `main` | MainLayout | attribute | -       |
+| 110 | `main`  | 정적 | `main` | MainLayout | attribute | -       |
 
 ## src/components/NavBar.tsx
 
@@ -137,45 +243,46 @@ await page.getByTestId("sidenav-signout").click();
 
 | 줄  | test id                                     | 종류                   | 요소             | 컴포넌트             | 연결 방식 | UI 특징              |
 | --- | ------------------------------------------- | ---------------------- | ---------------- | -------------------- | --------- | -------------------- |
-| 84  | `notification-list-item-${notification.id}` | 동적 (notification.id) | `StyledListItem` | NotificationListItem | attribute | -                    |
-| 88  | `notification-mark-read-${notification.id}` | 동적 (notification.id) | `IconButton`     | NotificationListItem | attribute | onClick              |
-| 99  | `notification-mark-read-${notification.id}` | 동적 (notification.id) | `Button`         | NotificationListItem | attribute | onClick, text="확인" |
+| 86  | `notification-list-item-${notification.id}` | 동적 (notification.id) | `StyledListItem` | NotificationListItem | attribute | -                    |
+| 93  | `notification-mark-read-${notification.id}` | 동적 (notification.id) | `IconButton`     | NotificationListItem | attribute | onClick              |
+| 104 | `notification-mark-read-${notification.id}` | 동적 (notification.id) | `Button`         | NotificationListItem | attribute | onClick, text="확인" |
 
 ## src/components/PasswordConfirmDialog.tsx
 
 | 줄  | test id                    | 종류                | 요소                | 컴포넌트              | 연결 방식  | UI 특징                            |
 | --- | -------------------------- | ------------------- | ------------------- | --------------------- | ---------- | ---------------------------------- |
-| 81  | `${testIdPrefix}-dialog`   | 동적 (testIdPrefix) | `Dialog`            | PasswordConfirmDialog | attribute  | -                                  |
-| 90  | `${testIdPrefix}-summary`  | 동적 (testIdPrefix) | `DialogContentText` | PasswordConfirmDialog | attribute  | component=div                      |
-| 97  | `${testIdPrefix}-password` | 동적 (testIdPrefix) | `TextField`         | PasswordConfirmDialog | inputProps | onChange, onKeyDown, type=password |
-| 116 | `${testIdPrefix}-error`    | 동적 (testIdPrefix) | `Alert`             | PasswordConfirmDialog | attribute  | -                                  |
-| 122 | `${testIdPrefix}-cancel`   | 동적 (testIdPrefix) | `Button`            | PasswordConfirmDialog | attribute  | onClick, text="취소"               |
-| 125 | `${testIdPrefix}-confirm`  | 동적 (testIdPrefix) | `Button`            | PasswordConfirmDialog | attribute  | onClick                            |
+| 83  | `${testIdPrefix}-dialog`   | 동적 (testIdPrefix) | `Dialog`            | PasswordConfirmDialog | attribute  | -                                  |
+| 92  | `${testIdPrefix}-summary`  | 동적 (testIdPrefix) | `DialogContentText` | PasswordConfirmDialog | attribute  | component=div                      |
+| 99  | `${testIdPrefix}-password` | 동적 (testIdPrefix) | `TextField`         | PasswordConfirmDialog | inputProps | onChange, onKeyDown, type=password |
+| 118 | `${testIdPrefix}-error`    | 동적 (testIdPrefix) | `Alert`             | PasswordConfirmDialog | attribute  | -                                  |
+| 124 | `${testIdPrefix}-cancel`   | 동적 (testIdPrefix) | `Button`            | PasswordConfirmDialog | attribute  | onClick, text="취소"               |
+| 127 | `${testIdPrefix}-confirm`  | 동적 (testIdPrefix) | `Button`            | PasswordConfirmDialog | attribute  | onClick                            |
 
 ## src/components/SignInForm.tsx
 
 | 줄  | test id              | 종류 | 요소        | 컴포넌트   | 연결 방식 | UI 특징                    |
 | --- | -------------------- | ---- | ----------- | ---------- | --------- | -------------------------- |
-| 89  | `signin-error`       | 정적 | `Alert`     | SignInForm | attribute | -                          |
-| 113 | `signin-username`    | 정적 | `TextField` | SignInForm | attribute | type=text                  |
-| 130 | `signin-password`    | 정적 | `TextField` | SignInForm | attribute | type=password              |
-| 149 | `signin-remember-me` | 정적 | `Checkbox`  | SignInForm | attribute | -                          |
-| 156 | `signin-submit`      | 정적 | `Button`    | SignInForm | attribute | type=submit, text="로그인" |
-| 172 | `signup`             | 정적 | `Link`      | SignInForm | attribute | to=/signup                 |
-| 183 | `signin-note-button` | 정적 | `Button`    | SignInForm | attribute | onClick, text="Note"       |
+| 88  | `signin-error`       | 정적 | `Alert`     | SignInForm | attribute | -                          |
+| 112 | `signin-username`    | 정적 | `TextField` | SignInForm | attribute | type=text                  |
+| 129 | `signin-password`    | 정적 | `TextField` | SignInForm | attribute | type=password              |
+| 148 | `signin-remember-me` | 정적 | `Checkbox`  | SignInForm | attribute | -                          |
+| 155 | `signin-submit`      | 정적 | `Button`    | SignInForm | attribute | type=submit, text="로그인" |
+| 171 | `signup`             | 정적 | `Link`      | SignInForm | attribute | to=/signup                 |
+| 182 | `signin-note-button` | 정적 | `Button`    | SignInForm | attribute | onClick, text="Note"       |
 
 ## src/components/SignUpForm.tsx
 
 | 줄  | test id                  | 종류 | 요소         | 컴포넌트   | 연결 방식 | UI 특징                       |
 | --- | ------------------------ | ---- | ------------ | ---------- | --------- | ----------------------------- |
-| 84  | `signup-title`           | 정적 | `Typography` | SignUpForm | attribute | component=h1, text="회원가입" |
-| 100 | `signup-last-name`       | 정적 | `TextField`  | SignUpForm | attribute | type=text                     |
-| 118 | `signup-first-name`      | 정적 | `TextField`  | SignUpForm | attribute | type=text                     |
-| 135 | `signup-username`        | 정적 | `TextField`  | SignUpForm | attribute | type=text                     |
-| 152 | `signup-phone-number`    | 정적 | `TextField`  | SignUpForm | attribute | type=text                     |
-| 171 | `signup-password`        | 정적 | `TextField`  | SignUpForm | attribute | type=password                 |
-| 188 | `signup-confirmPassword` | 정적 | `TextField`  | SignUpForm | attribute | type=password                 |
-| 203 | `signup-submit`          | 정적 | `Button`     | SignUpForm | attribute | type=submit, text="회원가입"  |
+| 85  | `signup-title`           | 정적 | `Typography` | SignUpForm | attribute | component=h1, text="회원가입" |
+| 89  | `signup-error`           | 정적 | `Alert`      | SignUpForm | attribute | -                             |
+| 104 | `signup-last-name`       | 정적 | `TextField`  | SignUpForm | attribute | type=text                     |
+| 125 | `signup-first-name`      | 정적 | `TextField`  | SignUpForm | attribute | type=text                     |
+| 145 | `signup-username`        | 정적 | `TextField`  | SignUpForm | attribute | type=text                     |
+| 162 | `signup-phone-number`    | 정적 | `TextField`  | SignUpForm | attribute | type=text                     |
+| 181 | `signup-password`        | 정적 | `TextField`  | SignUpForm | attribute | type=password                 |
+| 201 | `signup-confirmPassword` | 정적 | `TextField`  | SignUpForm | attribute | type=password                 |
+| 216 | `signup-submit`          | 정적 | `Button`     | SignUpForm | attribute | type=submit, text="회원가입"  |
 
 ## src/components/SkeletonList.tsx
 
@@ -224,11 +331,14 @@ await page.getByTestId("sidenav-signout").click();
 
 | 줄  | test id                                | 종류 | 요소         | 컴포넌트                 | 연결 방식 | UI 특징                                                |
 | --- | -------------------------------------- | ---- | ------------ | ------------------------ | --------- | ------------------------------------------------------ |
-| 182 | `transaction-create-form`              | 정적 | `Form`       | TransactionCreateStepTwo | attribute | -                                                      |
-| 185 | `transaction-create-amount-input`      | 정적 | `TextField`  | TransactionCreateStepTwo | attribute | type=text                                              |
-| 207 | `transaction-create-description-input` | 정적 | `TextField`  | TransactionCreateStepTwo | attribute | type=text                                              |
-| 237 | `transaction-create-not-enough`        | 정적 | `Typography` | TransactionCreateStepTwo | attribute | component=p, text="선택한 계좌의 잔액( )이 부족합니다" |
-| 254 | `transaction-create-submit-payment`    | 정적 | `Button`     | TransactionCreateStepTwo | attribute | type=submit, text="이체"                               |
+| 170 | `transaction-create-form`              | 정적 | `Form`       | TransactionCreateStepTwo | attribute | -                                                      |
+| 172 | `transaction-create-send-card`         | 정적 | `Paper`      | TransactionCreateStepTwo | attribute | -                                                      |
+| 182 | `transaction-create-amount-input`      | 정적 | `TextField`  | TransactionCreateStepTwo | attribute | type=text                                              |
+| 204 | `transaction-create-description-input` | 정적 | `TextField`  | TransactionCreateStepTwo | attribute | type=text                                              |
+| 227 | `transaction-create-not-enough`        | 정적 | `Typography` | TransactionCreateStepTwo | attribute | component=p, text="선택한 계좌의 잔액( )이 부족합니다" |
+| 238 | `transaction-create-receive-card`      | 정적 | `Paper`      | TransactionCreateStepTwo | attribute | -                                                      |
+| 248 | `transaction-create-receiver-name`     | 정적 | `Typography` | TransactionCreateStepTwo | attribute | -                                                      |
+| 272 | `transaction-create-submit-payment`    | 정적 | `Button`     | TransactionCreateStepTwo | attribute | type=submit, text="이체"                               |
 
 ## src/components/TransactionDateBoxesFilter.tsx
 
@@ -236,9 +346,9 @@ await page.getByTestId("sidenav-signout").click();
 | --- | ------------------------------------------- | ------------------------- | ---------------- | -------------------------- | ---------- | --------------------------- |
 | 84  | `${testIdPrefix}-box`                       | 동적 (testIdPrefix)       | `Box`            | DatePartsBox               | attribute  | -                           |
 | 117 | `${testIdPrefix}-${part}`                   | 동적 (testIdPrefix, part) | `InputBase`      | DatePartsBox               | inputProps | onChange, onBlur, onKeyDown |
-| 215 | `transaction-list-filter-date`              | 정적                      | `Box`            | TransactionDateBoxesFilter | attribute  | -                           |
-| 239 | `transaction-list-filter-date-clear-button` | 정적                      | `Button`         | TransactionDateBoxesFilter | attribute  | onClick, text="초기화"      |
-| 253 | `transaction-list-filter-date-message`      | 정적                      | `FormHelperText` | TransactionDateBoxesFilter | attribute  | -                           |
+| 218 | `transaction-list-filter-date`              | 정적                      | `Box`            | TransactionDateBoxesFilter | attribute  | -                           |
+| 242 | `transaction-list-filter-date-clear-button` | 정적                      | `Button`         | TransactionDateBoxesFilter | attribute  | onClick, text="초기화"      |
+| 256 | `transaction-list-filter-date-message`      | 정적                      | `FormHelperText` | TransactionDateBoxesFilter | attribute  | -                           |
 
 ## src/components/TransactionDetail.tsx
 
@@ -256,7 +366,7 @@ await page.getByTestId("sidenav-signout").click();
 
 | 줄  | test id            | 종류 | 요소  | 컴포넌트                | 연결 방식 | UI 특징 |
 | --- | ------------------ | ---- | ----- | ----------------------- | --------- | ------- |
-| 77  | `transaction-list` | 정적 | `div` | TransactionInfiniteList | attribute | -       |
+| 99  | `transaction-list` | 정적 | `div` | TransactionInfiniteList | attribute | -       |
 
 ## src/components/TransactionItem.tsx
 
@@ -283,9 +393,9 @@ await page.getByTestId("sidenav-signout").click();
 
 | 줄  | test id                | 종류 | 요소   | 컴포넌트           | 연결 방식 | UI 특징                         |
 | --- | ---------------------- | ---- | ------ | ------------------ | --------- | ------------------------------- |
-| 36  | `nav-transaction-tabs` | 정적 | `Tabs` | TransactionNavTabs | attribute | onChange                        |
-| 46  | `nav-public-tab`       | 정적 | `Tab`  | TransactionNavTabs | attribute | to=/, component=${Link}         |
-| 47  | `nav-personal-tab`     | 정적 | `Tab`  | TransactionNavTabs | attribute | to=/personal, component=${Link} |
+| 32  | `nav-transaction-tabs` | 정적 | `Tabs` | TransactionNavTabs | attribute | -                               |
+| 41  | `nav-public-tab`       | 정적 | `Tab`  | TransactionNavTabs | attribute | to=/, component=${Link}         |
+| 42  | `nav-personal-tab`     | 정적 | `Tab`  | TransactionNavTabs | attribute | to=/personal, component=${Link} |
 
 ## src/components/TransactionTitle.tsx
 
@@ -341,8 +451,9 @@ await page.getByTestId("sidenav-signout").click();
 
 | 줄  | test id              | 종류 | 요소     | 컴포넌트              | 연결 방식 | UI 특징                                                      |
 | --- | -------------------- | ---- | -------- | --------------------- | --------- | ------------------------------------------------------------ |
-| 105 | `bankaccount-new`    | 정적 | `Button` | BankAccountsContainer | attribute | to=/bankaccounts/new, component=${RouterLink}, text="만들기" |
-| 118 | `bankaccount-notice` | 정적 | `Alert`  | BankAccountsContainer | attribute | -                                                            |
+| 109 | `bankaccount-new`    | 정적 | `Button` | BankAccountsContainer | attribute | to=/bankaccounts/new, component=${RouterLink}, text="만들기" |
+| 123 | `bankaccount-limit`  | 정적 | `Alert`  | BankAccountsContainer | attribute | text="은행 계좌는 최대 개까지 만들 수 있습니다."             |
+| 128 | `bankaccount-notice` | 정적 | `Alert`  | BankAccountsContainer | attribute | -                                                            |
 
 ## src/containers/PrivateRoutesContainer.tsx
 
@@ -351,8 +462,28 @@ await page.getByTestId("sidenav-signout").click();
 | 109 | `amounts-changed-notice` | 정적 | `Alert`  | PrivateRoutesContainer | attribute | text="금액 변동이 생겼어요. 새로고침을 해주세요." |
 | 114 | `amounts-changed-reload` | 정적 | `Button` | PrivateRoutesContainer | attribute | onClick, text="새로고침"                          |
 
+## src/containers/TransactionDetailContainer.tsx
+
+| 줄  | test id                      | 종류 | 요소    | 컴포넌트                    | 연결 방식 | UI 특징 |
+| --- | ---------------------------- | ---- | ------- | --------------------------- | --------- | ------- |
+| 45  | `transaction-detail-failure` | 정적 | `Alert` | TransactionDetailsContainer | attribute | -       |
+
 ## id가 없는 상호작용 요소
 
 `pnpm testid:add`로 제안 id를 확인하고, `pnpm testid:add:write`로 반영합니다. 제안이 `-`인 항목은 직접 이름을 정해야 합니다.
 
-없음
+| 파일                             | 줄  | 요소                | 컴포넌트      | 제안 id                          | 비고                                      |
+| -------------------------------- | --- | ------------------- | ------------- | -------------------------------- | ----------------------------------------- |
+| src/components/DbSnapshot.tsx    | 157 | `Box`               | DbSnapshot    | `db-snapshot-item-${column.id}`  | 목록 항목 (항목 id 사용)                  |
+| src/components/DbSnapshot.tsx    | 173 | `Box`               | DbSnapshot    | `db-snapshot-item-${column.id}`  | 목록 항목 (항목 id 사용)                  |
+| src/components/DemoAccordion.tsx | 257 | `ToggleButtonGroup` | DemoAccordion | -                                | 핸들러만 있고 역할이 불분명함 (직접 지정) |
+| src/components/DemoAccordion.tsx | 321 | `Box`               | DemoAccordion | `demo-accordion-item-${text.id}` | 목록 항목 (항목 id 사용)                  |
+| src/components/DemoIde.tsx       | 153 | `Box`               | DemoIde       | `demo-ide-item-${folder.id}`     | 목록 항목 (항목 id 사용)                  |
+| src/components/DemoIde.tsx       | 194 | `Box`               | DemoIde       | `demo-ide-item-${text.id}`       | 목록 항목 (항목 id 사용)                  |
+
+## 같은 정적 id가 여러 곳에 있음
+
+조건부 렌더링처럼 의도한 경우일 수 있습니다. 확인만 하세요.
+
+- `demo-api-summary` (2곳)
+- `demo-ide-line` (2곳)
