@@ -392,7 +392,9 @@ describe("routes", () => {
   });
 
   it("start, join, signal, finish, list and read", async () => {
-    const opened = await call("POST", "", { platform: "web", device: "chrome" });
+    const code = { testCommit: "a".repeat(40), testDirty: false, target: "b".repeat(16) };
+    const opened = await call("POST", "", { platform: "web", device: "chrome", code });
+    expect(opened.json.versions).toEqual({ server: "0.100", target: "0.100" });
     const joined = await call("POST", "", { platform: "app" });
     expect([opened.status, opened.json.runNo, joined.status, joined.json.runNo]).toEqual([
       201, 1, 200, 1,
@@ -414,6 +416,16 @@ describe("routes", () => {
   it("refuses wrong input (422) and a number that does not exist (404)", async () => {
     for (const platform of [undefined, "", "ios", 1]) {
       expect((await call("POST", "", { platform })).status, String(platform)).toBe(422);
+    }
+    for (const code of [
+      "x",
+      { testCommit: "HEAD" },
+      { testDirty: "no" },
+      { target: "0.100" },
+      { target: "A".repeat(16) },
+    ]) {
+      const { status } = await call("POST", "", { platform: "web", code });
+      expect(status, JSON.stringify(code)).toBe(422);
     }
     expect((await call("GET", "/1/fixtures")).status).toBe(422);
     for (const runNo of ["0", "-1", "abc", "2147483648"]) {

@@ -7,6 +7,7 @@
 import { RunProgress, RunStatus, TestFixturePerson, TestPlatform } from "@prisma/client";
 import prisma, { DbClient } from "./prisma";
 import { HttpError } from "./http-error";
+import { SERVER_FINGERPRINT } from "./server-fingerprint";
 import {
   FIXTURE_RULES,
   FixtureValues,
@@ -16,6 +17,7 @@ import {
 } from "./test-fixture-rules";
 import { finalResultOf, writeReport } from "./test-report-db";
 import { fixturePassword } from "./test-run-secret";
+import { versionOf } from "./test-version-db";
 
 /** A running platform without a signal for this long has died: its number becomes blocked. */
 export const SIGNAL_LIMIT_MS = 10 * 60 * 1000;
@@ -33,22 +35,30 @@ export const changeRuns = <T>(now: Date, change: (tx: DbClient) => Promise<T>): 
           lastSignalAt: { lt: new Date(now.getTime() - SIGNAL_LIMIT_MS) },
         },
       });
-      for (const run of dead) await endRun(tx, run, "blocked", now);
+      for (const run of dead) await endRun(tx, run, "blocked", now, null);
       return change(tx);
     },
     { maxWait: 15_000, timeout: 15_000 }
   );
+
+const serverVersionNow = (tx: DbClient, now: Date) =>
+  versionOf(tx, "server", SERVER_FINGERPRINT, now);
 
 /** The end of a platform's run: its progress and its report are written together. */
 const endRun = async (
   tx: DbClient,
   { runNo, platform }: RunProgress,
   status: "finished" | "blocked",
-  now: Date
+  now: Date,
+  serverVersionEnd: string | null // null: the run died, nobody knows the server it ended with
 ) => {
   await tx.runProgress.update({
     where: { runNo_platform: { runNo, platform } },
-    data: status === "finished" ? { status, lastSignalAt: now, finishedAt: now } : { status },
+    data: {
+      status,
+      serverVersionEnd,
+      ...(status === "finished" ? { lastSignalAt: now, finishedAt: now } : {}),
+    },
   });
   await writeReport(tx, runNo, platform, status, now);
 };
@@ -128,10 +138,19 @@ const forPlatform = (
   return out;
 };
 
+/** The code a platform runs with. Every part may be unknown. */
+export interface RunCode {
+  testCommit?: string;
+  testDirty?: boolean;
+  /** The fingerprint of the Web screens or of the App build */
+  target?: string;
+}
+
 export interface StartedRun {
   runNo: number;
   /** true when this start opened the number, false when it joined one that the other platform opened */
   opened: boolean;
+  versions: { server: string; target: string | null };
   fixtures: Fixtures;
 }
 
@@ -140,7 +159,8 @@ export const startRun = (
   platform: TestPlatform,
   device: string | undefined,
   secret: string,
-  now = new Date()
+  now = new Date(),
+  { testCommit, testDirty, target }: RunCode = {}
 ): Promise<StartedRun> =>
   changeRuns(now, async (tx) => {
     const newest = await tx.testFixture.findFirst({
@@ -159,12 +179,25 @@ export const startRun = (
     }
 
     await fillFixtures(tx, runNo); // stored values stay
+    const serverVersion = await serverVersionNow(tx, now);
+    const targetVersion = target ? await versionOf(tx, platform, target, now) : null;
     await tx.runProgress.create({
-      data: { runNo, platform, device, startedAt: now, lastSignalAt: now },
+      data: {
+        runNo,
+        platform,
+        device,
+        startedAt: now,
+        lastSignalAt: now,
+        serverVersion,
+        targetVersion,
+        testCommit,
+        testDirty,
+      },
     });
 
     const fixtures = forPlatform(await readFixtures(tx, runNo), runNo, platform, secret);
-    return { runNo, opened: !canJoin, fixtures };
+    const versions = { server: serverVersion, target: targetVersion };
+    return { runNo, opened: !canJoin, versions, fixtures };
   });
 
 export type RunEvent = "signal" | "finish" | "block";
@@ -194,7 +227,10 @@ export const reportRun = async (
     }
 
     if (event === "signal") await tx.runProgress.update({ where, data: { lastSignalAt: now } });
-    else await endRun(tx, run, event === "finish" ? "finished" : "blocked", now);
+    else {
+      const status = event === "finish" ? "finished" : "blocked";
+      await endRun(tx, run, status, now, await serverVersionNow(tx, now));
+    }
 
     const progress = await tx.runProgress.findMany({ where: { runNo } });
     return {
@@ -224,6 +260,8 @@ export const listRuns = (now = new Date()) =>
             device: true,
             startedAt: true,
             finishedAt: true,
+            serverVersion: true,
+            targetVersion: true,
           },
           orderBy: { platform: "asc" },
         },

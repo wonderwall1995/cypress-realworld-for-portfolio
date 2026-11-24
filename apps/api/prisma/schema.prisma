@@ -206,6 +206,15 @@ enum TestPlatform {
   @@schema("testschema")
 }
 
+// server: apps/api. web: the Web screens. app: the App build
+enum VersionPart {
+  server
+  web
+  app
+
+  @@schema("testschema")
+}
+
 enum TestPerson {
   A
   B
@@ -298,6 +307,21 @@ model TestFixturePerson {
   @@schema("testschema")
 }
 
+// 0.100, 0.101... for the server, the Web screens and the App build, each with its own line
+model TestVersion {
+  part        VersionPart
+  version     String
+  major       Int
+  minor       Int
+  fingerprint String // of the source files
+  firstSeenAt DateTime    @default(now()) @map("first_seen_at")
+
+  @@id([part, version])
+  @@unique([part, major, fingerprint])
+  @@map("test_version")
+  @@schema("testschema")
+}
+
 // Internal, for the run itself: who runs a number now, joining it, and the 10-minute rule. Not a result.
 model RunProgress {
   runNo        Int          @map("run_no")
@@ -307,6 +331,13 @@ model RunProgress {
   startedAt    DateTime     @default(now()) @map("started_at")
   lastSignalAt DateTime     @default(now()) @map("last_signal_at") // used by the 10-minute rule
   finishedAt   DateTime?    @map("finished_at")
+
+  // what this run worked with (see test_version). Empty: not known
+  serverVersion    String?  @map("server_version") // at the start
+  serverVersionEnd String?  @map("server_version_end") // at the end: another one when the server changed meanwhile
+  targetVersion    String?  @map("target_version") // of the Web screens, or of the App build
+  testCommit       String?  @map("test_commit") // of the test code
+  testDirty        Boolean? @map("test_dirty") // the test code had changes that were not committed
 
   fixture TestFixture @relation(fields: [runNo], references: [runNo], onDelete: Restrict)
 

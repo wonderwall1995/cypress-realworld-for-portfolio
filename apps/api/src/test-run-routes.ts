@@ -42,16 +42,26 @@ const PLATFORMS = ["web", "app"];
 const platformInBody = body("platform").isIn(PLATFORMS).withMessage("platform must be web or app");
 const runNoInPath = param("runNo").isInt({ min: 1, max: 2_147_483_647 }).toInt();
 
-// POST /testRuns { platform, device? } - joins the newest number or opens the next one
+// POST /testRuns { platform, device?, code? } - joins the newest number or opens the next one
 router.post(
   "/",
   validateMiddleware([
     platformInBody,
     body("device").optional().isString().trim().isLength({ max: 100 }),
+    // which code runs: the commit of the tests, and the fingerprint of the Web screens or of the App build
+    body("code").optional().isObject(),
+    body("code.testCommit")
+      .optional()
+      .matches(/^[0-9a-f]{7,40}$/),
+    body("code.testDirty").optional().isBoolean({ strict: true }),
+    body("code.target")
+      .optional()
+      .matches(/^[0-9a-f]{16}$/),
   ]),
   asyncHandler(async (req, res) => {
-    const { platform, device } = req.body;
-    const started = await startRun(platform, device, res.locals.testRunSecret);
+    const { platform, device, code } = req.body;
+    const secret = res.locals.testRunSecret;
+    const started = await startRun(platform, device, secret, new Date(), code);
     res.status(started.opened ? 201 : 200).json(started);
   })
 );
