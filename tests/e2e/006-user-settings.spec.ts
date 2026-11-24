@@ -56,7 +56,7 @@ test("6. 사용자 설정: 정보를 고치고 되돌릴 수 있고, 잘못된 �
   page,
 }) => {
   // 준비 (API): A와 남(B)을 만든다. 가입할 때의 정보가 처음 값이다. 가입에는 이메일이 없으므로 비어 있다
-  const { A, B } = await createUsersWithApi(page, ["B", "A"], START_DOLLARS);
+  const { A, B } = await createUsersWithApi(page, ["B", "A"], START_DOLLARS, "user-settings");
   const signedUp = ({ user }: typeof A): Profile => ({
     lastName: user.lastName,
     firstName: user.firstName,

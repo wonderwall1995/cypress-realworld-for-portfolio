@@ -59,7 +59,12 @@ test("8. 알림: 일어난 일이 맞는 사람에게 알려지고, 확인하면
   page,
 }) => {
   // 준비 (API): 세 사람을 만든다. 새 사람이라 알림이 없다
-  const { A, B, C } = await createUsersWithApi(page, ["A", "C", "B"], START_DOLLARS);
+  const { A, B, C } = await createUsersWithApi(
+    page,
+    ["A", "C", "B"],
+    START_DOLLARS,
+    "notifications"
+  );
 
   // ============================================================================================
   // API: 실제로 알림을 일으키고, 누구에게 무엇이 왔는지 본다

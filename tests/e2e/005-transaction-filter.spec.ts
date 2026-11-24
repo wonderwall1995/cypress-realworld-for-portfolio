@@ -50,6 +50,7 @@ import {
   openMyTransactions,
 } from "./common/transaction-filter";
 import { random } from "./fixture/random";
+import { fixtureValue, runFixtures } from "./fixture/run-fixtures";
 
 const START_DOLLARS = 1000; // 세 사람이 처음에 계좌에 넣은 돈. 이 입금도 거래 목록에 한 건으로 나온다
 const MAX_CENTS = 2_147_483_647; // 금액 필터가 받는 최대 (센트 칸이 담을 수 있는 크기)
@@ -67,13 +68,22 @@ test("5. 거래 목록 필터: 범위 안의 거래만 보이고, 잘못된 범�
 }) => {
   // 준비 (API): A가 B와 C에게 보내고, B와 C에게서 받는다. 금액은 구간 안에서 무작위다.
   //   작은 구간은 $10~$90, 큰 구간은 $250~$390. A의 목록은 이 4건과 처음 입금 1건, 모두 5건이다
-  const { A, B, C } = await createUsersWithApi(page, ["B", "C", "A"], START_DOLLARS);
-  const sentSmall = await transferWithApi(page, A, B, random(10, 90));
-  const sentBig = await transferWithApi(page, A, C, random(250, 390));
+  //   정식 실행이면 이 번호의 Fixture 값으로, 번호 없는 실행이면 무작위 값으로 만든다
+  const { A, B, C } = await createUsersWithApi(
+    page,
+    ["B", "C", "A"],
+    START_DOLLARS,
+    "transaction-filter"
+  );
+  const fixtures = runFixtures("transaction-filter");
+  const dollarsOf = (item: string, min: number, max: number) =>
+    fixtures ? Number(fixtureValue(fixtures, item)) : random(min, max);
+  const sentSmall = await transferWithApi(page, A, B, dollarsOf("sentSmallDollars", 10, 90));
+  const sentBig = await transferWithApi(page, A, C, dollarsOf("sentBigDollars", 250, 390));
   await loginWithApi(page, B.user);
-  const gotSmall = await transferWithApi(page, B, A, random(10, 90));
+  const gotSmall = await transferWithApi(page, B, A, dollarsOf("gotSmallDollars", 10, 90));
   await loginWithApi(page, C.user);
-  const gotBig = await transferWithApi(page, C, A, random(250, 390));
+  const gotBig = await transferWithApi(page, C, A, dollarsOf("gotBigDollars", 250, 390));
   const transfers = [sentSmall, sentBig, gotSmall, gotBig];
 
   // ============================================================================================

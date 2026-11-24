@@ -34,8 +34,9 @@
 
 import { test, expect } from "@playwright/test";
 import { expectLoggedInAsWithApi } from "./api/expect-logged-in-as";
-import { submitSignUp, signUpWithRandomUser } from "./common/signup";
+import { submitSignUp, signUp } from "./common/signup";
 import { signIn } from "./common/signin";
+import { runUser } from "./fixture/run-user";
 
 test("0. 무작위 값으로 회원가입하고 로그인한다", async ({ page }) => {
   // 로그인 화면이 열린다: 주소가 /signin 이고 제목 "로그인"이 보인다
@@ -44,8 +45,8 @@ test("0. 무작위 값으로 회원가입하고 로그인한다", async ({ page 
   await expect(page.getByRole("heading", { name: "로그인" })).toBeVisible();
 
   // 화면에서 무작위 값으로 회원가입한다 (공통 코드: 가입 화면의 주소 /signup 도 그 안에서 확인한다).
-  // 가입이 끝나 로그인 화면으로 돌아오면 끝난다
-  const user = await signUpWithRandomUser(page);
+  // 가입이 끝나 로그인 화면으로 돌아오면 끝난다. 정식 실행이면 이 번호의 A로, 번호 없는 실행이면 무작위 값으로 가입한다
+  const user = await signUp(page, runUser("auth", "A"));
   await expect(page).toHaveURL("/signin");
 
   // 거절: 이미 있는 아이디로 다시 가입할 수 없다

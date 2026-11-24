@@ -51,7 +51,12 @@ test("7. 거래 공개 범위: 공개 거래는 모두에게, 비공개 거래�
   page,
 }) => {
   // 준비 (API): 세 사람을 만든다. 이때 각자의 목록에는 처음 입금 한 건만 있다
-  const users = await createUsersWithApi(page, ["B", "C", "A"], START_DOLLARS);
+  const users = await createUsersWithApi(
+    page,
+    ["B", "C", "A"],
+    START_DOLLARS,
+    "transaction-visibility"
+  );
   const { A, B, C } = users;
   const deposits: Record<string, string> = {};
   for (const [name, who] of Object.entries(users)) {

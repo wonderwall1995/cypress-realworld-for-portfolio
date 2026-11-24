@@ -33,7 +33,7 @@
  */
 
 import { test, expect } from "@playwright/test";
-import { createFundedUserWithApi } from "./api/create-funded-user";
+import { createUsersWithApi } from "./api/create-users";
 import { getCommentsWithApi } from "./api/get-comments";
 import { getLikesWithApi } from "./api/get-likes";
 import { hardDeleteBankAccountsWithApi } from "./api/hard-delete-bank-accounts";
@@ -43,6 +43,7 @@ import { signIn } from "./common/signin";
 import { likeTransaction, openTransactionDetail, writeComment } from "./common/transaction-detail";
 import { random } from "./fixture/random";
 import { randomComment } from "./fixture/random-comment";
+import { fixtureValue, runFixtures } from "./fixture/run-fixtures";
 
 const START_DOLLARS = 1000; // 두 사람이 처음에 각자 계좌에 가진 돈
 
@@ -51,9 +52,12 @@ test("4. 거래 상세: 좋아요와 댓글이 화면과 서버에서 같고, �
 }) => {
   // 준비 (API): 받는 사람 B를 먼저, 보내는 사람 A를 마지막에 만든다. 준비가 끝나면 브라우저의 로그인은 A다.
   //   이체 자체는 003이 시험하므로, 여기서는 상세를 볼 거래 하나를 API로 빠르게 만든다
-  const B = await createFundedUserWithApi(page, START_DOLLARS);
-  const A = await createFundedUserWithApi(page, START_DOLLARS);
-  const transaction = await transferWithApi(page, A, B, random(1, 500), "거래 상세 시험");
+  //   정식 실행이면 이 번호의 Fixture 값으로, 번호 없는 실행이면 무작위 값으로 만든다
+  const { A, B } = await createUsersWithApi(page, ["B", "A"], START_DOLLARS, "transaction-detail");
+  const fixtures = runFixtures("transaction-detail");
+  const dollars = fixtures ? Number(fixtureValue(fixtures, "dollars")) : random(1, 500);
+  const text = fixtures ? fixtureValue(fixtures, "comment") : randomComment();
+  const transaction = await transferWithApi(page, A, B, dollars, "거래 상세 시험");
   const id: string = transaction.id;
 
   // A가 화면에서 로그인하고 거래 상세를 연다 (공통 코드). 새 거래라 좋아요도 댓글도 없다
@@ -82,7 +86,6 @@ test("4. 거래 상세: 좋아요와 댓글이 화면과 서버에서 같고, �
 
   // 3) 댓글
   //    화면: 쓰고 Enter를 누르면 목록에 보인다(공통 코드). 댓글은 하나다
-  const text = randomComment();
   await writeComment(page, id, text);
   await expect(commentItems).toHaveCount(1);
   //    서버: 댓글이 하나이고, 내용과 쓴 사람이 같다

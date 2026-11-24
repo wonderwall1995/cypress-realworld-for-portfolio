@@ -58,7 +58,7 @@ const money = (cents: number) =>
 
 test("2. 입금: 계좌마다 입금하고, 경계값과 금액 구간을 시험한다", async ({ page }) => {
   // Main이 아니면 API로 계정을 만들고 화면에서 로그인해서 Main으로 간다 (공통 코드)
-  await goToMain(page);
+  await goToMain(page, "deposit");
 
   // 페이지 확인: 지금 화면이 Main(주소 /)이다
   await expect(page).toHaveURL("/");

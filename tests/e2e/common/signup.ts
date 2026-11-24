@@ -1,5 +1,5 @@
 import { expect, Page, test } from "@playwright/test";
-import { randomUser, RandomUser } from "../fixture/random-user";
+import { RandomUser } from "../fixture/random-user";
 
 /**
  * 공통 코드: 로그인 화면에서 회원가입 화면으로 가서 값을 쓰고 가입 버튼을 누른다.
@@ -23,13 +23,11 @@ export async function submitSignUp(page: Page, user: RandomUser) {
 }
 
 /**
- * 로그인 화면에서 회원가입 화면으로 가서, 무작위 값으로 가입한다. 가입이 끝나 로그인 화면으로 돌아오면 끝난다.
+ * 공통 코드: 로그인 화면에서 회원가입 화면으로 가서, 받은 값으로 가입한다. 가입이 끝나 로그인 화면으로 돌아오면 끝난다.
  * 비밀번호 확인 칸은 화면 규칙상 비밀번호와 같은 값이어야 한다.
  */
-export async function signUpWithRandomUser(page: Page): Promise<RandomUser> {
-  return test.step("[common] signUpWithRandomUser", async () => {
-    const user = randomUser();
-
+export async function signUp(page: Page, user: RandomUser): Promise<RandomUser> {
+  return test.step("[common] signUp", async () => {
     await submitSignUp(page, user);
 
     // 가입이 끝나면 앱이 로그인 화면으로 돌아온다. 이 확인으로 가입 요청이 끝날 때까지 기다린다.

@@ -1,5 +1,6 @@
 import { expect, Page, test } from "@playwright/test";
 import { createAccountWithApi } from "../api/create-account";
+import { runUser } from "../fixture/run-user";
 import { signIn } from "./signin";
 
 /**
@@ -7,11 +8,12 @@ import { signIn } from "./signin";
  * - 테스트는 언제나 로그인 기록이 없는 새 브라우저에서 시작한다. (시연도 테스트마다 로그아웃해서 같은 상태를 만든다)
  * - API로 이 테스트만의 계정을 만들고, 화면에서 로그인해서 Main으로 간다.
  *   이 앱은 로그인 상태를 브라우저가 기억하므로, API로 로그인하는 것만으로는 화면이 로그인되지 않는다.
+ * - 이름표(label)를 주면 정식 실행에서는 그 번호의 A로 만든다. 번호 없는 실행이나 이름표가 없으면 무작위다.
  */
-export async function goToMain(page: Page) {
+export async function goToMain(page: Page, label?: string) {
   return test.step("[common] goToMain", async () => {
     await page.goto("/signin");
-    const user = await createAccountWithApi(page);
+    const user = await createAccountWithApi(page, runUser(label, "A"));
     await signIn(page, user);
     await expect(page).toHaveURL("/");
     return user;

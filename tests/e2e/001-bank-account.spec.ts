@@ -50,7 +50,7 @@ const MAX_BANK_ACCOUNTS = 60; // 앱이 한 사용자에게 허용하는 계좌 
 
 test("1. 은행 계좌: 소량은 화면으로, 대량은 API로, 59~61번째 경계는 화면으로 시험한다", async ({ page }) => {
   // Main이 아니면 API로 계정을 만들고 화면에서 로그인해서 Main으로 간다 (공통 코드)
-  await goToMain(page);
+  await goToMain(page, "bank-account");
 
   // 페이지 확인: 지금 화면이 Main(주소 /)이다
   await expect(page).toHaveURL("/");

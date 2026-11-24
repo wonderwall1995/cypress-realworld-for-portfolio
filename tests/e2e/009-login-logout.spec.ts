@@ -42,7 +42,7 @@ import { signIn } from "./common/signin";
 import { signOut } from "./common/signout";
 import { randomDigits } from "./fixture/random";
 import { randomBankAccountInput } from "./fixture/random-bank-account";
-import { randomUser } from "./fixture/random-user";
+import { runUser } from "./fixture/run-user";
 
 const A_DOLLARS = 1000; // 두 사람의 돈을 다르게 두어, 화면에 누구의 잔액이 보이는지 구별한다
 const B_DOLLARS = 500;
@@ -70,12 +70,13 @@ test("9. 로그인 실패와 로그아웃: 틀린 로그인은 거절되고, 로
   page,
 }) => {
   // 준비 (API): 두 사람을 만든다. 비밀번호는 대소문자를 구별하는지 보려고 글자를 섞고, 앞 글자를 달리해 둘이 같지 않게 한다
-  const inputOf = (letters: string) => ({
-    user: { ...randomUser(), password: `${letters}${randomDigits(4)}` },
+  //   비밀번호 말고는 정식 실행이면 이 번호의 값을, 번호 없는 실행이면 무작위 값을 쓴다
+  const inputOf = (name: string, letters: string) => ({
+    user: { ...runUser("login-logout", name), password: `${letters}${randomDigits(4)}` },
     account: randomBankAccountInput(),
   });
-  const B = await createFundedUserWithApi(page, B_DOLLARS, inputOf("Bb"));
-  const A = await createFundedUserWithApi(page, A_DOLLARS, inputOf("Aa"));
+  const B = await createFundedUserWithApi(page, B_DOLLARS, inputOf("B", "Bb"));
+  const A = await createFundedUserWithApi(page, A_DOLLARS, inputOf("A", "Aa"));
   //   준비 도구가 브라우저를 A로 로그인시켰다. 로그아웃하고, 아무도 로그인하지 않은 상태에서 시작한다
   await page.request.post("/api/logout");
 

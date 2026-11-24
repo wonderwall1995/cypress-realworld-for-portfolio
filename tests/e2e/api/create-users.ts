@@ -1,18 +1,13 @@
 import { Page, test } from "@playwright/test";
 import { fixtureValue, LabelFixtures, runFixtures } from "../fixture/run-fixtures";
+import { runUser } from "../fixture/run-user";
 import { createFundedUserWithApi, FundedUser, FundedUserInput } from "./create-funded-user";
 
 // 이름표의 값에서 한 사람을 만들 값을 꺼낸다
-const inputOf = (fixtures: LabelFixtures, name: string): FundedUserInput => {
+const inputOf = (label: string, fixtures: LabelFixtures, name: string): FundedUserInput => {
   const of = (item: string) => fixtureValue(fixtures, `${name}.${item}`);
   return {
-    user: {
-      firstName: of("firstName"),
-      lastName: of("lastName"),
-      username: of("username"),
-      phoneNumber: of("phoneNumber"),
-      password: of("password"),
-    },
+    user: runUser(label, name),
     account: { bankName: of("bankName"), accountNumber: of("accountNumber") },
   };
 };
@@ -33,7 +28,7 @@ export async function createUsersWithApi<Name extends string>(
     const fixtures = label ? runFixtures(label) : undefined;
     const users = {} as Record<Name, FundedUser>;
     for (const name of names) {
-      const input = fixtures ? inputOf(fixtures, name) : undefined;
+      const input = label && fixtures ? inputOf(label, fixtures, name) : undefined;
       users[name] = await createFundedUserWithApi(page, dollars, input);
     }
     return users;
