@@ -16,11 +16,13 @@
  *                                         (the app gets this answer, or the real one later; page.request always talks to the real server)
  *   page.getByTestId(id), page.getByRole("heading" | "button" | "link", { name }), page.locator(css)
  *   locator.locator(css), locator.fill(text), locator.click(), locator.press("Enter")   (only Enter)
+ *   locator.pressSequentially(text)       (one character after the other, behind the text that is there)
  *   request.get(url), request.post(url, { data }), request.patch(url, { data }), request.delete(url)   -> response.status(), response.ok(), response.json()
  *   page.request                          (the same API tool, it has the login of the page)
  *   await expect(locator).toBeVisible(), await expect(locator).toBeHidden()
  *   await expect(locator).toContainText("text"), await expect(locator).toBeDisabled(), await expect(locator).toBeEnabled()
  *   await expect(locator).toHaveCount(n), await expect(locator).toHaveText("text")   (the whole text, spaces squeezed)
+ *   await expect(locator).toHaveValue("text")   (what an entry field holds)
  *   await expect(locator).toHaveCSS("opacity", "1")   (one style value, as the browser computes it)
  *   await expect(page).toHaveURL("/signin")     (a text is resolved against the address of the app; a RegExp is also fine)
  *   expect(value).toBe(expected), expect(value).toEqual(expected), expect(value).toBeTruthy()
@@ -269,6 +271,21 @@ export class Locator {
     }
   }
 
+  /** Types behind the text that is there. The real one sends key events too; the app listens only to the input. */
+  async pressSequentially(text: string): Promise<void> {
+    const where = captureCaller();
+    await beforeStep(where);
+    const input = (await this.until((e) => isVisible(e) && !isDisabled(e), "입력 가능한")) as HTMLInputElement;
+    highlight(input);
+    input.focus();
+    const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+    for (const character of text) {
+      setValue.call(input, input.value + character);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      await sleep(TYPING_DELAY);
+    }
+  }
+
   async click(): Promise<void> {
     const where = captureCaller();
     await beforeStep(where);
@@ -312,6 +329,17 @@ class LocatorExpectation {
       }
       await sleep(50);
     }
+  }
+
+  /** Passes when the entry field holds exactly this text. */
+  async toHaveValue(expected: string): Promise<void> {
+    const where = captureCaller();
+    await beforeStep(where);
+    const element = await this.locator.until(
+      (found) => (found as HTMLInputElement).value === expected,
+      `값이 "${expected}" 인`
+    );
+    highlight(element);
   }
 
   /** Passes when the element has this style value, as the browser computes it. */

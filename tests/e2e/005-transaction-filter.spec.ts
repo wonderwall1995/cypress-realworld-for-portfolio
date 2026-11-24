@@ -47,6 +47,7 @@ import {
   applyAmountFilter,
   fillAmountFilter,
   fillDateFilter,
+  typeDateFilter,
   openMyTransactions,
 } from "./common/transaction-filter";
 import { random } from "./fixture/random";
@@ -263,6 +264,22 @@ test("5. 거래 목록 필터: 범위 안의 거래만 보이고, 잘못된 범�
   }
   await page.getByTestId("transaction-list-filter-date-clear-button").click();
   await expect(page.getByTestId("transaction-list-filter-date-message")).toBeHidden();
+  await expectListOnScreen(everything);
+
+  // 9) 한 글자씩 치기: 친 날짜가 그대로 남는다 (두 자리 월이 01, 00으로 바뀌던 일이 있었다)
+  //    0으로 시작하는 월과 1로 시작하는 월을 하나씩 친다
+  await typeDateFilter(page, "2025-03-07", "2025-11-24");
+  for (const [part, typed] of [
+    ["start-year", "2025"],
+    ["start-month", "03"],
+    ["start-day", "07"],
+    ["end-year", "2025"],
+    ["end-month", "11"],
+    ["end-day", "24"],
+  ]) {
+    await expect(page.getByTestId(`transaction-list-filter-date-${part}`)).toHaveValue(typed);
+  }
+  await page.getByTestId("transaction-list-filter-date-clear-button").click();
   await expectListOnScreen(everything);
 
   // 정리: 세 사람의 은행 계좌를 API로 완전히 지운다 (거래를 지우는 API는 없어서 거래 기록은 남는다)
