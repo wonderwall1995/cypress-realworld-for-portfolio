@@ -27,13 +27,15 @@ export async function submitSignUp(page: Page, user: RandomUser) {
  * 비밀번호 확인 칸은 화면 규칙상 비밀번호와 같은 값이어야 한다.
  */
 export async function signUpWithRandomUser(page: Page): Promise<RandomUser> {
-  const user = randomUser();
+  return test.step("[common] signUpWithRandomUser", async () => {
+    const user = randomUser();
 
-  await submitSignUp(page, user);
+    await submitSignUp(page, user);
 
-  // 가입이 끝나면 앱이 로그인 화면으로 돌아온다. 이 확인으로 가입 요청이 끝날 때까지 기다린다.
-  // (이 도구를 부른 뒤 곧바로 API로 계정을 확인해도, 서버에 계정이 이미 만들어져 있다)
-  await expect(page.getByRole("heading", { name: "로그인" })).toBeVisible();
+    // 가입이 끝나면 앱이 로그인 화면으로 돌아온다. 이 확인으로 가입 요청이 끝날 때까지 기다린다.
+    // (이 도구를 부른 뒤 곧바로 API로 계정을 확인해도, 서버에 계정이 이미 만들어져 있다)
+    await expect(page.getByRole("heading", { name: "로그인" })).toBeVisible();
 
-  return user;
+    return user;
+  });
 }

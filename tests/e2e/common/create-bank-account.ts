@@ -1,4 +1,4 @@
-import { expect, Page } from "@playwright/test";
+import { expect, Page, test } from "@playwright/test";
 import { expectNewBankAccount } from "../api/expect-bank-account";
 import { randomBankAccountInput } from "../fixture/random-bank-account";
 
@@ -10,15 +10,20 @@ import { randomBankAccountInput } from "../fixture/random-bank-account";
  * 만든 계좌의 정보(API가 준 id 포함)를 돌려준다.
  */
 export async function createBankAccount(page: Page) {
-  const account = randomBankAccountInput();
+  return test.step("[common] createBankAccount", async () => {
+    const account = randomBankAccountInput();
 
-  await page.goto("/bankaccounts/new");
-  await expect(page).toHaveURL("/bankaccounts/new");
-  await page.getByTestId("bankaccount-bankName-input").locator("input").fill(account.bankName);
-  await page.getByTestId("bankaccount-accountNumber-input").locator("input").fill(account.accountNumber);
-  await page.getByTestId("bankaccount-submit").click();
-  await expect(page).toHaveURL("/bankaccounts");
+    await page.goto("/bankaccounts/new");
+    await expect(page).toHaveURL("/bankaccounts/new");
+    await page.getByTestId("bankaccount-bankName-input").locator("input").fill(account.bankName);
+    await page
+      .getByTestId("bankaccount-accountNumber-input")
+      .locator("input")
+      .fill(account.accountNumber);
+    await page.getByTestId("bankaccount-submit").click();
+    await expect(page).toHaveURL("/bankaccounts");
 
-  const found = await expectNewBankAccount(page, account);
-  return { ...account, id: found.id };
+    const found = await expectNewBankAccount(page, account);
+    return { ...account, id: found.id };
+  });
 }

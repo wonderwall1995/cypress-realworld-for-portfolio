@@ -1,4 +1,4 @@
-import { expect, Page } from "@playwright/test";
+import { expect, Page, test } from "@playwright/test";
 
 /**
  * API 도구: 로그인한 사용자의 은행 계좌를 DB에서 완전히 지운다 (하드 삭제).
@@ -9,20 +9,22 @@ import { expect, Page } from "@playwright/test";
  * 확인: 지우기 전에는 행이 있고(숨겨진 행 포함), 지운 개수가 그 행 수와 같고, 지운 뒤에는 0행이다.
  */
 export async function hardDeleteBankAccountsWithApi(page: Page) {
-  const rows = async () => {
-    const response = await page.request.get("/api/demo/bankaccounts/count");
-    expect(response.ok()).toBeTruthy();
+  return test.step("[api] hardDeleteBankAccountsWithApi", async () => {
+    const rows = async () => {
+      const response = await page.request.get("/api/demo/bankaccounts/count");
+      expect(response.ok()).toBeTruthy();
+      const body = await response.json();
+      return body.total as number;
+    };
+
+    const before = await rows();
+    expect(before > 0).toBe(true);
+
+    const response = await page.request.delete("/api/demo/bankaccounts");
+    expect(response.status()).toBe(200);
     const body = await response.json();
-    return body.total as number;
-  };
+    expect(body.deleted).toBe(before);
 
-  const before = await rows();
-  expect(before > 0).toBe(true);
-
-  const response = await page.request.delete("/api/demo/bankaccounts");
-  expect(response.status()).toBe(200);
-  const body = await response.json();
-  expect(body.deleted).toBe(before);
-
-  expect(await rows()).toBe(0);
+    expect(await rows()).toBe(0);
+  });
 }

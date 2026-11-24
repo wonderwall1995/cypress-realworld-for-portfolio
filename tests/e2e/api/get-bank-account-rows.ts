@@ -1,4 +1,4 @@
-import { expect, Page } from "@playwright/test";
+import { expect, Page, test } from "@playwright/test";
 
 /** DB에 있는 은행 계좌 행 수. 숨긴 행(앱의 삭제)도 센다. */
 export interface BankAccountRows {
@@ -13,7 +13,9 @@ export interface BankAccountRows {
  * 화면의 로그인(쿠키)을 그대로 쓰므로 page.request로 부른다. 응답이 성공이 아니면 이 도구를 부른 줄에서 테스트가 멈춘다.
  */
 export async function getBankAccountRows(page: Page): Promise<BankAccountRows> {
-  const response = await page.request.get("/api/demo/bankaccounts/count");
-  expect(response.ok()).toBeTruthy();
-  return response.json();
+  return test.step("[api] getBankAccountRows", async () => {
+    const response = await page.request.get("/api/demo/bankaccounts/count");
+    expect(response.ok()).toBeTruthy();
+    return response.json();
+  });
 }

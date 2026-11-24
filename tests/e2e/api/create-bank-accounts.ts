@@ -1,4 +1,4 @@
-import { expect, Page } from "@playwright/test";
+import { expect, Page, test } from "@playwright/test";
 import { randomBankAccountInput } from "../fixture/random-bank-account";
 import { getBankAccounts } from "./get-bank-accounts";
 
@@ -9,12 +9,17 @@ import { getBankAccounts } from "./get-bank-accounts";
  * 하나라도 만들어지지 않으면(200이 아니면) 이 도구를 부른 줄에서 테스트가 멈춘다.
  */
 export async function createBankAccountsWithApi(page: Page, total: number) {
-  const accounts = await getBankAccounts(page);
-  for (let count = accounts.length; count < total; count += 1) {
-    const number = String(count + 1).padStart(2, "0");
-    const response = await page.request.post("/api/bankAccounts", {
-      data: { bankName: `테스트 은행 ${number}`, accountNumber: randomBankAccountInput().accountNumber },
-    });
-    expect(response.status()).toBe(200);
-  }
+  return test.step("[api] createBankAccountsWithApi", async () => {
+    const accounts = await getBankAccounts(page);
+    for (let count = accounts.length; count < total; count += 1) {
+      const number = String(count + 1).padStart(2, "0");
+      const response = await page.request.post("/api/bankAccounts", {
+        data: {
+          bankName: `테스트 은행 ${number}`,
+          accountNumber: randomBankAccountInput().accountNumber,
+        },
+      });
+      expect(response.status()).toBe(200);
+    }
+  });
 }

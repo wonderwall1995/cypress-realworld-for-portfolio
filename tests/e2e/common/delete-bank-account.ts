@@ -1,4 +1,4 @@
-import { expect, Page } from "@playwright/test";
+import { expect, Page, test } from "@playwright/test";
 
 /**
  * 공통 코드: 화면에서 은행 계좌 하나를 삭제한다.
@@ -9,11 +9,13 @@ import { expect, Page } from "@playwright/test";
  * 다른 테스트 파일이 쓰지 않으면 spec 안의 함수로 되돌릴 수 있다 (보류 중인 결정).
  */
 export async function deleteBankAccount(page: Page, accountId: string) {
-  await page.goto("/bankaccounts");
-  await page
-    .locator(
-      `[data-testid="bankaccount-list-item-${accountId}"] [data-testid="bankaccount-delete"]`
-    )
-    .click();
-  await expect(page.getByTestId(`bankaccount-list-item-${accountId}`)).toBeHidden();
+  return test.step("[common] deleteBankAccount", async () => {
+    await page.goto("/bankaccounts");
+    await page
+      .locator(
+        `[data-testid="bankaccount-list-item-${accountId}"] [data-testid="bankaccount-delete"]`
+      )
+      .click();
+    await expect(page.getByTestId(`bankaccount-list-item-${accountId}`)).toBeHidden();
+  });
 }
