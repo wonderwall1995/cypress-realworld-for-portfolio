@@ -2,17 +2,17 @@ import React from "react";
 import { List } from "@mui/material";
 
 import CommentListItem from "./CommentListItem";
-import { Comment } from "@rwa/shared";
+import { CommentResponseItem } from "@rwa/shared";
 
 export interface CommentsListProps {
-  comments: Comment[];
+  comments: CommentResponseItem[];
 }
 
 const CommentsList: React.FC<CommentsListProps> = ({ comments }) => {
   return (
     <List data-testid="comments-list">
       {comments &&
-        comments.map((comment: Comment) => <CommentListItem key={comment.id} comment={comment} />)}
+        comments.map((comment) => <CommentListItem key={comment.id} comment={comment} />)}
     </List>
   );
 };

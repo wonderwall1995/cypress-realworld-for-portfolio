@@ -129,7 +129,7 @@ const TransactionItem: React.FC<TransactionProps> = ({ transaction }) => {
                   {formatSlashDate(transaction.createdAt)}
                 </Typography>
                 <TransactionTitle transaction={transaction} />
-                {!isExternalDeposit(transaction) && (
+                {!isExternalDeposit(transaction) && transaction.description && (
                   <Typography variant="body2" color="textSecondary" gutterBottom>
                     {transaction.description}
                   </Typography>

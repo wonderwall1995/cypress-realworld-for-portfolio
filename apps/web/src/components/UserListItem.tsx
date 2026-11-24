@@ -1,10 +1,10 @@
 import React from "react";
 import { ListItem, ListItemText, ListItemAvatar, Avatar, Grid } from "@mui/material";
 
-import { User } from "@rwa/shared";
+import { OtherUser } from "@rwa/shared";
 
 export interface UserListItemProps {
-  user: User;
+  user: OtherUser;
   setReceiver: Function;
   index: Number;
 }

@@ -8,7 +8,8 @@ export const transactionDetailMachine = dataMachine("transactionData").withConfi
     fetchData: async (ctx, event: any) => {
       const payload = omit("type", event);
       const contextTransactionId = !isEmpty(ctx.results) && first(ctx.results)["id"];
-      const transactionId = contextTransactionId || payload.transactionId;
+      // the transaction that is asked for; after a like or a comment nothing is asked: read the shown one again
+      const transactionId = payload.transactionId || contextTransactionId;
       const resp = await httpClient.get(`${API_BASE}/transactions/${transactionId}`);
       // @ts-ignore
       return { results: [resp.data.transaction] };

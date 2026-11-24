@@ -31,7 +31,7 @@ interface Props {
 }
 
 /**
- * Last step before money moves: "정말 진행하겠습니까? 자신의 계정 비밀번호를 입력해주세요."
+ * Last step before money moves: "정말 진행하겠습니까? 계정의 비밀번호를 입력해주세요."
  * The password is checked with the server first, so a wrong one is shown here and nothing is sent.
  */
 const PasswordConfirmDialog: React.FC<Props> = ({
@@ -93,16 +93,14 @@ const PasswordConfirmDialog: React.FC<Props> = ({
           {summary}
         </DialogContentText>
         {extra}
-        <DialogContentText sx={{ marginTop: 2 }}>
-          자신의 계정 비밀번호를 입력해주세요.
-        </DialogContentText>
+        <DialogContentText sx={{ marginTop: 2 }}>계정의 비밀번호를 입력해주세요.</DialogContentText>
         <TextField
           autoFocus
           fullWidth
           margin="dense"
           size="small"
           type="password"
-          label="비밀번호"
+          label="계정의 비밀번호"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={(e) => {

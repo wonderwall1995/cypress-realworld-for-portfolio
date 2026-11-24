@@ -99,7 +99,7 @@ const TransactionCreateStepThree: React.FC<TransactionCreateStepThreeProps> = ({
             <Typography component="h2" variant="h6" color="primary" gutterBottom>
               {transactionDetails?.amount &&
                 formatAmount(parseInt(transactionDetails.amount, 10) * 100)}{" "}
-              이체 완료 ({transactionDetails?.description})
+              이체 완료{transactionDetails?.description && ` (${transactionDetails.description})`}
             </Typography>
           </Grid>
         </Grid>
@@ -134,7 +134,7 @@ const TransactionCreateStepThree: React.FC<TransactionCreateStepThreeProps> = ({
               }}
               data-testid="new-transaction-create-another-transaction"
             >
-              다른 거래 만들기
+              다른 이체 진행하기
             </Button>
           </Grid>
         </Grid>
