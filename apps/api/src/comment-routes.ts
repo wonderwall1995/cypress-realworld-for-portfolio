@@ -1,7 +1,7 @@
 ///<reference path="types.ts" />
 
 import express from "express";
-import { getCommentsByTransactionId } from "./comment-db";
+import { getCommentsByTransactionId, withCommentAuthors } from "./comment-db";
 import { createComments } from "./social-db";
 import { asyncHandler } from "./async-handler";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
@@ -20,7 +20,7 @@ router.get(
     const { transactionId } = req.params;
     // 404 when the member may not see the transaction
     await getViewableTransaction(req.user?.id, transactionId);
-    const comments = await getCommentsByTransactionId(transactionId);
+    const comments = await withCommentAuthors(await getCommentsByTransactionId(transactionId));
 
     res.status(200);
     res.json({ comments });

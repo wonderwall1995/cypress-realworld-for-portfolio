@@ -5,6 +5,7 @@ import {
   createBankAccountForUser,
   getBankAccountById,
   getBankAccountsByUserId,
+  getUserIdsWithBankAccount,
   removeBankAccountById,
 } from "../bankaccount-db";
 import { resetDatabase } from "./db-setup/reset";
@@ -46,6 +47,16 @@ describe("Bank accounts (PostgreSQL)", () => {
 
     expect((await getBankAccountById(account.id))!.accountNumber).toBe("123456789");
     expect(await getBankAccountById("nope")).toBeNull();
+  });
+
+  it("tells who has an account that is not deleted", async () => {
+    const one = await createBankAccountForUser("u1", details);
+    await createBankAccountForUser("u1", details);
+    const only = await createBankAccountForUser("u2", details);
+    await removeBankAccountById("u1", one.id);
+    expect(await getUserIdsWithBankAccount()).toEqual(new Set(["u1", "u2"]));
+    await removeBankAccountById("u2", only.id);
+    expect(await getUserIdsWithBankAccount()).toEqual(new Set(["u1"]));
   });
 
   it("soft deletes: the row stays with visible=false, and the list hides it", async () => {

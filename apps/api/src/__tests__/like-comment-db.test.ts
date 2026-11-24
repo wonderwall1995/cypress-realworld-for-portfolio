@@ -7,7 +7,9 @@ import {
   getAllComments,
   getCommentById,
   getCommentsByTransactionId,
+  withCommentAuthors,
 } from "../comment-db";
+import { createUser } from "../user-db";
 import { resetDatabase } from "./db-setup/reset";
 
 describe("Likes and comments (PostgreSQL)", () => {
@@ -17,6 +19,23 @@ describe("Likes and comments (PostgreSQL)", () => {
 
   afterAll(async () => {
     await prisma.$disconnect();
+  });
+
+  it("comments get the name of their writer (last name first), and an unknown writer has an empty name", async () => {
+    const user = await createUser({
+      firstName: "Gil",
+      lastName: "Hong",
+      username: "hong",
+      password: "x1234",
+    });
+    await createComment(user.id, "t1", "one");
+    await createComment("gone", "t1", "two");
+    const comments = await withCommentAuthors(await getCommentsByTransactionId("t1"));
+    expect(comments.map(({ content, userFullName }) => [content, userFullName])).toEqual([
+      ["one", "Hong Gil"],
+      ["two", ""],
+    ]);
+    expect(await withCommentAuthors([])).toEqual([]);
   });
 
   describe("likes", () => {
