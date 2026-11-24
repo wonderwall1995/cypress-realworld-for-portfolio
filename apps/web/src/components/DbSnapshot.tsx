@@ -157,6 +157,7 @@ export default function DbSnapshot() {
                         <Box
                           component="th"
                           key={column}
+                          data-testid="demo-db-column"
                           sx={{ ...CELL_SX, background: "#f5f5f5", fontWeight: 600, position: "sticky", top: 0, zIndex: 1 }}
                         >
                           {column}
@@ -173,6 +174,7 @@ export default function DbSnapshot() {
                             <Box
                               component="td"
                               key={column}
+                              data-testid="demo-db-cell"
                               title={text}
                               sx={{ ...CELL_SX, ...(row[column] === null ? { color: "#9e9e9e" } : {}) }}
                             >

@@ -150,7 +150,7 @@ export default function DemoIde({ state, activeFile }: Props) {
               e2e/
             </Typography>
             {folders.map((folder, at) => (
-              <Box key={folder}>
+              <Box key={folder} data-testid="demo-ide-folder-group">
                 {at > 0 && <Box data-testid="demo-ide-line" sx={GROUP_LINE_SX} />}
                 <Typography
                   variant="caption"
@@ -191,7 +191,7 @@ export default function DemoIde({ state, activeFile }: Props) {
               sx={{ flex: 1, minHeight: 0, overflow: "auto", background: "#000", color: "#fff", py: 1, fontFamily: "monospace", fontSize: 13, lineHeight: 1.6 }}
             >
               {lines.map((text, index) => (
-                <Box key={index} sx={{ display: "flex" }}>
+                <Box key={index} data-testid="demo-ide-code-line" sx={{ display: "flex" }}>
                   <Box sx={{ width: 44, flexShrink: 0, pr: 1.5, textAlign: "right", color: "#777", userSelect: "none" }}>
                     {index + 1}
                   </Box>

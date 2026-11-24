@@ -260,6 +260,7 @@ export default function DemoAccordion({ current, next, state, index, activeFile,
               value={view}
               onChange={(_event, next) => next && setView(next)}
               aria-label="보기 전환"
+              data-testid="demo-view-toggle"
               sx={{ ml: `${HEADER_PADDING}px`, flexShrink: 0 }}
             >
               <ToggleButton value="demo" data-testid="demo-view-demo" sx={VIEW_TAB_SX}>
@@ -320,6 +321,7 @@ export default function DemoAccordion({ current, next, state, index, activeFile,
                 return (
                   <Box
                     key={lineIndex}
+                    data-testid="demo-code-line"
                     ref={running ? lineRef : undefined}
                     data-line={lineIndex + 1}
                     data-running={running ? "true" : undefined}

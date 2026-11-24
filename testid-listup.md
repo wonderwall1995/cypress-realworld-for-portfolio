@@ -4,8 +4,8 @@
 
 - 속성: `data-testid` (Playwright `getByTestId()` 기본 속성)
 - `${...}`가 들어간 id는 동적 값입니다. 접두사로 찾으세요. 예: `[data-testid^="transaction-item-"]`
-- 합계: 파일 47개, test id 220개 (동적 49개)
-- id가 없는 상호작용 요소: 6개 (맨 아래 참고)
+- 합계: 파일 47개, test id 226개 (동적 49개)
+- id가 없는 상호작용 요소: 0개 (맨 아래 참고)
 
 ## 사용 예시
 
@@ -85,32 +85,36 @@ await page.getByTestId("sidenav-signout").click();
 | 101 | `demo-db-tablelist`   | 정적 | `Box`        | DbSnapshot | attribute | -                                      |
 | 108 | `demo-db-table-item`  | 정적 | `Box`        | DbSnapshot | attribute | onClick, type=button, component=button |
 | 147 | `demo-db-grid`        | 정적 | `Box`        | DbSnapshot | attribute | -                                      |
-| 169 | `demo-db-row`         | 정적 | `tr`         | DbSnapshot | attribute | -                                      |
-| 192 | `demo-db-page-info`   | 정적 | `Typography` | DbSnapshot | attribute | text="· – / 행"                        |
-| 196 | `demo-db-page-prev`   | 정적 | `Button`     | DbSnapshot | attribute | onClick, text="이전"                   |
-| 204 | `demo-db-page-number` | 정적 | `Typography` | DbSnapshot | attribute | text="/"                               |
-| 207 | `demo-db-page-next`   | 정적 | `Button`     | DbSnapshot | attribute | onClick, text="다음"                   |
+| 157 | `demo-db-column`      | 정적 | `Box`        | DbSnapshot | attribute | component=th                           |
+| 170 | `demo-db-row`         | 정적 | `tr`         | DbSnapshot | attribute | -                                      |
+| 174 | `demo-db-cell`        | 정적 | `Box`        | DbSnapshot | attribute | component=td                           |
+| 194 | `demo-db-page-info`   | 정적 | `Typography` | DbSnapshot | attribute | text="· – / 행"                        |
+| 198 | `demo-db-page-prev`   | 정적 | `Button`     | DbSnapshot | attribute | onClick, text="이전"                   |
+| 206 | `demo-db-page-number` | 정적 | `Typography` | DbSnapshot | attribute | text="/"                               |
+| 209 | `demo-db-page-next`   | 정적 | `Button`     | DbSnapshot | attribute | onClick, text="다음"                   |
 
 ## src/components/DemoAccordion.tsx
 
-| 줄  | test id                 | 종류 | 요소           | 컴포넌트      | 연결 방식 | UI 특징                                                      |
-| --- | ----------------------- | ---- | -------------- | ------------- | --------- | ------------------------------------------------------------ |
-| 177 | `demo-accordion`        | 정적 | `Box`          | DemoAccordion | attribute | -                                                            |
-| 193 | `demo-accordion-resize` | 정적 | `Box`          | DemoAccordion | attribute | -                                                            |
-| 220 | `demo-accordion-fold`   | 정적 | `Button`       | DemoAccordion | attribute | onClick                                                      |
-| 232 | `demo-file-name`        | 정적 | `Typography`   | DemoAccordion | attribute | -                                                            |
-| 243 | `demo-cards-toggle`     | 정적 | `Button`       | DemoAccordion | attribute | onClick, text="테스트 별 코드 확인"                          |
-| 265 | `demo-view-demo`        | 정적 | `ToggleButton` | DemoAccordion | attribute | text="시연"                                                  |
-| 268 | `demo-view-ide`         | 정적 | `ToggleButton` | DemoAccordion | attribute | text="IDE"                                                   |
-| 271 | `demo-view-db`          | 정적 | `ToggleButton` | DemoAccordion | attribute | text="DB"                                                    |
-| 286 | `demo-code-row`         | 정적 | `Box`          | DemoAccordion | attribute | -                                                            |
-| 300 | `demo-code-area`        | 정적 | `Box`          | DemoAccordion | attribute | -                                                            |
-| 304 | `demo-code`             | 정적 | `Box`          | DemoAccordion | attribute | -                                                            |
-| 362 | `demo-message-row`      | 정적 | `Box`          | DemoAccordion | attribute | -                                                            |
-| 364 | `demo-error`            | 정적 | `Typography`   | DemoAccordion | attribute | text="실패:"                                                 |
-| 369 | `demo-finished`         | 정적 | `Typography`   | DemoAccordion | attribute | text="시연이 끝났습니다. ■를 누르면 처음 상태로 돌아갑니다." |
-| 380 | `demo-tab`              | 정적 | `Button`       | DemoAccordion | attribute | onClick                                                      |
-| 425 | `demo-next`             | 정적 | `Typography`   | DemoAccordion | attribute | text="다음 테스트:"                                          |
+| 줄  | test id                 | 종류 | 요소                | 컴포넌트      | 연결 방식 | UI 특징                                                      |
+| --- | ----------------------- | ---- | ------------------- | ------------- | --------- | ------------------------------------------------------------ |
+| 177 | `demo-accordion`        | 정적 | `Box`               | DemoAccordion | attribute | -                                                            |
+| 193 | `demo-accordion-resize` | 정적 | `Box`               | DemoAccordion | attribute | -                                                            |
+| 220 | `demo-accordion-fold`   | 정적 | `Button`            | DemoAccordion | attribute | onClick                                                      |
+| 232 | `demo-file-name`        | 정적 | `Typography`        | DemoAccordion | attribute | -                                                            |
+| 243 | `demo-cards-toggle`     | 정적 | `Button`            | DemoAccordion | attribute | onClick, text="테스트 별 코드 확인"                          |
+| 257 | `demo-view-toggle`      | 정적 | `ToggleButtonGroup` | DemoAccordion | attribute | onChange                                                     |
+| 266 | `demo-view-demo`        | 정적 | `ToggleButton`      | DemoAccordion | attribute | text="시연"                                                  |
+| 269 | `demo-view-ide`         | 정적 | `ToggleButton`      | DemoAccordion | attribute | text="IDE"                                                   |
+| 272 | `demo-view-db`          | 정적 | `ToggleButton`      | DemoAccordion | attribute | text="DB"                                                    |
+| 287 | `demo-code-row`         | 정적 | `Box`               | DemoAccordion | attribute | -                                                            |
+| 301 | `demo-code-area`        | 정적 | `Box`               | DemoAccordion | attribute | -                                                            |
+| 305 | `demo-code`             | 정적 | `Box`               | DemoAccordion | attribute | -                                                            |
+| 322 | `demo-code-line`        | 정적 | `Box`               | DemoAccordion | attribute | -                                                            |
+| 364 | `demo-message-row`      | 정적 | `Box`               | DemoAccordion | attribute | -                                                            |
+| 366 | `demo-error`            | 정적 | `Typography`        | DemoAccordion | attribute | text="실패:"                                                 |
+| 371 | `demo-finished`         | 정적 | `Typography`        | DemoAccordion | attribute | text="시연이 끝났습니다. ■를 누르면 처음 상태로 돌아갑니다." |
+| 382 | `demo-tab`              | 정적 | `Button`            | DemoAccordion | attribute | onClick                                                      |
+| 427 | `demo-next`             | 정적 | `Typography`        | DemoAccordion | attribute | text="다음 테스트:"                                          |
 
 ## src/components/DemoApiPanel.tsx
 
@@ -163,11 +167,13 @@ await page.getByTestId("sidenav-signout").click();
 | 126 | `demo-ide-area`           | 정적 | `Box`        | DemoIde  | attribute | -                                      |
 | 131 | `demo-ide-summary`        | 정적 | `Typography` | DemoIde  | attribute | text="스냅샷 · 파일 개"                |
 | 145 | `demo-ide-filelist`       | 정적 | `Box`        | DemoIde  | attribute | -                                      |
+| 153 | `demo-ide-folder-group`   | 정적 | `Box`        | DemoIde  | attribute | -                                      |
 | 154 | `demo-ide-line`           | 정적 | `Box`        | DemoIde  | attribute | -                                      |
 | 155 | `demo-ide-folder`         | 정적 | `Typography` | DemoIde  | attribute | text="/"                               |
 | 165 | `demo-ide-line`           | 정적 | `Box`        | DemoIde  | attribute | -                                      |
 | 172 | `demo-ide-path`           | 정적 | `Typography` | DemoIde  | attribute | -                                      |
 | 189 | `demo-ide-code`           | 정적 | `Box`        | DemoIde  | attribute | -                                      |
+| 194 | `demo-ide-code-line`      | 정적 | `Box`        | DemoIde  | attribute | -                                      |
 | 203 | `demo-ide-lines`          | 정적 | `Typography` | DemoIde  | attribute | text="· 줄"                            |
 | 208 | `demo-ide-subcodes`       | 정적 | `Box`        | DemoIde  | attribute | -                                      |
 | 212 | `demo-ide-subcodes-title` | 정적 | `Typography` | DemoIde  | attribute | -                                      |
@@ -472,14 +478,7 @@ await page.getByTestId("sidenav-signout").click();
 
 `pnpm testid:add`로 제안 id를 확인하고, `pnpm testid:add:write`로 반영합니다. 제안이 `-`인 항목은 직접 이름을 정해야 합니다.
 
-| 파일                             | 줄  | 요소                | 컴포넌트      | 제안 id                          | 비고                                      |
-| -------------------------------- | --- | ------------------- | ------------- | -------------------------------- | ----------------------------------------- |
-| src/components/DbSnapshot.tsx    | 157 | `Box`               | DbSnapshot    | `db-snapshot-item-${column.id}`  | 목록 항목 (항목 id 사용)                  |
-| src/components/DbSnapshot.tsx    | 173 | `Box`               | DbSnapshot    | `db-snapshot-item-${column.id}`  | 목록 항목 (항목 id 사용)                  |
-| src/components/DemoAccordion.tsx | 257 | `ToggleButtonGroup` | DemoAccordion | -                                | 핸들러만 있고 역할이 불분명함 (직접 지정) |
-| src/components/DemoAccordion.tsx | 321 | `Box`               | DemoAccordion | `demo-accordion-item-${text.id}` | 목록 항목 (항목 id 사용)                  |
-| src/components/DemoIde.tsx       | 153 | `Box`               | DemoIde       | `demo-ide-item-${folder.id}`     | 목록 항목 (항목 id 사용)                  |
-| src/components/DemoIde.tsx       | 194 | `Box`               | DemoIde       | `demo-ide-item-${text.id}`       | 목록 항목 (항목 id 사용)                  |
+없음
 
 ## 같은 정적 id가 여러 곳에 있음
 
