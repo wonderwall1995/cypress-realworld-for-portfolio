@@ -299,7 +299,7 @@ final_test_report (뷰)     두 보고, 최종 결과, 버전을 번호마다 1�
 | 칸 | 형 | 뜻 |
 |---|---|---|
 | run_no | int, PK, FK -> test_fixture | |
-| spec_ok, common_ok, api_ok | boolean, 빈칸 가능 | 그 종류가 모두 성공 / 하나라도 실패. 빈칸은 돌지 않았거나 Blocked |
+| spec_ok, common_ok, api_ok | boolean, 빈칸 가능 | 그 종류가 모두 성공 / 하나라도 실패. 빈칸은 돌지 않았거나 Blocked. **spec_ok는 돌아야 할 시험이 빠졌거나 건너뛰었으면 false다**(아래) |
 | result | `passed` / `failed` / `blocked` | 그 플랫폼의 결과 |
 | reported_at | timestamp | |
 
@@ -309,6 +309,7 @@ final_test_report (뷰)     두 보고, 최종 결과, 버전을 번호마다 1�
 
 ### final_test_report: 최종 결과 (뷰)
 - 칸: run_no, created_at, web_spec_ok, web_common_ok, web_api_ok, web_result, app_(같음), final_result, decided_at, same_server, 그리고 web_과 app_의 version, server_version, server_version_end, test_commit, test_dirty.
+- 돌아야 할 시험은 서버의 이름표 목록(`FIXTURE_RULES`) 전부다. 두 플랫폼에 같이 적용한다. 목록에 이름표를 더하면 **두 쪽 모두** 그 시험이 있어야 `passed`가 된다. 목록에 없는 시험(한쪽에만 있는 것)은 있어도 되고 없어도 되지만, 실패하면 실패다. (2026-11-24, 그 전의 보고는 그대로다)
 - `final_result`: 한쪽이라도 멈췄으면 `blocked`, 한쪽이 끝나지 않았으면 `pending`, 둘 다 `passed`면 `passed`, 아니면 `failed`.
 - 뷰라서 두 보고와 어긋날 수 없다. Prisma 설계 파일에는 없고, DB 탭에도 나오지 않는다.
 - 보고 테이블과 run_progress의 칸을 바꾸는 마이그레이션은 이 뷰를 먼저 지우고 다시 만들어야 한다.

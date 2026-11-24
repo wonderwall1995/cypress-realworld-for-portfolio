@@ -4,6 +4,7 @@
  */
 import { CodeKind, ReportResult, TestPlatform } from "@prisma/client";
 import { DbClient } from "./prisma";
+import { FIXTURE_RULES } from "./test-fixture-rules";
 
 // The two record tables (and the two report tables) have the same columns, so the rest of the code sees one type.
 export const recordsOf = (tx: DbClient, platform: TestPlatform) =>
@@ -11,7 +12,14 @@ export const recordsOf = (tx: DbClient, platform: TestPlatform) =>
 export const reportsOf = (tx: DbClient, platform: TestPlatform) =>
   platform === "web" ? tx.webTestReport : (tx.appTestReport as unknown as typeof tx.webTestReport);
 
-/** true: all code of that kind passed. false: something failed. null: none ran. A retried test counts by its last try. */
+/** Every label of the fixture rules is a test that both platforms must run. A test beyond this list may be there too. */
+const EXPECTED_TESTS = Object.keys(FIXTURE_RULES);
+
+/**
+ * true: all code of that kind passed. false: something failed. null: none ran. A retried test counts by its last try.
+ * The tests (spec) are also false when an expected one is missing or was skipped: a run that left something out has
+ * not passed.
+ */
 const readVerdicts = async (tx: DbClient, runNo: number, platform: TestPlatform) => {
   const records = await recordsOf(tx, platform).findMany({
     where: { runNo },
@@ -29,7 +37,18 @@ const readVerdicts = async (tx: DbClient, runNo: number, platform: TestPlatform)
     );
     return ran.length === 0 ? null : ran.every((row) => row.status === "passed");
   };
-  return { specOk: allPassed("spec"), commonOk: allPassed("common"), apiOk: allPassed("api") };
+  const ranTests = new Set(
+    records
+      .filter((row) => row.kind === "spec" && row.status !== "skipped" && counted.has(row.id))
+      .map((row) => row.testCase)
+  );
+  const nothingMissing = EXPECTED_TESTS.every((testCase) => ranTests.has(testCase));
+  const specs = allPassed("spec");
+  return {
+    specOk: specs && nothingMissing,
+    commonOk: allPassed("common"),
+    apiOk: allPassed("api"),
+  };
 };
 
 export const writeReport = async (

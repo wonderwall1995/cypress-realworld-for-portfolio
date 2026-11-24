@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import prisma from "../prisma";
+import { FIXTURE_RULES } from "../test-fixture-rules";
 import { recordResult, TestOutcome } from "../test-result-db";
 import { listRuns, reportRun, startRun } from "../test-run-db";
 import { emptyTestSchema } from "./db-setup/emptyTestSchema";
@@ -50,10 +51,21 @@ const finalRow = async () =>
     )
   )[0];
 
+/** The end of a run that left nothing out: every expected test that is not recorded yet has passed. */
+const finish = async (platform: Platform, runNo = 1) => {
+  const table = platform === "web" ? prisma.webTestRecord : prisma.appTestRecord;
+  const rows = await (table as typeof prisma.webTestRecord).findMany({ where: { runNo } });
+  for (const testCase of Object.keys(FIXTURE_RULES)) {
+    if (rows.some((row) => row.testCase === testCase)) continue;
+    await recordResult(runNo, platform, { ...code, testCase, name: testCase, status: "passed" });
+  }
+  return reportRun(runNo, platform, "finish");
+};
+
 const ok = { common: "passed", api: "passed" } as const;
 const runAll = async (platform: Platform, status: Status = "passed") => {
   await record(platform, status, ok);
-  return reportRun(1, platform, "finish");
+  return finish(platform);
 };
 
 describe("the report of one platform", () => {
@@ -64,7 +76,7 @@ describe("the report of one platform", () => {
     await reportRun(1, "web", "signal");
     expect(await reportOf("web")).toBeNull();
 
-    await reportRun(1, "web", "finish");
+    await finish("web");
     expect(await reportOf("web")).toEqual([true, true, true, "passed"]);
     expect(await reportOf("app")).toBeNull();
   });
@@ -84,7 +96,6 @@ describe("the report of one platform", () => {
       [true, true, false, "failed"],
     ],
     ["no tools: empty, not failed", "passed", {}, [true, null, null, "passed"]],
-    ["only a skipped test: nothing has passed", "skipped", {}, [null, null, null, "failed"]],
     [
       "a fixture tool has no column of its own",
       "passed",
@@ -94,7 +105,7 @@ describe("the report of one platform", () => {
   ] as [string, Status, object, unknown[]][])("%s", async (_what, status, tools, expected) => {
     await start("web");
     await record("web", status, tools);
-    await reportRun(1, "web", "finish");
+    await finish("web");
     expect(await reportOf("web")).toEqual(expected);
   });
 
@@ -102,7 +113,7 @@ describe("the report of one platform", () => {
     await start("web");
     await record("web", "passed", ok);
     await record("web", "failed", ok, { testCase: "transfer", name: "3. transfer" });
-    await reportRun(1, "web", "finish");
+    await finish("web");
     expect(await reportOf("web")).toEqual([false, true, true, "failed"]);
   });
 
@@ -110,7 +121,7 @@ describe("the report of one platform", () => {
     await start("web");
     await record("web", "failed", { common: "failed" }, { attempt: 1 });
     await record("web", "passed", { common: "passed" }, { attempt: 2 });
-    await reportRun(1, "web", "finish");
+    await finish("web");
     expect(await reportOf("web")).toEqual([true, true, null, "passed"]);
   });
 
@@ -118,6 +129,32 @@ describe("the report of one platform", () => {
     await start("web");
     await reportRun(1, "web", "finish");
     expect(await reportOf("web")).toEqual([null, null, null, "failed"]);
+  });
+
+  it("a test that did not run: the others passed, but the run has not", async () => {
+    await start("web");
+    for (const testCase of Object.keys(FIXTURE_RULES).slice(1)) {
+      await record("web", "passed", ok, { testCase, name: testCase });
+    }
+    await reportRun(1, "web", "finish");
+    expect(await reportOf("web")).toEqual([false, true, true, "failed"]);
+  });
+
+  it("a skipped test counts as one that did not run", async () => {
+    await start("web");
+    await record("web", "skipped");
+    await finish("web");
+    expect(await reportOf("web")).toEqual([false, null, null, "failed"]);
+  });
+
+  it("a test that only one platform has is judged too, and it is not missed on the other one", async () => {
+    await start("app");
+    await record("app", "failed", {}, { testCase: "session-expired", name: "session" });
+    await finish("app");
+    expect((await reportOf("app"))![3]).toBe("failed");
+
+    await start("web");
+    expect((await finish("web")) && (await reportOf("web"))![3]).toBe("passed");
   });
 
   it("a blocked run has no verdicts, also when it died without a word", async () => {
@@ -137,7 +174,7 @@ describe("the report of one platform", () => {
     await runAll("web", "failed");
     await start("web"); // 2
     await recordResult(2, "web", { ...code, testCase: "deposit", name: "x", status: "passed" });
-    await reportRun(2, "web", "finish");
+    await finish("web", 2);
     expect(
       (await prisma.webTestReport.findMany({ orderBy: { runNo: "asc" } })).map((r) => r.result)
     ).toEqual(["failed", "passed"]);
