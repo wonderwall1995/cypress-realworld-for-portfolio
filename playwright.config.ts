@@ -26,6 +26,7 @@ if (
 }
 export const TEST_RUN_SERVER = process.env.TEST_RUN_SERVER || BASE_URL;
 export const TEST_RUN_FILE = join(__dirname, "test-results", "test-run.json"); // git-ignored, emptied by every run
+export const TEST_RESULTS_FILE = join(__dirname, "test-results", "test-run-results.jsonl"); // the same
 // Every worker reads this config when it starts, after the starter has written the file
 if (NUMBERED && existsSync(TEST_RUN_FILE)) {
   process.env.TEST_RUN_FIXTURES = JSON.stringify(

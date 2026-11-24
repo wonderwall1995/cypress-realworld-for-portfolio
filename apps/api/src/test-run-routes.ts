@@ -6,6 +6,7 @@ import express from "express";
 import { body, param, query } from "express-validator";
 import { asyncHandler } from "./async-handler";
 import { validateMiddleware } from "./helpers";
+import { getRunResults, MAX_STEPS, recordResult } from "./test-result-db";
 import { getTestRunSecret, hasTestRunSecret } from "./test-run-secret";
 import {
   getLatestPublicFixtures,
@@ -75,6 +76,48 @@ router.get(
     const platform = req.query.platform as "web" | "app";
     const fixtures = await getRunFixtures(runNo, platform, res.locals.testRunSecret);
     res.status(200).json({ runNo, fixtures });
+  })
+);
+
+// what a result says about one piece of code: a test ("") or a tool it called ("steps.*.")
+const codeOutcome = (at: "" | "steps.*.") => [
+  body(`${at}name`).isString().trim().isLength({ min: 1, max: 200 }),
+  body(`${at}file`).isString().trim().isLength({ min: 1, max: 200 }),
+  body(`${at}status`).isIn(["passed", "failed", "skipped"]),
+  body(`${at}startedAt`).isISO8601({ strict: true }),
+  body(`${at}durationMs`).isInt({ min: 0, max: 2_147_483_647 }).toInt(),
+  body(`${at}errorMessage`).optional({ nullable: true }).isString(),
+];
+
+// POST /testRuns/:runNo/results - one test and the tools it called. 201 stored, 200 it was stored before.
+router.post(
+  "/:runNo/results",
+  validateMiddleware([
+    runNoInPath,
+    platformInBody,
+    // not only the labels of the fixture rules: the App has tests of its own
+    body("testCase")
+      .matches(/^[a-z0-9]+(-[a-z0-9]+)*$/)
+      .isLength({ max: 50 }),
+    body("attempt").optional().isInt({ min: 1, max: 100 }).toInt(),
+    body("steps").optional().isArray({ max: MAX_STEPS }),
+    body("steps.*.kind").isIn(["common", "api", "fixture"]),
+    ...codeOutcome(""),
+    ...codeOutcome("steps.*."),
+  ]),
+  asyncHandler(async (req, res) => {
+    const answer = await recordResult(Number(req.params.runNo), req.body.platform, req.body);
+    res.status(answer.stored > 0 ? 201 : 200).json(answer);
+  })
+);
+
+// GET /testRuns/:runNo/results - every stored result of one number
+router.get(
+  "/:runNo/results",
+  validateMiddleware([runNoInPath]),
+  asyncHandler(async (req, res) => {
+    const runNo = Number(req.params.runNo);
+    res.status(200).json({ runNo, results: await getRunResults(runNo) });
   })
 );
 

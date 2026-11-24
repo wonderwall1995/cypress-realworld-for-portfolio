@@ -1,12 +1,13 @@
 /**
- * Watches a numbered run (pnpm test:run): a signal after every test, and block when the run is stopped midway.
+ * Watches a numbered run (pnpm test:run): sends the result of every test and of the tools it called (which is a
+ * signal too), and block when the run is stopped midway.
  * The normal end is told by finisher.spec.ts, because a server that Playwright started is already down here.
  * Playwright's own reporter feature; it talks only to the number server.
- * It does not record results yet (code_result): that is the next step.
  */
 import { existsSync, readFileSync, rmSync } from "fs";
-import type { FullResult, Reporter } from "@playwright/test/reporter";
-import { TEST_RUN_FILE, TEST_RUN_SERVER } from "../playwright.config";
+import type { FullResult, Reporter, TestCase, TestResult } from "@playwright/test/reporter";
+import { TEST_RESULTS_FILE, TEST_RUN_FILE, TEST_RUN_SERVER } from "../playwright.config";
+import { keepResult, resultOf, sendResult } from "./test-run-results";
 
 const runNumber = (): number | undefined =>
   existsSync(TEST_RUN_FILE) ? JSON.parse(readFileSync(TEST_RUN_FILE, "utf8")).runNo : undefined;
@@ -31,11 +32,16 @@ class TestRunReporter implements Reporter {
   onBegin() {
     // the number of an older run must never be changed by this one
     rmSync(TEST_RUN_FILE, { force: true });
+    rmSync(TEST_RESULTS_FILE, { force: true });
   }
 
-  onTestEnd() {
+  onTestEnd(test: TestCase, result: TestResult) {
     const runNo = runNumber();
-    if (runNo !== undefined) void tell(runNo, "signal");
+    if (runNo === undefined) return;
+    const outcome = resultOf(test, result);
+    if (!outcome) return void tell(runNo, "signal");
+    keepResult(outcome); // kept before it is sent: the finisher sends what did not arrive
+    void sendResult(runNo, outcome);
   }
 
   async onEnd(result: FullResult) {

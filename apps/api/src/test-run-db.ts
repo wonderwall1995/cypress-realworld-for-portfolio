@@ -16,7 +16,7 @@ export const SIGNAL_LIMIT_MS = 10 * 60 * 1000;
 const LOCK = 7_201_217; // any fixed number: every change of the run numbers waits for this lock
 
 /** Runs one change at a time (two platforms can start at the same moment), after blocking the runs that died. */
-const changeRuns = <T>(now: Date, change: (tx: DbClient) => Promise<T>): Promise<T> =>
+export const changeRuns = <T>(now: Date, change: (tx: DbClient) => Promise<T>): Promise<T> =>
   prisma.$transaction(
     async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${LOCK})`;

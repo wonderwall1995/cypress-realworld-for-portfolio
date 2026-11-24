@@ -63,7 +63,7 @@ The second cycle uses **values only**. Until section 9 is done, do not say that 
 | `GET /api/testRuns/:runNo/fixtures` (secret needed) | Built. It returns stored values and makes no new ones. |
 | Specs that use the values of a number | **003 only.** All others use random values. |
 | Labels in the server rules (`test-fixture-rules.ts`) | `auth`, `bank-account`, `deposit`, `transfer`, `transaction-detail`, `transaction-filter`, `user-settings`, `transaction-visibility`, `notifications`, `login-logout`. |
-| `code_result` | Table only. Nothing writes to it. |
+| `code_result` | Built. `pnpm test:run` stores every test and the tools it called. The commit is not stored yet. |
 | Demo in the browser | Random values. It does not read a run number. |
 
 Two facts to keep in mind:
