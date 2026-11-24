@@ -154,7 +154,7 @@ Not part of this plan. If the owner wants it, design it on its own.
 - It runs where that user exists. The users of the deleted numbers 1 to 8 are still in the local `users` table, but nothing tells their values any more.
 - It needs its own judgements. "Visible" does not prove that a long name does not cover the next line.
 - Decide first which test data is kept and which is cleaned. The Web's 003 keeps its accounts in a numbered run, the App's 003 does not. The other tests delete their accounts fully, but users and transactions stay, so some transactions point to accounts that are gone.
-- `api/get-past-users.ts`, `fixture/pick-runs.ts` and `api/set-my-profile.ts` were made for this. Nothing uses them now.
+- The three tools that were made for this (`get-past-users`, `pick-runs`, `set-my-profile`) were deleted on 2026-11-24, because nothing used them. They are in the history before that.
 
 ## 10. Questions for the owner
 
