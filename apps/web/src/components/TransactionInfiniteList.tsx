@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { styled } from "@mui/material/styles";
 import { get } from "lodash/fp";
 import { useTheme, useMediaQuery, Divider } from "@mui/material";
@@ -40,6 +40,15 @@ const TransactionInfiniteList: React.FC<TransactionListProps> = ({
   const theme = useTheme();
   const isXsBreakpoint = useMediaQuery(theme.breakpoints.down("sm"));
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const listContainerRef = useRef<HTMLDivElement | null>(null);
+  const [mobileListWidth, setMobileListWidth] = useState(304);
+  useEffect(() => {
+    const container = listContainerRef.current;
+    if (!isXsBreakpoint || !container) return;
+    const observer = new ResizeObserver(() => setMobileListWidth(container.clientWidth));
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [isXsBreakpoint]);
 
   // Every row is measured: a long name takes more lines, and a fixed height would let the next row cover them.
   // A measured height belongs to the transaction, not to the place in the list (a filter changes the places).
@@ -59,7 +68,7 @@ const TransactionInfiniteList: React.FC<TransactionListProps> = ({
   useEffect(() => {
     rowHeights.clearAll(); // the width of the list changes with the screen
     listRef.current?.recomputeRowHeights();
-  }, [isXsBreakpoint, isMobile, rowHeights]);
+  }, [isXsBreakpoint, isMobile, mobileListWidth, rowHeights]);
 
   const itemCount = pagination.hasNextPages ? transactions.length + 1 : transactions.length;
 
@@ -96,7 +105,11 @@ const TransactionInfiniteList: React.FC<TransactionListProps> = ({
       threshold={2}
     >
       {({ onRowsRendered, registerChild }) => (
-        <div data-testid="transaction-list" className={classes.transactionList}>
+        <div
+          ref={listContainerRef}
+          data-testid="transaction-list"
+          className={classes.transactionList}
+        >
           <List
             rowCount={itemCount}
             ref={(list) => {
@@ -106,7 +119,7 @@ const TransactionInfiniteList: React.FC<TransactionListProps> = ({
             deferredMeasurementCache={rowHeights}
             onRowsRendered={onRowsRendered}
             height={isXsBreakpoint ? removePx(theme.spacing(74)) : removePx(theme.spacing(88))}
-            width={isXsBreakpoint ? removePx(theme.spacing(38)) : removePx(theme.spacing(90))}
+            width={isXsBreakpoint ? mobileListWidth : removePx(theme.spacing(90))}
             rowHeight={rowHeights.rowHeight}
             rowRenderer={rowRenderer}
           />

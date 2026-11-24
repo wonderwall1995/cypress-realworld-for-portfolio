@@ -31,7 +31,9 @@ const resolveImport = (from: DemoFile, specifier: string): string => {
 
 /** The code files that this file imports (its sub codes): API tools first, then the common code. */
 const subCodesOf = (file: DemoFile): DemoFile[] => {
-  const paths = Array.from(file.code.matchAll(IMPORT)).map((match) => resolveImport(file, match[1]));
+  const paths = Array.from(file.code.matchAll(IMPORT)).map((match) =>
+    resolveImport(file, match[1])
+  );
   const found = Array.from(new Set(paths))
     .map((path) => e2eSnapshot.find((item) => item.path === path))
     .filter((item): item is DemoFile => !!item);
@@ -105,13 +107,32 @@ export default function DemoIde({ state, activeFile }: Props) {
       >
         {/* a small square in the color of the kind of the file */}
         <span
-          style={{ width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: look.idleBorder, border: `1px solid ${look.activeBorder}` }}
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 2,
+            flexShrink: 0,
+            background: look.idleBorder,
+            border: `1px solid ${look.activeBorder}`,
+          }}
         />
-        <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", fontWeight: active ? 700 : 400 }}>
+        <span
+          style={{
+            flex: 1,
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            fontWeight: active ? 700 : 400,
+          }}
+        >
           {item.name}
         </span>
         {running && (
-          <span data-testid="demo-ide-running" title="실행 중" style={{ color: "#2e7d32", fontSize: 10 }}>
+          <span
+            data-testid="demo-ide-running"
+            title="실행 중"
+            style={{ color: "#2e7d32", fontSize: 10 }}
+          >
             ●
           </span>
         )}
@@ -127,7 +148,16 @@ export default function DemoIde({ state, activeFile }: Props) {
       data-testid="demo-ide-area"
       sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", background: "#fff" }}
     >
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1.5, py: 0.75, borderBottom: "1px solid #ddd" }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          px: 1.5,
+          py: 0.75,
+          borderBottom: "1px solid #ddd",
+        }}
+      >
         <Typography variant="caption" color="text.secondary" data-testid="demo-ide-summary">
           {E2E_PREFIX} 스냅샷 · 파일 {e2eSnapshot.length}개
         </Typography>
@@ -144,9 +174,19 @@ export default function DemoIde({ state, activeFile }: Props) {
           {/* left: the folders and files of tests/e2e (pick one) */}
           <Box
             data-testid="demo-ide-filelist"
-            sx={{ width: 190, flexShrink: 0, overflow: "auto", borderRight: "1px solid #ddd", background: "#fafafa", py: 0.5 }}
+            sx={{
+              width: { xs: "38%", sm: 190 },
+              flexShrink: 0,
+              overflow: "auto",
+              borderRight: "1px solid #ddd",
+              background: "#fafafa",
+              py: 0.5,
+            }}
           >
-            <Typography variant="caption" sx={{ display: "block", px: 1.5, py: 0.5, color: "#757575", fontFamily: "monospace" }}>
+            <Typography
+              variant="caption"
+              sx={{ display: "block", px: 1.5, py: 0.5, color: "#757575", fontFamily: "monospace" }}
+            >
               e2e/
             </Typography>
             {folders.map((folder, at) => (
@@ -155,21 +195,47 @@ export default function DemoIde({ state, activeFile }: Props) {
                 <Typography
                   variant="caption"
                   data-testid="demo-ide-folder"
-                  sx={{ display: "block", pl: 2, pr: 1, py: 0.4, color: "#616161", fontFamily: "monospace", fontWeight: 600 }}
+                  sx={{
+                    display: "block",
+                    pl: 2,
+                    pr: 1,
+                    py: 0.4,
+                    color: "#616161",
+                    fontFamily: "monospace",
+                    fontWeight: 600,
+                  }}
                 >
                   {folder}/
                 </Typography>
-                {e2eSnapshot.filter((item) => folderOf(item) === folder).map((item) => row(item, 1))}
+                {e2eSnapshot
+                  .filter((item) => folderOf(item) === folder)
+                  .map((item) => row(item, 1))}
               </Box>
             ))}
-            {folders.length > 0 && rootFiles.length > 0 && <Box data-testid="demo-ide-line" sx={GROUP_LINE_SX} />}
+            {folders.length > 0 && rootFiles.length > 0 && (
+              <Box data-testid="demo-ide-line" sx={GROUP_LINE_SX} />
+            )}
             {rootFiles.map((item) => row(item, 0))}
           </Box>
 
           {/* right: the code of the chosen file */}
           <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-            <Box sx={{ px: 1.5, py: 0.75, borderBottom: "1px solid #ddd", display: "flex", alignItems: "center", gap: 1 }}>
-              <Typography variant="caption" data-testid="demo-ide-path" sx={{ flex: 1, fontFamily: "monospace", minWidth: 0 }} noWrap>
+            <Box
+              sx={{
+                px: 1.5,
+                py: 0.75,
+                borderBottom: "1px solid #ddd",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+              }}
+            >
+              <Typography
+                variant="caption"
+                data-testid="demo-ide-path"
+                sx={{ flex: 1, fontFamily: "monospace", minWidth: 0 }}
+                noWrap
+              >
                 {file.path}
               </Typography>
               <Typography
@@ -188,14 +254,35 @@ export default function DemoIde({ state, activeFile }: Props) {
             </Box>
             <Box
               data-testid="demo-ide-code"
-              sx={{ flex: 1, minHeight: 0, overflow: "auto", background: "#000", color: "#fff", py: 1, fontFamily: "monospace", fontSize: 13, lineHeight: 1.6 }}
+              sx={{
+                flex: 1,
+                minHeight: 0,
+                overflow: "auto",
+                background: "#000",
+                color: "#fff",
+                py: 1,
+                fontFamily: "monospace",
+                fontSize: 13,
+                lineHeight: 1.6,
+              }}
             >
               {lines.map((text, index) => (
                 <Box key={index} data-testid="demo-ide-code-line" sx={{ display: "flex" }}>
-                  <Box sx={{ width: 44, flexShrink: 0, pr: 1.5, textAlign: "right", color: "#777", userSelect: "none" }}>
+                  <Box
+                    sx={{
+                      width: 44,
+                      flexShrink: 0,
+                      pr: 1.5,
+                      textAlign: "right",
+                      color: "#777",
+                      userSelect: "none",
+                    }}
+                  >
                     {index + 1}
                   </Box>
-                  <Box sx={{ flex: 1, minWidth: 0, whiteSpace: "pre-wrap", pr: 1 }}>{text || " "}</Box>
+                  <Box sx={{ flex: 1, minWidth: 0, whiteSpace: "pre-wrap", pr: 1 }}>
+                    {text || " "}
+                  </Box>
                 </Box>
               ))}
             </Box>
@@ -207,9 +294,21 @@ export default function DemoIde({ state, activeFile }: Props) {
             {/* the box right below: the sub codes that this code uses (the files it imports) */}
             <Box
               data-testid="demo-ide-subcodes"
-              sx={{ px: 1.5, py: 0.75, borderTop: "1px solid #ddd", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 0.75 }}
+              sx={{
+                px: 1.5,
+                py: 0.75,
+                borderTop: "1px solid #ddd",
+                display: "flex",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 0.75,
+              }}
             >
-              <Typography variant="caption" color="text.secondary" data-testid="demo-ide-subcodes-title">
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                data-testid="demo-ide-subcodes-title"
+              >
                 {subCodes.length > 0 ? `하위 코드 ${subCodes.length}개` : "하위 코드 없음"}
               </Typography>
               {subCodes.map((sub) => {

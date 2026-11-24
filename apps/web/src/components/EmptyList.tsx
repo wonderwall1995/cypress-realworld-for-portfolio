@@ -16,6 +16,13 @@ const EmptyList: React.FC<{ entity: string; children?: React.ReactNode }> = ({
       justifyContent="center"
       border={1}
       borderColor={grey[200]}
+      sx={{
+        "@media (max-width: 599.95px)": {
+          "& .MuiGrid-item": { maxWidth: "100%", minWidth: 0 },
+          "& svg": { maxWidth: "100%", height: "auto !important" },
+          "& h2": { fontSize: 16, textAlign: "center", overflowWrap: "anywhere" },
+        },
+      }}
     >
       <Grid
         container
@@ -35,6 +42,7 @@ const EmptyList: React.FC<{ entity: string; children?: React.ReactNode }> = ({
             data-testid="empty-list-children"
             display="flex"
             width={300}
+            sx={{ maxWidth: "100%" }}
             alignItems="center"
             justifyContent="center"
           >

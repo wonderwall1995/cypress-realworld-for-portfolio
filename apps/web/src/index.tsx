@@ -5,6 +5,7 @@ import { createTheme, StyledEngineProvider } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
 import App from "./containers/App";
 import { history } from "./utils/historyUtils";
+import { MOBILE_FOOTER_SPACE } from "./demo/layout";
 
 const INPUT_PADDING = "10px 14px";
 
@@ -23,6 +24,22 @@ const theme = createTheme({
     },
   },
   components: {
+    // The demo player and test selector remain usable above application dialogs.
+    // Backdrops still block the application underneath the dialog.
+    MuiDialog: {
+      defaultProps: { disableEnforceFocus: true },
+      styleOverrides: {
+        paper: {
+          "@media (max-width: 599.95px)": {
+            maxHeight: `calc(100dvh - ${MOBILE_FOOTER_SPACE} - 96px)`,
+            marginBottom: `calc(${MOBILE_FOOTER_SPACE} + 64px)`,
+          },
+        },
+      },
+    },
+    MuiDrawer: {
+      defaultProps: { ModalProps: { disableEnforceFocus: true } },
+    },
     // One rule for the text inside EVERY text box (sign in, sign up, settings, transfer, bank account...):
     // a left/right space so the text and the placeholder do not touch the border, and an even
     // space above and below. The font size is not changed here.

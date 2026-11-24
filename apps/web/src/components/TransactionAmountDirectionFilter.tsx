@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { MOBILE_FOOTER_SPACE } from "../demo/layout";
 import {
   Box,
   Button,
@@ -212,7 +213,18 @@ const AmountChip: React.FC<AmountChipProps> = ({
         </Popover>
       )}
       {xsBreakpoint && (
-        <Drawer anchor="bottom" open={Boolean(anchor)} ModalProps={{ onClose: close }}>
+        <Drawer
+          anchor="bottom"
+          open={Boolean(anchor)}
+          ModalProps={{ onClose: close, disableEnforceFocus: true }}
+          sx={{
+            "& .MuiDrawer-paper": {
+              bottom: `calc(${MOBILE_FOOTER_SPACE} + 48px)`,
+              maxHeight: `calc(100dvh - ${MOBILE_FOOTER_SPACE} - 64px)`,
+              overflowY: "auto",
+            },
+          }}
+        >
           <Button onClick={close} data-testid={`${prefix}-close-button`}>
             닫기
           </Button>

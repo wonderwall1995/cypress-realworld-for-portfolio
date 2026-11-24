@@ -27,7 +27,11 @@ const TransactionListFilters: React.FC<TransactionListFiltersProps> = ({
 
   return (
     // the usual outlined border of this app, so the filters read as one group
-    <Paper variant="outlined" sx={{ padding: 1.5 }} data-testid="transaction-list-filters">
+    <Paper
+      variant="outlined"
+      sx={{ padding: { xs: 0.5, sm: 1.5 } }}
+      data-testid="transaction-list-filters"
+    >
       <Box display="flex" alignItems="flex-start" flexWrap="wrap" columnGap={2} rowGap={1}>
         <TransactionDateBoxesFilter
           filterDateRange={filterDateRange}
@@ -35,7 +39,16 @@ const TransactionListFilters: React.FC<TransactionListFiltersProps> = ({
           resetDateRange={resetDateRange}
         />
         {/* right next to the date boxes; the top margin lines the chips up with the boxes */}
-        <Box sx={{ marginTop: "16px", minHeight: 30, display: "flex", alignItems: "center" }}>
+        <Box
+          sx={{
+            marginTop: "16px",
+            minHeight: 30,
+            minWidth: 0,
+            display: "flex",
+            alignItems: "center",
+            "@media (max-width: 599.95px)": { "& > .MuiBox-root": { flexWrap: "wrap" } },
+          }}
+        >
           <TransactionAmountDirectionFilter
             filterAmountRange={filterAmountRange}
             amountRangeFilters={amountRangeFilters}

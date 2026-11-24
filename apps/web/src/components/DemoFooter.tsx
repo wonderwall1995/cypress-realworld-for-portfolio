@@ -8,8 +8,7 @@ import {
   Stop as StopIcon,
 } from "@mui/icons-material";
 import { DemoState } from "../demo/queue";
-import { FOOTER_HEIGHT } from "../demo/layout";
-
+import { DEMO_Z_INDEX, FOOTER_HEIGHT, MOBILE_FOOTER_SPACE } from "../demo/layout";
 
 interface Props {
   state: DemoState;
@@ -54,76 +53,103 @@ export default function DemoFooter({
       component="footer"
       data-testid="demo-footer"
       sx={{
-        height: FOOTER_HEIGHT,
+        position: { xs: "fixed", sm: "relative" },
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: DEMO_Z_INDEX + 1,
+        height: { xs: MOBILE_FOOTER_SPACE, sm: FOOTER_HEIGHT },
+        paddingBottom: { xs: "env(safe-area-inset-bottom, 0px)", sm: 0 },
         flexShrink: 0,
         // three areas: the current testid (left), the demo controls (middle), an empty area (right)
         display: "grid",
-        gridTemplateColumns: "1fr auto 1fr",
+        gridTemplateColumns: { xs: "minmax(0, 1fr) auto", sm: "1fr auto 1fr" },
+        gridTemplateRows: { xs: "32px 64px", sm: "1fr" },
+        "& > :nth-of-type(2)": {
+          gridColumn: { xs: "1 / -1", sm: "auto" },
+          gridRow: { xs: 2, sm: "auto" },
+        },
+        "& > :nth-of-type(3)": {
+          gridColumn: { xs: 2, sm: "auto" },
+          gridRow: { xs: 1, sm: "auto" },
+        },
+        "@media (max-width: 599.95px)": {
+          "& .MuiIconButton-root": { width: 44, height: 44 },
+          "& .MuiButton-root": { minHeight: 44 },
+        },
         alignItems: "center",
-        columnGap: 2,
-        px: 2,
+        columnGap: { xs: 0.5, sm: 2 },
+        px: { xs: 1, sm: 2 },
         borderTop: "1px solid #ddd",
         background: "#fff",
       }}
     >
       <TestIdArea label="현재 TID" testId={currentTestId} testid="demo-current-tid" />
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
-      <IconButton
-        size="small"
-        onClick={onPrev}
-        disabled={idle || !hasPrev}
-        aria-label="이전 테스트"
-        data-testid="demo-prev"
-      >
-        <PrevIcon />
-      </IconButton>
-      <Button
-        variant="contained"
-        size="small"
-        onClick={onStart}
-        disabled={!(idle || state === "finished")}
-        data-testid="demo-start"
-        sx={{ textTransform: "none" }}
-      >
-        시연 시작
-      </Button>
-      <IconButton
-        size="small"
-        onClick={onTogglePause}
-        disabled={!canToggle}
-        aria-label={state === "running" ? "일시정지" : "계속"}
-        data-testid="demo-toggle"
-        data-state={state}
-      >
-        {state === "running" ? <PauseIcon /> : <PlayIcon />}
-      </IconButton>
-      <IconButton
-        size="small"
-        color="error"
-        onClick={onStop}
-        disabled={idle}
-        aria-label="시연 중지"
-        title="시연 중지"
-        data-testid="demo-stop"
-        // One plain red stop icon in every state (before, while and after the demo). It has no round ripple and no
-        // round focus circle: they were drawn around the icon and made the button look like two buttons.
-        disableRipple
-        sx={{ "&:hover, &.Mui-focusVisible": { background: "transparent" } }}
-      >
-        <StopIcon />
-      </IconButton>
-      <IconButton
-        size="small"
-        onClick={onNext}
-        disabled={idle || !hasNext}
-        aria-label="다음 테스트"
-        data-testid="demo-forward"
-      >
-        <NextIcon />
-      </IconButton>
+        <IconButton
+          size="small"
+          onClick={onPrev}
+          disabled={idle || !hasPrev}
+          aria-label="이전 테스트"
+          data-testid="demo-prev"
+        >
+          <PrevIcon />
+        </IconButton>
+        <Button
+          variant="contained"
+          size="small"
+          onClick={onStart}
+          disabled={!(idle || state === "finished")}
+          data-testid="demo-start"
+          sx={{ textTransform: "none" }}
+        >
+          시연 시작
+        </Button>
+        <IconButton
+          size="small"
+          onClick={onTogglePause}
+          disabled={!canToggle}
+          aria-label={state === "running" ? "일시정지" : "계속"}
+          data-testid="demo-toggle"
+          data-state={state}
+        >
+          {state === "running" ? <PauseIcon /> : <PlayIcon />}
+        </IconButton>
+        <IconButton
+          size="small"
+          color="error"
+          onClick={onStop}
+          disabled={idle}
+          aria-label="시연 중지"
+          title="시연 중지"
+          data-testid="demo-stop"
+          // One plain red stop icon in every state (before, while and after the demo). It has no round ripple and no
+          // round focus circle: they were drawn around the icon and made the button look like two buttons.
+          disableRipple
+          sx={{ "&:hover, &.Mui-focusVisible": { background: "transparent" } }}
+        >
+          <StopIcon />
+        </IconButton>
+        <IconButton
+          size="small"
+          onClick={onNext}
+          disabled={idle || !hasNext}
+          aria-label="다음 테스트"
+          data-testid="demo-forward"
+        >
+          <NextIcon />
+        </IconButton>
       </Box>
       {/* the right area: which test of how many (empty while no demo runs) */}
-      <Box sx={{ minWidth: 0, display: "flex", justifyContent: "flex-end", alignItems: "baseline", gap: 1 }}>
+      <Box
+        sx={{
+          minWidth: 0,
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "baseline",
+          gap: 1,
+        }}
+      >
         {progress && (
           <Box
             data-testid="demo-progress"
@@ -135,7 +161,14 @@ export default function DemoFooter({
             </Typography>
             <Box
               component="span"
-              sx={{ fontSize: 22, fontWeight: 800, lineHeight: 1, color: "#1976d2", fontVariantNumeric: "tabular-nums", letterSpacing: "0.02em" }}
+              sx={{
+                fontSize: 22,
+                fontWeight: 800,
+                lineHeight: 1,
+                color: "#1976d2",
+                fontVariantNumeric: "tabular-nums",
+                letterSpacing: "0.02em",
+              }}
             >
               {progress.current} / {progress.total}
             </Box>
@@ -147,7 +180,8 @@ export default function DemoFooter({
 }
 
 // a clear code font: a bold monospace font at a small size looks smeared, so it is regular and 13px
-const TEST_ID_FONT = '"Cascadia Mono", "Cascadia Code", Consolas, "D2Coding", "Courier New", monospace';
+const TEST_ID_FONT =
+  '"Cascadia Mono", "Cascadia Code", Consolas, "D2Coding", "Courier New", monospace';
 
 /** Left area of the footer: the testid of the UI the current step works on (empty when there is none). */
 function TestIdArea({ label, testId, testid }: { label: string; testId?: string; testid: string }) {
@@ -159,7 +193,10 @@ function TestIdArea({ label, testId, testid }: { label: string; testId?: string;
           title={`${label}: ${testId}`}
           sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}
         >
-          <Typography variant="caption" sx={{ color: "text.secondary", flexShrink: 0, fontSize: 12 }}>
+          <Typography
+            variant="caption"
+            sx={{ color: "text.secondary", flexShrink: 0, fontSize: 12 }}
+          >
             {label}
           </Typography>
           <Box

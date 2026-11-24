@@ -9,6 +9,7 @@ import DemoIde from "./DemoIde";
 import DemoApiPanel from "./DemoApiPanel";
 import DemoCards from "./DemoCards";
 import type { ApiExchange } from "../demo/controller";
+import { DEMO_Z_INDEX, MOBILE_FOOTER_SPACE } from "../demo/layout";
 
 const MIN_WIDTH = 360; // it cannot get narrower than this
 const DEFAULT_WIDTH = 840; // the width it opens with (kept inside the limits below on a small window)
@@ -80,7 +81,19 @@ interface Props {
  * - The arrow in the header folds it to a thin strip and unfolds it. Folding does not stop the demo.
  * - The tabs at the bottom switch between the test file and the shared files it uses.
  */
-export default function DemoAccordion({ current, next, state, index, activeFile, activeLine, error, api, apis, single, onChoose }: Props) {
+export default function DemoAccordion({
+  current,
+  next,
+  state,
+  index,
+  activeFile,
+  activeLine,
+  error,
+  api,
+  apis,
+  single,
+  onChoose,
+}: Props) {
   const [width, setWidth] = React.useState(() => Math.min(DEFAULT_WIDTH, maxWidth()));
   // The accordion is always on screen, so it can always be folded and unfolded (also when no demo runs).
   // It starts folded, so the first screen (sign in) keeps its full width until the demo starts.
@@ -189,15 +202,24 @@ export default function DemoAccordion({ current, next, state, index, activeFile,
       data-testid="demo-accordion"
       data-folded={folded}
       sx={{
-        position: "relative",
+        position: { xs: "fixed", sm: "relative" },
+        zIndex: DEMO_Z_INDEX,
+        bottom: { xs: MOBILE_FOOTER_SPACE, sm: "auto" },
+        left: { xs: 0, sm: "auto" },
+        right: { xs: 0, sm: "auto" },
         flexShrink: 0,
-        width: folded ? FOLDED_WIDTH : width,
-        height: "100%",
+        width: { xs: "100%", sm: folded ? FOLDED_WIDTH : width },
+        height: { xs: folded ? 48 : "min(60dvh, 480px)", sm: "100%" },
+        maxHeight: { xs: `calc(100dvh - ${MOBILE_FOOTER_SPACE})`, sm: "none" },
         display: "flex",
         flexDirection: "column",
         borderLeft: "1px solid #ddd",
         background: "#fff",
         overflow: "hidden",
+        "@media (max-width: 599.95px)": {
+          borderTop: "1px solid #ddd",
+          "& > :first-of-type": { flexShrink: 0 },
+        },
       }}
     >
       {!folded && (
@@ -216,6 +238,7 @@ export default function DemoAccordion({ current, next, state, index, activeFile,
             cursor: "col-resize",
             zIndex: 1,
             touchAction: "none",
+            display: { xs: "none", sm: "block" },
             "&:hover": { background: "rgba(25,118,210,0.25)" },
           }}
         />
@@ -224,20 +247,35 @@ export default function DemoAccordion({ current, next, state, index, activeFile,
         sx={{
           display: "flex",
           alignItems: "center",
-          p: `${HEADER_PADDING}px`,
+          flexShrink: 0,
+          flexWrap: { xs: "wrap", sm: "nowrap" },
+          gap: { xs: 0.5, sm: 0 },
+          p: { xs: "2px 8px", sm: `${HEADER_PADDING}px` },
           borderBottom: folded ? "none" : "1px solid #ddd",
         }}
       >
         <Button
           variant="contained"
           onClick={() => setFolded(!folded)}
+          aria-expanded={!folded}
           aria-label={folded ? "펼치기" : "접기"}
           title={folded ? "펼치기" : "접기"}
           data-testid="demo-accordion-fold"
-          sx={{ minWidth: 0, width: BUTTON_SIZE, height: BUTTON_SIZE, p: 0, flexShrink: 0 }}
+          sx={{
+            minWidth: 0,
+            width: { xs: 44, sm: BUTTON_SIZE },
+            height: { xs: 44, sm: BUTTON_SIZE },
+            p: 0,
+            flexShrink: 0,
+          }}
         >
           {folded ? <ChevronLeft sx={{ fontSize: 20 }} /> : <ChevronRight sx={{ fontSize: 20 }} />}
         </Button>
+        {folded && (
+          <Typography sx={{ display: { xs: "block", sm: "none" }, ml: 1 }}>
+            시연 · 테스트 선택 / 코드 보기
+          </Typography>
+        )}
         {!folded && (
           <>
             <Typography
@@ -245,7 +283,7 @@ export default function DemoAccordion({ current, next, state, index, activeFile,
               data-testid="demo-file-name"
               title={view === "demo" ? shown.path : VIEW_TITLE[view]}
               noWrap
-              sx={{ ml: `${HEADER_PADDING}px`, flex: 1, minWidth: 0 }}
+              sx={{ ml: { xs: 0, sm: `${HEADER_PADDING}px` }, flex: 1, minWidth: 0 }}
             >
               {view === "demo" ? shown.name : VIEW_TITLE[view]}
             </Typography>
@@ -259,7 +297,15 @@ export default function DemoAccordion({ current, next, state, index, activeFile,
                 title={cardsOpen ? "카드 목록 닫기" : "테스트 별 코드 확인"}
                 data-testid="demo-cards-toggle"
                 data-open={cardsOpen ? "true" : "false"}
-                sx={{ ml: `${HEADER_PADDING}px`, flexShrink: 0, textTransform: "none", fontSize: 13, fontWeight: 600, py: 0.25, whiteSpace: "nowrap" }}
+                sx={{
+                  ml: `${HEADER_PADDING}px`,
+                  flexShrink: 0,
+                  textTransform: "none",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  py: 0.25,
+                  whiteSpace: "nowrap",
+                }}
               >
                 테스트 별 코드 확인
               </Button>
@@ -295,92 +341,120 @@ export default function DemoAccordion({ current, next, state, index, activeFile,
           {view === "db" && <DbSnapshot />}
           {/* the 시연 tab: the cards (opened by the button in the header) on the left, the code of the shown test (white on black) on the right */}
           {view === "demo" && (
-          <Box data-testid="demo-code-row" sx={{ flex: 1, minHeight: 0, display: "flex" }}>
-          <DemoCards
-            open={cardsOpen}
-            state={state}
-            runningIndex={index}
-            viewIndex={viewIndex}
-            onPick={(at) => {
-              setPinned(at === index ? undefined : at);
-              setChosen(at);
-              setCardsOpen(false); // the picked card brings the code screen back
-            }}
-          />
-          {/* while the cards are open they take the place of the code screen */}
-          {!cardsOpen && (
-          <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          <Box
-            data-testid="demo-code-area"
-            sx={{ flex: 1, minHeight: 0, overflow: "auto", p: 1, background: "#000", color: "#fff" }}
-          >
-            <Box
-              key={changeId}
-              data-testid="demo-code"
-              data-flashing={flashing ? "true" : undefined}
-              sx={{
-                fontFamily: "monospace",
-                fontSize: 13,
-                lineHeight: 1.6,
-                whiteSpace: "pre-wrap",
-                borderRadius: "4px",
-                ...(flashing && changeId > 0 ? { animation: `${codeFlash} ${FLASH_MS}ms ease-out` } : {}),
-                "@media (prefers-reduced-motion: reduce)": { animation: "none" },
-              }}
-            >
-              {shown.code.split(LINE_BREAK).map((text, lineIndex) => {
-                const running = runningLine === lineIndex + 1;
-                return (
+            <Box data-testid="demo-code-row" sx={{ flex: 1, minHeight: 0, display: "flex" }}>
+              <DemoCards
+                open={cardsOpen}
+                state={state}
+                runningIndex={index}
+                viewIndex={viewIndex}
+                onPick={(at) => {
+                  setPinned(at === index ? undefined : at);
+                  setChosen(at);
+                  setCardsOpen(false); // the picked card brings the code screen back
+                }}
+              />
+              {/* while the cards are open they take the place of the code screen */}
+              {!cardsOpen && (
+                <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
                   <Box
-                    key={lineIndex}
-                    data-testid="demo-code-line"
-                    ref={running ? lineRef : undefined}
-                    data-line={lineIndex + 1}
-                    data-running={running ? "true" : undefined}
-                    sx={
-                      running
-                        ? {
-                            // the highlight has the color of the kind of the file: green for a test, purple for API, ivory for common
-                            background: KIND_LOOK[shown.kind].lineBg,
-                            borderBottom: `2px solid ${KIND_LOOK[shown.kind].lineBorder}`,
-                          }
-                        : { borderBottom: "2px solid transparent" }
-                    }
+                    data-testid="demo-code-area"
+                    sx={{
+                      flex: 1,
+                      minHeight: 0,
+                      overflow: "auto",
+                      p: 1,
+                      background: "#000",
+                      color: "#fff",
+                    }}
                   >
-                    {text || " "}
+                    <Box
+                      key={changeId}
+                      data-testid="demo-code"
+                      data-flashing={flashing ? "true" : undefined}
+                      sx={{
+                        fontFamily: "monospace",
+                        fontSize: 13,
+                        lineHeight: 1.6,
+                        whiteSpace: "pre-wrap",
+                        borderRadius: "4px",
+                        ...(flashing && changeId > 0
+                          ? { animation: `${codeFlash} ${FLASH_MS}ms ease-out` }
+                          : {}),
+                        "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+                      }}
+                    >
+                      {shown.code.split(LINE_BREAK).map((text, lineIndex) => {
+                        const running = runningLine === lineIndex + 1;
+                        return (
+                          <Box
+                            key={lineIndex}
+                            data-testid="demo-code-line"
+                            ref={running ? lineRef : undefined}
+                            data-line={lineIndex + 1}
+                            data-running={running ? "true" : undefined}
+                            sx={
+                              running
+                                ? {
+                                    // the highlight has the color of the kind of the file: green for a test, purple for API, ivory for common
+                                    background: KIND_LOOK[shown.kind].lineBg,
+                                    borderBottom: `2px solid ${KIND_LOOK[shown.kind].lineBorder}`,
+                                  }
+                                : { borderBottom: "2px solid transparent" }
+                            }
+                          >
+                            {text || " "}
+                          </Box>
+                        );
+                      })}
+                    </Box>
                   </Box>
-                );
-              })}
+                  {/* below the code of an API tool: the API bar with the ▲▼ button */}
+                  {shown.kind === "api" && (
+                    <DemoApiPanel
+                      exchange={exchangesOfShown[exchangesOfShown.length - 1]}
+                      count={exchangesOfShown.length}
+                      open={apiOpen}
+                      onToggle={() => {
+                        apiAutoOpened.current = false; // the viewer chose: the panel stays as chosen
+                        setApiOpen((open) => !open);
+                      }}
+                    />
+                  )}
+                </Box>
+              )}
             </Box>
-          </Box>
-          {/* below the code of an API tool: the API bar with the ▲▼ button */}
-          {shown.kind === "api" && (
-            <DemoApiPanel
-              exchange={exchangesOfShown[exchangesOfShown.length - 1]}
-              count={exchangesOfShown.length}
-              open={apiOpen}
-              onToggle={() => {
-                apiAutoOpened.current = false; // the viewer chose: the panel stays as chosen
-                setApiOpen((open) => !open);
-              }}
-            />
-          )}
-          </Box>
-          )}
-          </Box>
           )}
           {/* the bottom block never shrinks away: the code and the API panel give way to it */}
-          <Box sx={{ borderTop: "1px solid #ddd", flexShrink: 0 }}>
+          <Box
+            sx={{
+              borderTop: "1px solid #ddd",
+              flexShrink: 0,
+              maxHeight: { xs: "35%", sm: "none" },
+              overflow: "auto",
+            }}
+          >
             {/* The message row always has its place (it is empty until there is a message),
                 so the end message does not push the code and the tabs around. */}
-            <Box data-testid="demo-message-row" sx={{ minHeight: MESSAGE_ROW_HEIGHT, px: 1, pt: 1 }}>
+            <Box
+              data-testid="demo-message-row"
+              sx={{ minHeight: MESSAGE_ROW_HEIGHT, px: 1, pt: 1 }}
+            >
               {error && (
-                <Typography variant="caption" color="error" data-testid="demo-error" sx={{ display: "block" }}>
+                <Typography
+                  variant="caption"
+                  color="error"
+                  data-testid="demo-error"
+                  sx={{ display: "block" }}
+                >
                   실패: {error}
                 </Typography>
               )}
               {state === "finished" && !error && (
-                <Typography variant="caption" data-testid="demo-finished" sx={{ display: "block", color: "#2e7d32" }}>
+                <Typography
+                  variant="caption"
+                  data-testid="demo-finished"
+                  sx={{ display: "block", color: "#2e7d32" }}
+                >
                   시연이 끝났습니다. ■를 누르면 처음 상태로 돌아갑니다.
                 </Typography>
               )}
