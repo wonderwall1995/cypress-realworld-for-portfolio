@@ -218,7 +218,7 @@ PK는 (run_no, test_case, item)이다. 같은 키로 값이 두 개 생기지 �
 | testschema 테이블 4개, 상태 값 목록 5개 | 만듦. 로컬 개발 DB에 적용함 |
 | EC2 서버 DB에 적용 | 안 함 |
 | 서버 API (3.15. 결과 기록은 빼고) | 만듦. app.ts는 Prisma client가 TestRun을 알 때만 연결한다. 옛 client로 도는 서버는 404로 답한다 (prisma generate 뒤 다시 켜야 한다) |
-| Fixture 규칙 목록 (서버) | `apps/api/src/test-fixture-rules.ts`. 이름표는 auth, bank-account, deposit, transfer, transaction-detail, transaction-filter. 006~009의 이름표는 없다 |
+| Fixture 규칙 목록 (서버) | `apps/api/src/test-fixture-rules.ts`. 이름표는 auth, bank-account, deposit, transfer, transaction-detail, transaction-filter, user-settings, transaction-visibility, notifications, login-logout |
 | `starter.spec.ts`, `finisher.spec.ts`, 기록기(`tests/test-run-reporter.ts`) | 만듦. 기록기는 신호와 멈춤만 보낸다 |
 | Chrome 하나로 정식 실행 (`pnpm test:run`) | 만듦. 전체 실행만 받는다 |
 | spec을 Fixture에 연결 | 003만 함 |

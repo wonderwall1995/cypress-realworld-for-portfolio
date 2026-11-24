@@ -62,7 +62,7 @@ The second cycle uses **values only**. Until section 9 is done, do not say that 
 | `runFixtures(label)` in `tests/e2e/fixture/run-fixtures.ts` | Built. It reads `TEST_RUN_FIXTURES`. |
 | `GET /api/testRuns/:runNo/fixtures` (secret needed) | Built. It returns stored values and makes no new ones. |
 | Specs that use the values of a number | **003 only.** All others use random values. |
-| Labels in the server rules (`test-fixture-rules.ts`) | `auth`, `bank-account`, `deposit`, `transfer`, `transaction-detail`, `transaction-filter`. None for 006 to 009. |
+| Labels in the server rules (`test-fixture-rules.ts`) | `auth`, `bank-account`, `deposit`, `transfer`, `transaction-detail`, `transaction-filter`, `user-settings`, `transaction-visibility`, `notifications`, `login-logout`. |
 | `code_result` | Table only. Nothing writes to it. |
 | Demo in the browser | Random values. It does not read a run number. |
 
@@ -91,7 +91,7 @@ Do one step at a time. Run all specs after each step. The owner watches each one
 | 1 | 004, 005 | The labels exist. Pass the label to the tools. Take amounts and the comment from the fixture. |
 | 2 | 000 | The label exists. The sign-up on the screen takes the values. |
 | 3 | 001, 002 | The labels exist. `goToMain` gets an optional label. |
-| 4 | 006, 007, 008, 009 | Add one label each to the server rules. Then connect. |
+| 4 | 006, 007, 008, 009 | The labels exist. Connect each spec. |
 
 Rules for this step:
 

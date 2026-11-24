@@ -111,6 +111,10 @@ export const FIXTURE_RULES: Record<string, TestCaseRule> = {
       gotBigDollars: () => between(250, 390),
     },
   },
+  "user-settings": { people: ["A", "B"] },
+  "transaction-visibility": { people: ["A", "B", "C"] },
+  notifications: { people: ["A", "B", "C"] },
+  "login-logout": { people: ["A", "B"] },
 };
 
 export interface FixtureRow {
