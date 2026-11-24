@@ -111,6 +111,8 @@ test("9. 로그인 실패와 로그아웃: 틀린 로그인은 거절되고, 로
     "없는 아이디": { username: `${username}-none`, password },
     "빈 비밀번호": { username, password: "" },
     "빈 아이디": { username: "", password },
+    "글자가 아닌 비밀번호": { username, password: 1234 },
+    "글자가 아닌 아이디": { username: 1234, password },
   })) {
     answered[name] = (await page.request.post("/api/login", { data })).status();
   }
@@ -123,6 +125,8 @@ test("9. 로그인 실패와 로그아웃: 틀린 로그인은 거절되고, 로
     "없는 아이디": 401,
     "빈 비밀번호": 400,
     "빈 아이디": 400,
+    "글자가 아닌 비밀번호": 400,
+    "글자가 아닌 아이디": 400,
   });
   //    거절된 로그인 뒤에도 서버는 닫혀 있다. 돈을 보내는 요청도 거절한다
   await expectApisClosed();

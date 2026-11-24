@@ -34,7 +34,7 @@
 
 import { test, expect } from "@playwright/test";
 import { expectLoggedInAsWithApi } from "./api/expect-logged-in-as";
-import { signUpWithRandomUser } from "./common/signup";
+import { submitSignUp, signUpWithRandomUser } from "./common/signup";
 import { signIn } from "./common/signin";
 
 test("0. 무작위 값으로 회원가입하고 로그인한다", async ({ page }) => {
@@ -47,6 +47,15 @@ test("0. 무작위 값으로 회원가입하고 로그인한다", async ({ page 
   // 가입이 끝나 로그인 화면으로 돌아오면 끝난다
   const user = await signUpWithRandomUser(page);
   await expect(page).toHaveURL("/signin");
+
+  // 거절: 이미 있는 아이디로 다시 가입할 수 없다
+  //   화면: 이유가 보이고 가입 화면에 머문다. 서버: 같은 값을 직접 보내도 거절한다 (409)
+  await submitSignUp(page, user);
+  await expect(page.getByTestId("signup-error")).toHaveText("이미 사용 중인 사용자 ID입니다");
+  await expect(page).toHaveURL("/signup");
+  const taken = await page.request.post("/api/users", { data: user });
+  expect(taken.status()).toBe(409);
+  await page.goto("/signin");
 
   // 화면에서 같은 계정으로 로그인하면 Main(주소 /)으로 가고 사이드바에 가입한 그 사용자 ID가 보인다 (공통 코드)
   await signIn(page, user);

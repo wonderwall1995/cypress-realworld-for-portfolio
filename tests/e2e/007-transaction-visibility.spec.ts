@@ -138,7 +138,7 @@ test("7. 거래 공개 범위: 공개 거래는 모두에게, 비공개 거래�
   }
 
   // ============================================================================================
-  // 화면: 탭을 눌러, 보여야 할 것이 보이는지 4개만 본다
+  // 화면: 탭을 눌러, 보여야 할 것이 보이는지 본다
   // ============================================================================================
   //    C의 전체: 관계없는 사람에게도 공개 거래가 보인다
   await page.goto("/signin");
@@ -147,14 +147,31 @@ test("7. 거래 공개 범위: 공개 거래는 모두에게, 비공개 거래�
   await openAllTransactions(page);
   await expect(page.getByTestId(`transaction-item-${open.id}`)).toBeVisible();
 
+  //    C가 비공개 거래의 주소를 직접 열면 거래 대신 안내가 보인다
+  await page.goto(`/transaction/${secret.id}`);
+  await expect(page.getByTestId("transaction-detail-failure")).toContainText(
+    "거래를 볼 수 없습니다"
+  );
+  await expect(page.getByTestId("transaction-detail-header")).toHaveCount(0);
+
   //    A의 내 거래: 공개 거래, 비공개 거래, 내 입금이 보인다
   await signOut(page);
   await signIn(page, A.user);
   await expect(page).toHaveURL("/");
   await openMyTransactionsTab(page);
+  await expect(
+    page.locator('[data-testid="nav-personal-tab"][aria-selected="true"]')
+  ).toBeVisible();
   await expect(page.getByTestId(`transaction-item-${open.id}`)).toBeVisible();
   await expect(page.getByTestId(`transaction-item-${secret.id}`)).toBeVisible();
   await expect(page.getByTestId(`transaction-item-${deposits.A}`)).toBeVisible();
+
+  //    내 거래의 주소를 직접 열어도 "내 거래" 탭이 골라져 있다
+  await page.goto("/");
+  await page.goto("/personal");
+  await expect(
+    page.locator('[data-testid="nav-personal-tab"][aria-selected="true"]')
+  ).toBeVisible();
 
   // 정리: 세 사람의 은행 계좌를 API로 완전히 지운다 (거래를 지우는 API는 없어서 거래 기록은 남는다)
   for (const who of [A, B, C]) {

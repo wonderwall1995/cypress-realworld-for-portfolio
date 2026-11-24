@@ -47,6 +47,7 @@ import { random } from "./fixture/random";
 import { fixtureValue, runFixtures } from "./fixture/run-fixtures";
 
 const START_DOLLARS = 1000; // 세 사람이 처음에 각자 계좌에 가진 돈
+const MAX_WRONG_PASSWORDS = 10; // 이만큼 틀리면 잠시 막힌다
 const MAX_AMOUNT_DOLLARS = 21_474_836; // 앱이 한 번에 받는 이체 금액의 최대 (센트 칸이 담을 수 있는 크기)
 
 // 이체 요청의 내용: from 의 계좌에서 to 의 계좌로. 거절 시험은 이것을 고쳐서 서버에 직접 보낸다
@@ -155,7 +156,25 @@ test("3. 이체: 돈은 정확히 옮겨지고, 잘못된 이체는 화면과 �
   });
   expect(balances.A + balances.B + balances.C).toBe(3 * START_DOLLARS * 100);
 
-  // 8) 정리: 번호 없는 실행이면 세 사람의 은행 계좌를 API로 완전히 지운다.
+  // 8) 거절: 비밀번호를 여러 번 틀리면 맞는 비밀번호도 잠시 받지 않는다 (서버만). 지금 로그인은 C다
+  //    로그인된 기기를 손에 넣은 사람이 비밀번호를 계속 맞혀 볼 수 없다. 확인 창과 이체가 같은 횟수를 센다
+  const tries: number[] = [];
+  for (let count = 0; count < MAX_WRONG_PASSWORDS; count += 1) {
+    const wrong = await page.request.post("/api/users/verifyPassword", {
+      data: { password: "wrong-password" },
+    });
+    tries.push(wrong.status());
+  }
+  expect(tries.every((status) => status === 403)).toBe(true);
+  const blocked = await page.request.post("/api/users/verifyPassword", {
+    data: { password: C.user.password },
+  });
+  expect(blocked.status()).toBe(429);
+  const blockedTransfer = await page.request.post("/api/transactions", { data: payment(C, A, 1) });
+  expect(blockedTransfer.status()).toBe(429);
+  expect(await getMyBalanceWithApi(page)).toBe(START_DOLLARS * 100);
+
+  // 9) 정리: 번호 없는 실행이면 세 사람의 은행 계좌를 API로 완전히 지운다.
   //    정식 실행이면 남긴다: 나중 실행이 이 번호의 A, B, C로 로그인해 예전 유저도 잘 보이는지 확인한다 (리그레션)
   if (!fixtures) {
     for (const who of [A, B, C]) {

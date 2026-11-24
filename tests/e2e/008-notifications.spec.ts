@@ -94,11 +94,14 @@ test("8. 알림: 일어난 일이 맞는 사람에게 알려지고, 확인하면
     C: [],
   });
 
-  // 3) 거절: 남의 알림은 읽음으로 바꿀 수 없다 (서버만). 서버는 조용히 넘기므로(204) 답이 아니라 결과를 본다
+  // 3) 거절: 남의 알림은 읽음으로 바꿀 수 없다 (서버만). 남의 알림은 없는 알림과 같다 (404)
   const [comment, like, payment] = await getMyNotificationsWithApi(page); // 지금 로그인은 A다
   await loginWithApi(page, C.user);
   for (const item of [comment, like, payment]) {
-    await page.request.patch(`/api/notifications/${item.id}`, { data: { isRead: true } });
+    const refused = await page.request.patch(`/api/notifications/${item.id}`, {
+      data: { isRead: true },
+    });
+    expect(refused.status()).toBe(404);
   }
   await loginWithApi(page, A.user);
   expect((await getMyNotificationsWithApi(page)).length).toBe(3);
