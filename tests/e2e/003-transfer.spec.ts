@@ -33,6 +33,7 @@
  */
 
 import { test, expect } from "@playwright/test";
+import { createAccountWithApi } from "./api/create-account";
 import { FundedUser } from "./api/create-funded-user";
 import { createUsersWithApi } from "./api/create-users";
 import { expectProfileBalanceIsAccountSumWithApi } from "./api/expect-profile-balance";
@@ -48,6 +49,8 @@ import { fixtureValue, runFixtures } from "./fixture/run-fixtures";
 
 const START_DOLLARS = 1000; // 세 사람이 처음에 각자 계좌에 가진 돈
 const MAX_WRONG_PASSWORDS = 10; // 이만큼 틀리면 잠시 막힌다
+const GREEN = "rgb(46, 125, 50)"; // 보낼 수 있는 잔액의 색
+const BLACK = "rgba(0, 0, 0, 0.87)"; // 모자란 잔액의 색
 const MAX_AMOUNT_DOLLARS = 21_474_836; // 앱이 한 번에 받는 이체 금액의 최대 (센트 칸이 담을 수 있는 크기)
 
 // 이체 요청의 내용: from 의 계좌에서 to 의 계좌로. 거절 시험은 이것을 고쳐서 서버에 직접 보낸다
@@ -72,6 +75,7 @@ test("3. 이체: 돈은 정확히 옮겨지고, 잘못된 이체는 화면과 �
   // 시작: 세 사람을 API로 준비한다 (가입, 로그인, 은행 계좌, 입금). 받는 사람 B, C를 먼저, 보내는 사람 A를 마지막에 만든다.
   //   준비 도구는 브라우저의 로그인을 그 사람으로 바꾼다. 그래서 받는 사람의 준비는 A가 화면에 로그인하기 전에 끝낸다
   //   정식 실행이면 이 번호의 Fixture 값으로, 번호 없는 실행이면 무작위 값으로 만든다
+  const noAccount = await createAccountWithApi(page); // 은행 계좌가 없는 사람. 이체를 받을 수 없다
   const { A, B, C } = await createUsersWithApi(page, ["B", "C", "A"], START_DOLLARS, "transfer");
   const fixtures = runFixtures("transfer");
   const cycleDollars = fixtures ? Number(fixtureValue(fixtures, "cycleDollars")) : random(1, 500); // 한 바퀴 돌릴 금액
@@ -82,12 +86,35 @@ test("3. 이체: 돈은 정확히 옮겨지고, 잘못된 이체는 화면과 �
   await expect(page).toHaveURL("/");
   await expectProfileBalanceOnScreen(page, START_DOLLARS * 100);
 
+  // 받는 사람 목록: 은행 계좌가 없는 사람은 화면에 나오지 않는다. 서버는 빼지 않고 표시(hasBankAccount)만 한다
+  const everybody: { id: string; username: string; hasBankAccount: boolean }[] = (
+    await (await page.request.get("/api/users")).json()
+  ).results;
+  const flagOf = (username: string) =>
+    everybody.find((user) => user.username === username)?.hasBankAccount;
+  expect([flagOf(noAccount.username), flagOf(B.user.username)]).toEqual([false, true]);
+  const noAccountId = everybody.find((user) => user.username === noAccount.username)!.id;
+  await page.goto("/transaction/new");
+  await page.getByTestId("user-list-search-input").fill(B.user.username);
+  await expect(page.getByTestId(`user-list-item-${B.user.id}`)).toBeVisible();
+  await page.getByTestId("user-list-search-input").fill(noAccount.username);
+  await expect(page.getByTestId(`user-list-item-${B.user.id}`)).toHaveCount(0); // 새 검색 결과가 왔다
+  await expect(page.getByTestId(`user-list-item-${noAccountId}`)).toHaveCount(0);
+
   // 1) 거절: 잔액 부족
   //    화면: 가진 돈보다 1달러 많이 쓰면 "이체" 버튼이 꺼지고 안내가 나온다
   await openTransferTo(page, B.user);
   await fillTransfer(page, { dollars: START_DOLLARS + 1, memo: "잔액 부족" });
   await expect(page.getByTestId("transaction-create-submit-payment")).toBeDisabled();
   await expect(page.getByTestId("transaction-create-not-enough")).toBeVisible();
+  //    보낼 수 있는 잔액은 녹색이고, 모자라면 녹색이 아니다
+  const shownBalance = page.getByTestId("transaction-create-my-account-shown-balance");
+  await expect(shownBalance).toHaveCSS("color", BLACK);
+  await fillTransfer(page, { dollars: START_DOLLARS, memo: "딱 맞는 금액" });
+  await expect(shownBalance).toHaveCSS("color", GREEN);
+  //    메모는 비워도 된다
+  await fillTransfer(page, { dollars: START_DOLLARS, memo: "" });
+  await expect(page.getByTestId("transaction-create-submit-payment")).toBeEnabled();
   //    서버: 버튼이 꺼진 것만으로는 서버가 막는다는 증명이 아니다. 같은 이체를 직접 보내도 거절한다 (400)
   const notEnough = await page.request.post("/api/transactions", {
     data: payment(A, B, START_DOLLARS + 1),
@@ -110,6 +137,14 @@ test("3. 이체: 돈은 정확히 옮겨지고, 잘못된 이체는 화면과 �
   await fillTransfer(page, { dollars: cycleDollars, memo: "비밀번호 틀림" });
   await confirmTransfer(page, "wrong-password");
   await expect(page.getByTestId("transaction-confirm-error")).toContainText("비밀번호");
+  //    확인 창에는 보내는 계좌와 받는 계좌가 다른 줄에 있고, 금액이 조금 크다
+  await expect(page.getByTestId("transaction-confirm-from")).toContainText(
+    A.account.accountNumber.slice(-4)
+  );
+  await expect(page.getByTestId("transaction-confirm-to")).toContainText(
+    `${B.user.lastName} ${B.user.firstName}님`
+  );
+  await expect(page.getByTestId("transaction-confirm-amount")).toHaveCSS("font-size", "17px");
   await expect(page.getByTestId("new-transaction-return-to-transactions")).toBeHidden();
   await page.getByTestId("transaction-confirm-cancel").click();
   //    서버: 틀린 비밀번호로 직접 보내도 거절한다 (403)
