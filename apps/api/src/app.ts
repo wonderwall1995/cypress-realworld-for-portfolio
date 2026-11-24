@@ -91,6 +91,15 @@ if (Prisma.dmmf.datamodel.models.some((model) => model.name === "TestFixturePers
   console.warn("[testRuns] closed: run prisma generate to open the test-run routes");
 }
 
+// What visitors do with the demo. Guarded in the same way.
+if (Prisma.dmmf.datamodel.models.some((model) => model.name === "DemoRun")) {
+  api.use("/demoRuns", require("./demo-run-routes").default);
+  const { closeLostDemos } = require("./demo-run-db");
+  setInterval(() => closeLostDemos().catch(console.error), 60_000).unref();
+} else {
+  console.warn("[demoRuns] closed: run prisma generate to open the demo-run routes");
+}
+
 api.use(auth);
 
 /* istanbul ignore if */

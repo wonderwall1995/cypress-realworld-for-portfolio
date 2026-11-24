@@ -12,6 +12,7 @@ import {
   takeRegisteredTests,
 } from "./runner/playwright";
 import { StepLocation } from "./runner/location";
+import { demoRecorder } from "./recorder";
 import { authService } from "../machines/authMachine";
 import { history } from "../utils/historyUtils";
 
@@ -55,6 +56,8 @@ export interface DemoSnapshot {
   state: DemoState;
   /** index in the queue of the test that runs (or ran last) */
   index: number;
+  /** true: only one test runs, the next one does not start by itself (부분 실행) */
+  single?: boolean;
   /** the file and line of the test code that runs now */
   activeFile?: string;
   activeLine?: number;
@@ -235,6 +238,7 @@ class DemoController {
       apis: [],
       notice: this.noticeFor(test.path),
     });
+    demoRecorder.testStart(test.name);
     setRunnerHooks({
       step: (location) => this.step(id, location),
       apiStart: (info) => this.apiStart(id, info),
@@ -255,45 +259,54 @@ class DemoController {
         await registered.fn(createFixtures());
       }
       this.check(id);
+      demoRecorder.testEnd("passed");
       clearHighlight();
       clearRoutes();
-      if (index + 1 < demoQueue.length) {
+      if (index + 1 < demoQueue.length && !this.snapshot.single) {
         await this.run(index + 1); // the next test starts by itself
       } else {
+        demoRecorder.end("finished");
         this.set({ state: "finished", activeLine: undefined, api: undefined });
       }
     } catch (error) {
       if (error instanceof StopSignal || id !== this.runId) return;
       clearHighlight();
       clearRoutes();
-      this.set({
-        state: "finished",
-        error: error instanceof Error ? error.message : String(error),
-      });
+      const message = error instanceof Error ? error.message : String(error);
+      demoRecorder.testEnd("failed", message);
+      demoRecorder.end("failed");
+      this.set({ state: "finished", error: message });
     }
   }
 
-  start = () => {
+  /** Starts all tests from the first one. With an index: only that test, and "이전" and "다음" play one test too. */
+  start = (only?: number) => {
     // a demo that has ended can start again from the first test, without pressing stop first
     const canStart = this.snapshot.state === "idle" || this.snapshot.state === "finished";
-    if (!canStart || demoQueue.length === 0) return;
+    const first = only ?? 0;
+    if (!canStart || !demoQueue[first]) return;
     this.releaseWaiters();
     clearHighlight();
     clearRoutes();
-    void this.run(0);
+    this.set({ single: only !== undefined });
+    demoRecorder.begin(only === undefined ? "all" : "partial");
+    void this.run(first);
   };
 
   togglePause = () => {
     if (this.snapshot.state === "running") {
       this.set({ state: "paused" });
+      demoRecorder.setPaused(true);
     } else if (this.snapshot.state === "paused") {
       this.set({ state: "running" });
+      demoRecorder.setPaused(false);
       this.releaseWaiters();
     }
   };
 
   stop = () => {
     this.runId += 1;
+    demoRecorder.end("stopped"); // nothing happens when the demo has already ended
     this.releaseWaiters();
     clearHighlight();
     clearRoutes();
@@ -304,6 +317,13 @@ class DemoController {
   goTo = (index: number) => {
     if (this.snapshot.state === "idle" || index < 0 || index >= demoQueue.length) return;
     this.runId += 1;
+    // after its end it is a new demo; otherwise the test that was playing is left
+    if (this.snapshot.state === "finished") {
+      demoRecorder.begin(this.snapshot.single ? "partial" : "all");
+    } else {
+      demoRecorder.testEnd("skipped", "방문자가 다른 시험으로 옮겼습니다");
+      demoRecorder.setPaused(false);
+    }
     this.releaseWaiters();
     clearHighlight();
     clearRoutes();
