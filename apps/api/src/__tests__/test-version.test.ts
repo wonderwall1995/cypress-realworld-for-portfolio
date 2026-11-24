@@ -9,16 +9,20 @@ import { listRuns, reportRun, RunCode, startRun } from "../test-run-db";
 import { emptyTestSchema } from "./db-setup/emptyTestSchema";
 
 // the server of these tests can change its code
-const server = vi.hoisted(() => ({ fingerprint: "" }));
+const server = vi.hoisted(() => ({ fingerprint: "", version: "" as string | undefined }));
 vi.mock("../server-fingerprint", () => ({
   get SERVER_FINGERPRINT() {
     return server.fingerprint;
+  },
+  get SERVER_VERSION() {
+    return server.version;
   },
 }));
 
 const print = (letter: string) => letter.repeat(16);
 beforeEach(async () => {
   server.fingerprint = print("1");
+  server.version = "0.100";
   await emptyTestSchema();
 });
 afterAll(async () => {
@@ -36,57 +40,134 @@ const finalRow = async (runNo = 1) =>
   )[0];
 
 describe("versions", () => {
-  it("start at 0.100, go up by one for new code, and code that comes back keeps its version", async () => {
-    const seen = [];
-    for (const letter of ["a", "a", "b", "c", "a"]) {
-      seen.push((await start("web", { target: print(letter) })).versions.target);
+  const web = (version: string | undefined, letter: string | undefined) =>
+    start("web", { targetVersion: version, target: letter && print(letter) });
+  const stored = async () =>
+    (await prisma.testVersion.findMany({ where: { part: "web" }, orderBy: { minor: "asc" } })).map(
+      ({ version, fingerprint }) => [version, fingerprint[0]]
+    );
+
+  it("a version that was not seen before is stored with its fingerprint, and has no warning", async () => {
+    for (const [version, letter] of [
+      ["0.100", "a"],
+      ["0.101", "b"],
+      ["0.100", "a"],
+      ["0.205", "c"],
+    ]) {
+      const { versions, warnings } = await web(version, letter);
+      expect([versions, warnings]).toEqual([{ server: "0.100", target: version }, []]);
     }
-    expect(seen).toEqual(["0.100", "0.100", "0.101", "0.102", "0.100"]);
+    expect(await stored()).toEqual([
+      ["0.100", "a"],
+      ["0.101", "b"],
+      ["0.205", "c"],
+    ]);
   });
 
-  it("the server, the Web and the App have lines of their own", async () => {
-    expect((await start("web", { target: print("a") })).versions).toEqual({
-      server: "0.100",
-      target: "0.100",
-    });
+  it("the same version with other code: the run goes on, with a warning, and the first fingerprint stays", async () => {
+    await web("0.100", "a");
+    const { versions, warnings } = await web("0.100", "b");
+    expect(versions.target).toBe("0.100");
+    expect(warnings).toEqual([
+      {
+        part: "web",
+        code: "code_changed",
+        sent: "0.100",
+        used: "0.100",
+        message: expect.any(String),
+      },
+    ]);
+    expect(await stored()).toEqual([["0.100", "a"]]);
+  });
+
+  it("the same code with another version: the older version is used, with a warning", async () => {
+    await web("0.100", "a");
+    const { versions, warnings } = await web("0.101", "a");
+    expect(versions.target).toBe("0.100");
+    expect(warnings).toMatchObject([{ code: "version_changed", sent: "0.101", used: "0.100" }]);
+    expect(await stored()).toEqual([["0.100", "a"]]);
+    const [run] = await listRuns();
+    expect(run.platformRuns[0].targetVersion).toBe("0.100");
+  });
+
+  it("the same code in a new major gets the new version", async () => {
+    await web("0.100", "a");
+    expect(await web("1.0", "a")).toMatchObject({ versions: { target: "1.0" }, warnings: [] });
+  });
+
+  it("the server has its own line, and its warning comes with the start and with the end", async () => {
+    await web("0.100", "a");
     server.fingerprint = print("2");
-    expect((await start("app", { target: print("a") })).versions).toEqual({
-      server: "0.101",
-      target: "0.100",
-    });
-    expect((await start("app", { target: print("b") })).versions).toEqual({
-      server: "0.101",
-      target: "0.101",
-    });
+    expect(
+      (await start("app", { targetVersion: "0.100", target: print("a") })).warnings
+    ).toMatchObject([{ part: "server", code: "code_changed", sent: "0.100", used: "0.100" }]);
+    expect((await reportRun(1, "app", "signal")).warnings).toEqual([]);
+    expect((await reportRun(1, "app", "finish")).warnings).toMatchObject([
+      { part: "server", code: "code_changed" },
+    ]);
   });
 
-  it("after 0.999 comes 0.1000", async () => {
-    await prisma.testVersion.create({
-      data: { part: "web", version: "0.999", major: 0, minor: 999, fingerprint: print("a") },
+  it("two parts can warn at the same time", async () => {
+    await web("0.100", "a");
+    server.version = "0.101";
+    const { warnings } = await web("0.100", "b");
+    expect(warnings.map(({ part, code }) => [part, code])).toEqual([
+      ["server", "version_changed"],
+      ["web", "code_changed"],
+    ]);
+  });
+
+  it("a missing version or fingerprint is a warning, not an error", async () => {
+    await web("0.100", "a");
+    expect(await web(undefined, "a")).toMatchObject({
+      versions: { target: "0.100" },
+      warnings: [{ code: "version_missing", sent: null, used: "0.100" }],
     });
-    expect((await start("web", { target: print("b") })).versions.target).toBe("0.1000");
-    expect((await start("web", { target: print("c") })).versions.target).toBe("0.1001");
+    expect(await web(undefined, "b")).toMatchObject({
+      versions: { target: null },
+      warnings: [{ code: "version_missing", sent: null, used: null }],
+    });
+    expect(await web("0.300", undefined)).toMatchObject({
+      versions: { target: "0.300" },
+      warnings: [{ code: "fingerprint_missing", sent: "0.300", used: "0.300" }],
+    });
+    server.version = undefined;
+    expect((await start("app")).warnings).toMatchObject([
+      { part: "server", code: "version_missing", used: "0.100" },
+    ]);
+    expect(await stored()).toEqual([["0.100", "a"]]);
   });
 
   it("starts at the same moment make one version", async () => {
-    const runs = await Promise.all([1, 2, 3, 4].map(() => start("web", { target: print("a") })));
+    const runs = await Promise.all([1, 2, 3, 4].map(() => web("0.100", "a")));
     expect(new Set(runs.map((run) => run.versions.target))).toEqual(new Set(["0.100"]));
-    expect(await prisma.testVersion.count({ where: { part: "web" } })).toBe(1);
+    expect(await stored()).toEqual([["0.100", "a"]]);
   });
 
-  it("a runner that tells nothing is welcome: its versions are empty", async () => {
-    expect((await start("app")).versions).toEqual({ server: "0.100", target: null });
-    const [run] = await listRuns();
-    expect(run.platformRuns[0]).toMatchObject({ serverVersion: "0.100", targetVersion: null });
+  it("a runner that tells nothing is welcome: its version is empty, without a warning", async () => {
+    const run = await start("app");
+    expect([run.versions, run.warnings]).toEqual([{ server: "0.100", target: null }, []]);
+    const [listed] = await listRuns();
+    expect(listed.platformRuns[0]).toMatchObject({ serverVersion: "0.100", targetVersion: null });
   });
 });
 
 describe("the final report", () => {
-  const both = async (between: () => void = () => {}) => {
-    await start("web", { target: print("a"), testCommit: "abcdef1", testDirty: false });
+  const both = async (between: () => unknown = () => {}) => {
+    await start("web", {
+      target: print("a"),
+      targetVersion: "0.100",
+      testCommit: "abcdef1",
+      testDirty: false,
+    });
     await reportRun(1, "web", "finish");
     between();
-    await start("app", { target: print("b"), testCommit: "1234567", testDirty: true });
+    await start("app", {
+      target: print("b"),
+      targetVersion: "0.100",
+      testCommit: "1234567",
+      testDirty: true,
+    });
     await reportRun(1, "app", "finish");
   };
 
@@ -108,7 +189,7 @@ describe("the final report", () => {
   });
 
   it("the server changed between the two: not the same", async () => {
-    await both(() => (server.fingerprint = print("2")));
+    await both(() => Object.assign(server, { fingerprint: print("2"), version: "0.101" }));
     expect(await finalRow()).toMatchObject({ same_server: false, app_server_version: "0.101" });
   });
 
@@ -116,7 +197,7 @@ describe("the final report", () => {
     await start("web");
     await reportRun(1, "web", "finish");
     await start("app");
-    server.fingerprint = print("2");
+    Object.assign(server, { fingerprint: print("2"), version: "0.101" });
     await reportRun(1, "app", "finish");
     expect(await finalRow()).toMatchObject({
       same_server: false,

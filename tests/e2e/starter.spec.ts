@@ -16,7 +16,7 @@ test("starter: 실행 번호와 Fixture를 받고, 번호 기능이 맞게 동�
   const closed = await request.post(url(), { data: { platform: "web" } });
   expect(closed.status()).toBe(401);
 
-  // 2) 번호를 열거나 합류하고 값을 받는다. 어떤 코드로 도는지도 알린다 (서버가 버전을 매긴다)
+  // 2) 번호를 열거나 합류하고 값을 받는다. 어떤 코드와 버전으로 도는지도 알린다 (버전은 사람이 적는다)
   const started = await request.post(url(), {
     headers,
     data: { platform: "web", device: "chrome", code: runCode() },
@@ -25,13 +25,19 @@ test("starter: 실행 번호와 Fixture를 받고, 번호 기능이 맞게 동�
   const run: {
     runNo: number;
     opened: boolean;
-    versions: { server: string; target: string };
+    versions: { server: string | null; target: string | null };
+    warnings: { part: string; code: string; sent: string | null; used: string | null }[];
     fixtures: Record<string, Record<string, string>>;
   } = await started.json();
 
   // 3) 받은 번호를 먼저 적어 둔다: 아래 점검이 실패해도 끝날 때 이 번호를 마무리할 수 있다
   mkdirSync(dirname(TEST_RUN_FILE), { recursive: true });
   writeFileSync(TEST_RUN_FILE, JSON.stringify(run));
+
+  //    버전과 코드가 맞지 않으면 멈추지 않고 알리기만 한다
+  for (const { part, code, sent, used } of run.warnings) {
+    console.warn(`[test run] 버전 경고: ${part} ${code} (적은 것 ${sent}, 쓴 것 ${used})`);
+  }
 
   // 4) 점검: 이 번호는 가장 최신이고 Web이 실행 중이다
   const { runs } = await (await request.get(url(), { headers })).json();

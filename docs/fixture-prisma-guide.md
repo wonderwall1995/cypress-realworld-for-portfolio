@@ -130,7 +130,7 @@ LLM이 다른 LLM에게 넘기는 설계 문서다. Web(Playwright) 쪽에서 Us
   - 한 플랫폼은 한 번호를 한 번만 돌므로 겹치지 않는다. 정식 실행은 재시도하지 않는다(3.9).
   - 시험 코드는 서버의 규칙 목록(`test-fixture-rules.ts`)에 있다. 같은 번호의 004와 005의 A가 겹치지 않게 한다. 바꾸거나 다시 쓰지 않는다. (2026-11-24 변경. 전에는 앞부분을 이름표마다 다르게 만들었다)
   - 코드는 번호 앞에 둔다. 화면의 찾기는 아이디의 일부도 찾으므로, 003의 A(`x6w`)를 찾을 때 004의 A(`x046w`)가 나오면 안 된다.
-  - 003에 코드가 없는 것은 1~5번의 003 유저(코드가 없던 때)를 계속 찾기 위해서다.
+  - 003에 코드가 없는 것은 코드가 없던 때의 003 유저를 계속 찾기 위해서였다. 그때의 번호(1~8)는 2026-11-24에 지웠다. 그래도 바꾸지 않는다(두 플랫폼이 같은 규칙을 쓴다).
 - 구간만으로는 화면 문제를 잡지 못한다. 예: 긴 이름이면 거래 목록의 좋아요 줄이 다음 줄에 가려졌다(2026-11-23 확인, 2026-11-24 고침). 가려졌는지 보는 판정은 아직 없다.
 
 ### 3.15 서버 API (2026-11-23)
@@ -154,7 +154,7 @@ LLM이 다른 LLM에게 넘기는 설계 문서다. Web(Playwright) 쪽에서 Us
 ### 3.16 과거 이력을 쓰는 법 (2026-11-23, 보류)
 - 픽스처(test_fixture, test_fixture_person)는 **입력 값의 저장소**이고, 기록(web_test_record, app_test_record)은 그 값으로 돈 **결과의 기록**, 보고(web_test_report, app_test_report)는 **완료된 상태**다.
 - `finished`는 끝까지 돌았다는 뜻이다. **통과했다는 뜻이 아니다.** 통과했는지는 보고의 `result`를 본다.
-- 1~5번에서 옮긴 사람의 값은 003의 것이다. 1~5번의 다른 시험 사람의 값은 버렸으므로, 그 번호들에서는 `transfer`의 값만 쓴다.
+- 로컬의 옛 번호 1~8은 2026-11-24에 지웠다. 번호는 다시 1부터다.
 - 과거에 실패한 시험을 다시 돌리는 것(재시험)은 보류다. 방법과 횟수를 정하지 않았다.
 - 기록은 고치지 않고 쌓기만 한다. EC2에 유저와 기록이 쌓이는 것은 의도다.
 - Web과 App의 결과 비교는 당장의 목표가 아니다. 서버 API는 둘 다 쓸 수 있게 둔다.
@@ -206,18 +206,45 @@ POST /api/testRuns/5/results
 - starter와 finisher, 사람이 멈춰서 끊긴 시험은 기록하지 않는다.
 - 어느 코드로 돌았는지는 3.18에 따라 저장한다.
 
-### 3.18 버전 (2026-11-24)
-- 서버, Web 화면, App 빌드가 각각 자기 버전 줄을 가진다: **0.100, 0.101, 0.102 ...** (0.999 다음은 0.1000)
-- **소스 파일의 지문**이 바뀌면 다음 버전이 된다. 같은 지문이 다시 오면 그 버전을 그대로 쓴다. 사람이 올리지 않는다.
-- 앞자리(0)는 **User가 요청할 때만** 올린다(`test-version-db.ts`의 `VERSION_MAJOR`).
-- 지문은 git 없이 계산하고, 커밋하지 않은 변경도 구별한다. 문서와 시험 코드, 줄 끝의 차이는 지문에 들어가지 않는다.
+### 3.18 버전 (2026-11-24, 같은 날 수동으로 변경)
+- 서버, Web 화면, App 빌드가 각각 자기 버전을 가진다. 모양은 `앞.뒤`다 (예: `0.100`, 다음 `0.101`. 앞에 0을 붙이지 않는다).
+- **버전은 사람(User)이 적는다.** 자동으로 오르지 않는다.
+  - 서버: `apps/api/VERSION`. 고친 뒤 서버를 다시 켠다(켜질 때 한 번 읽는다).
+  - Web 화면: `apps/web/VERSION`. starter가 읽는다.
+  - App: 앱 저장소에서 정하고 `code.targetVersion`으로 보낸다.
+- **소스 파일의 지문**은 계속 계산해 버전과 함께 저장한다. 버전을 적는 파일은 지문에 들어가지 않는다. 문서와 시험 코드, 줄 끝의 차이도 들어가지 않는다.
   - 서버: `apps/api`의 소스와 prisma, `packages/shared/src`. 서버가 켜질 때 한 번 계산한다.
   - Web 화면: `apps/web`의 소스와 `packages/shared/src`. starter가 계산한다.
-  - App: `pnpm build`가 앱 소스로 계산해 Android 버전 이름에 붙이고, 시험을 시작할 때 기기에서 읽는다.
-- 번호를 열 때 `code: { testCommit, testDirty, target }`을 보낸다. 시험 코드의 커밋, 커밋하지 않은 변경이 있는지, Web 화면 또는 App의 지문이다. 모두 없어도 된다(빈칸).
-- 서버 버전은 시작과 끝에 저장한다. 실행 중에 서버가 바뀐 것을 안다.
-- `final_test_report.same_server`: Web과 App의 시작과 끝, 네 번의 서버 버전이 모두 같으면 true. 두 플랫폼을 비교할 때는 true인 번호만 쓴다. 버전이 다르다고 합류를 막지는 않는다.
-- 번호 1~6은 빈칸이다. 버전이 다르다는 것은 알려 주지만, 결과가 달라진 원인은 알려 주지 않는다.
+  - App: `pnpm build`가 앱 소스로 계산한다.
+- 번호를 열 때 `code`를 보낸다. 모두 없어도 된다.
+
+| 칸 | 뜻 |
+|---|---|
+| `code.testCommit`, `code.testDirty` | 시험 코드의 커밋, 커밋하지 않은 변경이 있는지 |
+| `code.target` | Web 화면 또는 App의 지문 (16자리 16진수) |
+| `code.targetVersion` | Web 화면 또는 App의 버전. 글자다 (예: `"0.101"`). 모양이 틀리면 422 |
+
+- 번호를 열 때의 답과 finish, block의 답에 `warnings`가 있다(없으면 빈 목록). **경고가 있어도 막지 않는다.** finish와 block에는 서버의 경고만 있다.
+
+```json
+"versions": { "server": "0.100", "target": "0.100" },
+"warnings": [
+  { "part": "app", "code": "code_changed", "sent": "0.100", "used": "0.100",
+    "message": "the code changed but the version was not raised" }
+]
+```
+
+| code | 뜻 | 저장하는 버전 (`used`) |
+|---|---|---|
+| `code_changed` | 버전은 같은데 지문이 다르다 | 보낸 버전. 그 버전의 첫 지문은 그대로 둔다 |
+| `version_changed` | 지문은 같은데 버전이 다르다 (앞자리가 같을 때) | 예전 버전 |
+| `version_missing` | 지문만 있고 버전이 없다 | 그 지문의 예전 버전. 모르면 빈칸 |
+| `fingerprint_missing` | 버전만 있고 지문이 없다 | 보낸 버전. `test_version`에는 저장하지 않는다 |
+
+- `part`는 `server` / `web` / `app`. `message`는 사람이 읽는 글이라 바뀔 수 있다. 판단은 `code`로 한다.
+- 서버 버전은 시작과 끝에 저장한다.
+- `final_test_report.same_server`: Web과 App의 시작과 끝, 네 번의 서버 버전이 모두 같으면 true. **버전을 사람이 적으므로, 서버 코드를 고치고 버전을 올리지 않으면 코드가 달라도 true가 된다.** 그때는 경고(`code_changed`)만 나온다. 번호에는 지문을 저장하지 않으므로 나중에 알 수 없다.
+- 버전이 다르다는 것은 알려 주지만, 결과가 달라진 원인은 알려 주지 않는다.
 
 ## 4. 테이블 (testschema) (2026-11-24 다시 만듦)
 
@@ -319,7 +346,7 @@ final_test_report (뷰)     두 보고, 최종 결과, 버전을 번호마다 1�
 
 | 항목 | 상태 |
 |---|---|
-| testschema 테이블 8개와 뷰 1개 (2026-11-24 다시 만듦) | 만듦. 로컬 개발 DB에 적용함. 1~5번을 옮겼다 |
+| testschema 테이블 8개와 뷰 1개 (2026-11-24 다시 만듦) | 만듦. 로컬 개발 DB에 적용함 |
 | EC2 서버 DB에 적용 | 안 함 |
 | 서버 API (3.15) | 만듦. app.ts는 Prisma client가 TestFixturePerson을 알 때만 연결한다. 옛 client로 도는 서버는 404로 답한다 (prisma generate 뒤 다시 켜야 한다) |
 | Fixture 규칙 목록 (서버) | `apps/api/src/test-fixture-rules.ts`. 이름표는 auth, bank-account, deposit, transfer, transaction-detail, transaction-filter, user-settings, transaction-visibility, notifications, login-logout |

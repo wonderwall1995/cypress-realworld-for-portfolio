@@ -8,6 +8,7 @@ import { asyncHandler } from "./async-handler";
 import { validateMiddleware } from "./helpers";
 import { getRunResults, MAX_STEPS, recordResult } from "./test-result-db";
 import { getTestRunSecret, hasTestRunSecret } from "./test-run-secret";
+import { VERSION_PATTERN } from "./test-version-db";
 import {
   getLatestPublicFixtures,
   getRunFixtures,
@@ -57,6 +58,8 @@ router.post(
     body("code.target")
       .optional()
       .matches(/^[0-9a-f]{16}$/),
+    // the version that a person wrote for the Web screens or for the App build, for example 0.101
+    body("code.targetVersion").optional().isString().matches(VERSION_PATTERN),
   ]),
   asyncHandler(async (req, res) => {
     const { platform, device, code } = req.body;

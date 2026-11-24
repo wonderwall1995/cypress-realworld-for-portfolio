@@ -7,7 +7,7 @@
 import { RunProgress, RunStatus, TestFixturePerson, TestPlatform } from "@prisma/client";
 import prisma, { DbClient } from "./prisma";
 import { HttpError } from "./http-error";
-import { SERVER_FINGERPRINT } from "./server-fingerprint";
+import { SERVER_FINGERPRINT, SERVER_VERSION } from "./server-fingerprint";
 import {
   FIXTURE_RULES,
   FixtureValues,
@@ -17,7 +17,7 @@ import {
 } from "./test-fixture-rules";
 import { finalResultOf, writeReport } from "./test-report-db";
 import { fixturePassword } from "./test-run-secret";
-import { versionOf } from "./test-version-db";
+import { UsedVersion, useVersion, VersionWarning } from "./test-version-db";
 
 /** A running platform without a signal for this long has died: its number becomes blocked. */
 export const SIGNAL_LIMIT_MS = 10 * 60 * 1000;
@@ -42,7 +42,10 @@ export const changeRuns = <T>(now: Date, change: (tx: DbClient) => Promise<T>): 
   );
 
 const serverVersionNow = (tx: DbClient, now: Date) =>
-  versionOf(tx, "server", SERVER_FINGERPRINT, now);
+  useVersion(tx, "server", SERVER_VERSION, SERVER_FINGERPRINT, now);
+
+const warningsOf = (...used: UsedVersion[]): VersionWarning[] =>
+  used.flatMap(({ warning }) => (warning ? [warning] : []));
 
 /** The end of a platform's run: its progress and its report are written together. */
 const endRun = async (
@@ -144,13 +147,17 @@ export interface RunCode {
   testDirty?: boolean;
   /** The fingerprint of the Web screens or of the App build */
   target?: string;
+  /** The version of the Web screens or of the App build, as a person wrote it */
+  targetVersion?: string;
 }
 
 export interface StartedRun {
   runNo: number;
   /** true when this start opened the number, false when it joined one that the other platform opened */
   opened: boolean;
-  versions: { server: string; target: string | null };
+  versions: { server: string | null; target: string | null };
+  /** Empty when the versions and the code fit together. Nothing is refused because of it. */
+  warnings: VersionWarning[];
   fixtures: Fixtures;
 }
 
@@ -160,7 +167,7 @@ export const startRun = (
   device: string | undefined,
   secret: string,
   now = new Date(),
-  { testCommit, testDirty, target }: RunCode = {}
+  { testCommit, testDirty, target, targetVersion: sentVersion }: RunCode = {}
 ): Promise<StartedRun> =>
   changeRuns(now, async (tx) => {
     const newest = await tx.testFixture.findFirst({
@@ -179,8 +186,8 @@ export const startRun = (
     }
 
     await fillFixtures(tx, runNo); // stored values stay
-    const serverVersion = await serverVersionNow(tx, now);
-    const targetVersion = target ? await versionOf(tx, platform, target, now) : null;
+    const server = await serverVersionNow(tx, now);
+    const used = await useVersion(tx, platform, sentVersion, target, now);
     await tx.runProgress.create({
       data: {
         runNo,
@@ -188,16 +195,16 @@ export const startRun = (
         device,
         startedAt: now,
         lastSignalAt: now,
-        serverVersion,
-        targetVersion,
+        serverVersion: server.version,
+        targetVersion: used.version,
         testCommit,
         testDirty,
       },
     });
 
     const fixtures = forPlatform(await readFixtures(tx, runNo), runNo, platform, secret);
-    const versions = { server: serverVersion, target: targetVersion };
-    return { runNo, opened: !canJoin, versions, fixtures };
+    const versions = { server: server.version, target: used.version };
+    return { runNo, opened: !canJoin, versions, warnings: warningsOf(server, used), fixtures };
   });
 
 export type RunEvent = "signal" | "finish" | "block";
@@ -208,6 +215,8 @@ export interface RunState {
   platformStatus: RunStatus;
   /** "pending" until both platforms have ended */
   finalResult: string;
+  /** At the end of a run: about the version of the server it ended with */
+  warnings: VersionWarning[];
 }
 
 /** What a running platform tells about itself. Returns the state of the number after it. */
@@ -226,10 +235,13 @@ export const reportRun = async (
       return new HttpError(409, `this run is not running any more (${run.status})`);
     }
 
+    let warnings: VersionWarning[] = [];
     if (event === "signal") await tx.runProgress.update({ where, data: { lastSignalAt: now } });
     else {
       const status = event === "finish" ? "finished" : "blocked";
-      await endRun(tx, run, status, now, await serverVersionNow(tx, now));
+      const server = await serverVersionNow(tx, now);
+      await endRun(tx, run, status, now, server.version);
+      warnings = warningsOf(server);
     }
 
     const progress = await tx.runProgress.findMany({ where: { runNo } });
@@ -238,6 +250,7 @@ export const reportRun = async (
       status: numberStatus(progress),
       platformStatus: progress.find((one) => one.platform === platform)!.status,
       finalResult: await finalResultOf(tx, runNo),
+      warnings,
     };
   });
   if (answer instanceof HttpError) throw answer;

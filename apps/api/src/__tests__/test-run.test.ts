@@ -6,6 +6,7 @@ import { Server } from "http";
 import { isValidAccountNumber, isValidPhoneNumber } from "@rwa/shared";
 import prisma from "../prisma";
 import { HttpError } from "../http-error";
+import { SERVER_VERSION } from "../server-fingerprint";
 import testRunRoutes from "../test-run-routes";
 import {
   FIXTURE_RULES,
@@ -96,6 +97,7 @@ describe("finish, block and the 10-minute rule", () => {
       status: "open",
       platformStatus: "finished",
       finalResult: "pending",
+      warnings: [],
     });
     expect((await start("app")).runNo).toBe(1);
   });
@@ -392,9 +394,19 @@ describe("routes", () => {
   });
 
   it("start, join, signal, finish, list and read", async () => {
-    const code = { testCommit: "a".repeat(40), testDirty: false, target: "b".repeat(16) };
+    const code = {
+      testCommit: "a".repeat(40),
+      testDirty: false,
+      target: "b".repeat(16),
+      targetVersion: "0.107",
+    };
     const opened = await call("POST", "", { platform: "web", device: "chrome", code });
-    expect(opened.json.versions).toEqual({ server: "0.100", target: "0.100" });
+    expect(opened.json.versions).toEqual({ server: SERVER_VERSION, target: "0.107" });
+    expect(opened.json.warnings).toEqual([]);
+    for (const targetVersion of ["1", "v0.1", "0.01", "0.1.2", "", 0.1]) {
+      const refused = await call("POST", "", { platform: "app", code: { targetVersion } });
+      expect(refused.status, String(targetVersion)).toBe(422);
+    }
     const joined = await call("POST", "", { platform: "app" });
     expect([opened.status, opened.json.runNo, joined.status, joined.json.runNo]).toEqual([
       201, 1, 200, 1,
