@@ -47,7 +47,7 @@ const makeName = (partition: (typeof NAME_PARTITIONS)[number]) => {
   return repeat(between(min, max), pick([korean, letter]));
 };
 
-// The run number follows the base, so the base never ends with a digit ("ab1" + 17 would look like "ab" + 117).
+// Digits (the code, the run number) follow the base, so the base never ends with a digit ("ab1" + 17 would look like "ab" + 117).
 const makeUsernameBase = (partition: (typeof USERNAME_PARTITIONS)[number]) => {
   switch (partition) {
     case "korean":
@@ -84,72 +84,99 @@ const BANK_NAMES = [
   "Standard Chartreuse",
 ] as const;
 
-// ---- which test needs what ----
-type MakeValue = () => string | number;
+// ---- the values of one test (columns of test_fixture) ----
+/** Column -> how its value is made. A new value needs its line here and a column in test_fixture (a migration). */
+export const makeFixtureValues = () => ({
+  transferCycleDollars: between(1, 500),
+  detailDollars: between(1, 500),
+  detailComment: repeat(8, korean),
+  filterSentSmallDollars: between(10, 90),
+  filterSentBigDollars: between(250, 390),
+  filterGotSmallDollars: between(10, 90),
+  filterGotBigDollars: between(250, 390),
+});
 
+export type FixtureValues = ReturnType<typeof makeFixtureValues>;
+
+// ---- which test needs what ----
 interface TestCaseRule {
+  /**
+   * Keeps the usernames of the tests apart (every test signs up its own A): base + code + run number + platform.
+   * Always two digits, never changed and never used twice. Only "transfer" has none, like the numbers before this
+   * rule, so that its people of older numbers are still found.
+   */
+  code: string;
   people: Person[];
-  values?: Record<string, MakeValue>;
+  /** The name a test asks for -> the column of test_fixture */
+  values?: Record<string, keyof FixtureValues>;
 }
 
-/** The label of a test -> what it needs. A new test adds its line here. */
+/** The label of a test -> what it needs. A new test adds its line here (no DB change when it needs only people). */
 export const FIXTURE_RULES: Record<string, TestCaseRule> = {
-  auth: { people: ["A"] },
-  "bank-account": { people: ["A"] },
-  deposit: { people: ["A"] },
-  transfer: { people: ["A", "B", "C"], values: { cycleDollars: () => between(1, 500) } },
+  auth: { code: "00", people: ["A"] },
+  "bank-account": { code: "01", people: ["A"] },
+  deposit: { code: "02", people: ["A"] },
+  transfer: {
+    code: "",
+    people: ["A", "B", "C"],
+    values: { cycleDollars: "transferCycleDollars" },
+  },
   "transaction-detail": {
+    code: "04",
     people: ["A", "B"],
-    values: { dollars: () => between(1, 500), comment: () => repeat(8, korean) },
+    values: { dollars: "detailDollars", comment: "detailComment" },
   },
   "transaction-filter": {
+    code: "05",
     people: ["A", "B", "C"],
     values: {
-      sentSmallDollars: () => between(10, 90),
-      sentBigDollars: () => between(250, 390),
-      gotSmallDollars: () => between(10, 90),
-      gotBigDollars: () => between(250, 390),
+      sentSmallDollars: "filterSentSmallDollars",
+      sentBigDollars: "filterSentBigDollars",
+      gotSmallDollars: "filterGotSmallDollars",
+      gotBigDollars: "filterGotBigDollars",
     },
   },
-  "user-settings": { people: ["A", "B"] },
-  "transaction-visibility": { people: ["A", "B", "C"] },
-  notifications: { people: ["A", "B", "C"] },
-  "login-logout": { people: ["A", "B"] },
+  "user-settings": { code: "06", people: ["A", "B"] },
+  "transaction-visibility": { code: "07", people: ["A", "B", "C"] },
+  notifications: { code: "08", people: ["A", "B", "C"] },
+  "login-logout": { code: "09", people: ["A", "B"] },
 };
 
-export interface FixtureRow {
-  runNo: number;
-  testCase: string;
-  item: string;
-  value: string;
-}
+const PLATFORM_MARK = { web: "w", app: "a" } as const;
 
-/** Every value of a run number, as rows of test_fixture. Passwords are not values (see test-run-secret.ts). */
-export const makeFixtureRows = (runNo: number): FixtureRow[] => {
-  const rows: FixtureRow[] = [];
+/**
+ * The username of a person in one test of one number. The code stands before the number, not at the end: the search
+ * of the app finds a part of a username, and "x6w" must not find "x046w" (the same person in another test).
+ */
+export const usernameOf = (
+  base: string,
+  testCase: string,
+  runNo: number,
+  platform: keyof typeof PLATFORM_MARK
+): string => `${base}${FIXTURE_RULES[testCase].code}${runNo}${PLATFORM_MARK[platform]}`;
+
+/** The three people of a run number, as rows of test_fixture_person. Passwords are not values (see test-run-secret.ts). */
+export const makeFixturePeople = (runNo: number) => {
   const usedBases = new Set<string>();
+  return PEOPLE.map((person) => {
+    const partitions = partitionsOf(runNo, person);
+    let usernameBase = makeUsernameBase(partitions.username);
+    while (usedBases.has(usernameBase)) usernameBase = makeUsernameBase(partitions.username);
+    usedBases.add(usernameBase);
 
-  for (const [testCase, rule] of Object.entries(FIXTURE_RULES)) {
-    const add = (item: string, value: string | number) =>
-      rows.push({ runNo, testCase, item, value: String(value) });
-
-    for (const person of rule.people) {
-      const partitions = partitionsOf(runNo, person);
-      let base = makeUsernameBase(partitions.username);
-      while (usedBases.has(base)) base = makeUsernameBase(partitions.username);
-      usedBases.add(base);
-
-      add(`${person}.usernameBase`, base);
-      add(`${person}.firstName`, makeName(partitions.name));
-      add(`${person}.lastName`, makeName(partitions.name));
-      add(`${person}.phoneNumber`, makePhoneNumber(partitions.phone));
-      add(`${person}.bankName`, pick(BANK_NAMES));
-      add(`${person}.accountNumber`, digits(partitions.accountLength));
-      for (const [name, partition] of Object.entries(partitions)) {
-        add(`${person}.partition.${name}`, partition);
-      }
-    }
-    for (const [item, make] of Object.entries(rule.values ?? {})) add(item, make());
-  }
-  return rows;
+    return {
+      runNo,
+      person,
+      usernameBase,
+      firstName: makeName(partitions.name),
+      lastName: makeName(partitions.name),
+      phoneNumber: makePhoneNumber(partitions.phone),
+      bankName: pick<string>(BANK_NAMES),
+      accountNumber: digits(partitions.accountLength),
+      partitionUsername: partitions.username as string,
+      partitionName: partitions.name as string,
+      partitionPhone: partitions.phone as string,
+      partitionAccountLength: partitions.accountLength as number,
+    };
+  });
 };

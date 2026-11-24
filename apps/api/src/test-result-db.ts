@@ -1,5 +1,5 @@
 /**
- * Results of a numbered run (testschema.code_result): one row for a test (kind "spec") and one for every tool it
+ * Results of a numbered run (testschema.web_test_record, app_test_record): one row for a test (kind "spec") and one for every tool it
  * called (common, api, fixture). The rules are in docs/fixture-prisma-guide.md 3.11 and 3.17.
  *
  * A runner may send the same result again (the answer can get lost): it is stored only once. The same test of the
@@ -8,6 +8,7 @@
 import { CodeKind, CodeResultStatus, TestPlatform } from "@prisma/client";
 import prisma from "./prisma";
 import { HttpError } from "./http-error";
+import { recordsOf } from "./test-report-db";
 import { changeRuns } from "./test-run-db";
 
 export const MAX_ERROR_LENGTH = 300;
@@ -59,32 +60,32 @@ export const recordResult = async (
 ): Promise<{ stored: number }> => {
   // the answer is returned, not thrown, so that blocking the dead runs is saved also when the result is refused
   const answer = await changeRuns(now, async (tx) => {
-    const run = await tx.platformRun.findUnique({ where: { runNo_platform: { runNo, platform } } });
+    const where = { runNo_platform: { runNo, platform } };
+    const run = await tx.runProgress.findUnique({ where });
     if (!run) return new HttpError(404, "this platform has not started this run number");
 
+    const records = recordsOf(tx, platform);
     const spec = {
       runNo,
-      platformRunId: run.id,
       kind: "spec" as const,
       testCase: outcome.testCase,
       attempt: outcome.attempt ?? 1,
       ...rowOf(outcome),
     };
     const { kind, testCase, name, attempt, startedAt } = spec;
-    const before = await tx.codeResult.findFirst({
-      where: { platformRunId: run.id, kind, testCase, name, attempt, startedAt },
+    const before = await records.findFirst({
+      where: { runNo, kind, testCase, name, attempt, startedAt },
     });
     if (before) return { stored: 0 }; // sent again: also fine when the run has ended in the meantime
     if (run.status !== "running") {
       return new HttpError(409, `this run is not running any more (${run.status})`);
     }
 
-    const { id: parentId } = await tx.codeResult.create({ data: spec });
+    const { id: parentId } = await records.create({ data: spec });
     const steps = outcome.steps ?? [];
-    await tx.codeResult.createMany({
+    await records.createMany({
       data: steps.map((step) => ({
         runNo,
-        platformRunId: run.id,
         kind: step.kind,
         testCase,
         attempt,
@@ -92,25 +93,24 @@ export const recordResult = async (
         ...rowOf(step),
       })),
     });
-    await tx.platformRun.update({ where: { id: run.id }, data: { lastSignalAt: now } });
+    await tx.runProgress.update({ where, data: { lastSignalAt: now } });
     return { stored: 1 + steps.length };
   });
   if (answer instanceof HttpError) throw answer;
   return answer;
 };
 
-/** Every result of a number, in the order they were stored. */
+/** Every result of a number: the Web's, then the App's, each in the order they were stored. */
 export const getRunResults = async (runNo: number) => {
-  if (!(await prisma.testRun.findUnique({ where: { runNo } }))) {
+  if (!(await prisma.testFixture.findUnique({ where: { runNo } }))) {
     throw new HttpError(404, "this run number does not exist");
   }
-  const rows = await prisma.codeResult.findMany({
-    where: { runNo },
-    include: { platformRun: { select: { platform: true } } },
-    orderBy: { id: "asc" },
-  });
-  return rows.map(({ platformRun, platformRunId: _platformRunId, ...row }) => ({
-    ...row,
-    platform: platformRun.platform,
-  }));
+  const read = async (platform: TestPlatform) => {
+    const rows = await recordsOf(prisma, platform).findMany({
+      where: { runNo },
+      orderBy: { id: "asc" },
+    });
+    return rows.map((row) => ({ ...row, platform }));
+  };
+  return [...(await read("web")), ...(await read("app"))];
 };

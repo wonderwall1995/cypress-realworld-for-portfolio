@@ -199,14 +199,6 @@ model BankTransferLog {
 // One run number line for both platforms. A platform joins the newest number if it has not run it yet,
 // otherwise the server opens newest+1 with new fixtures. Older numbers are closed.
 
-// open: in use or can be joined. blocked: a platform stopped midway; kept but left out of statistics
-enum TestRunStatus {
-  open
-  blocked
-
-  @@schema("testschema")
-}
-
 enum TestPlatform {
   web
   app
@@ -214,9 +206,16 @@ enum TestPlatform {
   @@schema("testschema")
 }
 
-// waiting: another platform runs this number now. blocked: stopped midway (or no signal for 10 minutes)
-enum PlatformRunStatus {
-  waiting
+enum TestPerson {
+  A
+  B
+  C
+
+  @@schema("testschema")
+}
+
+// blocked: stopped midway (or no signal for 10 minutes)
+enum RunStatus {
   running
   finished
   blocked
@@ -243,79 +242,159 @@ enum CodeResultStatus {
   @@schema("testschema")
 }
 
-// One row per run number
-model TestRun {
-  runNo     Int           @id @default(autoincrement()) @map("run_no")
-  status    TestRunStatus @default(open)
-  openedBy  TestPlatform  @map("opened_by")
-  createdAt DateTime      @default(now()) @map("created_at")
+enum ReportResult {
+  passed
+  failed
+  blocked
 
-  fixtures     TestFixture[]
-  platformRuns PlatformRun[]
-  results      CodeResult[]
-
-  @@map("test_run")
   @@schema("testschema")
 }
 
-// Random values of a run number, one row per (test label, item). Web and App read the same values.
-// Items are rows, not columns: a new test adds items without a DB change.
+// One row per run number: the number itself and the values that belong to one test (amounts, a comment).
+// The values of a person are in test_fixture_person. Web and App read the same values.
+// The prefix of a value column is the test that uses it. Empty: the column is newer than the number.
 model TestFixture {
-  runNo     Int      @map("run_no")
-  testCase  String   @map("test_case") // the test's label, e.g. "deposit"
-  item      String // e.g. "amount"
-  value     String // stored as text; numbers are converted when read
-  createdAt DateTime @default(now()) @map("created_at")
+  runNo                  Int          @id @map("run_no") // newest + 1, made by the server
+  openedBy               TestPlatform @map("opened_by")
+  createdAt              DateTime     @default(now()) @map("created_at")
+  transferCycleDollars   Int?         @map("transfer_cycle_dollars")
+  detailDollars          Int?         @map("detail_dollars")
+  detailComment          String?      @map("detail_comment")
+  filterSentSmallDollars Int?         @map("filter_sent_small_dollars")
+  filterSentBigDollars   Int?         @map("filter_sent_big_dollars")
+  filterGotSmallDollars  Int?         @map("filter_got_small_dollars")
+  filterGotBigDollars    Int?         @map("filter_got_big_dollars")
 
-  run TestRun @relation(fields: [runNo], references: [runNo], onDelete: Restrict)
+  people     TestFixturePerson[]
+  progress   RunProgress[]
+  webRecords WebTestRecord[]
+  appRecords AppTestRecord[]
+  webReport  WebTestReport?
+  appReport  AppTestReport?
 
-  @@id([runNo, testCase, item])
   @@map("test_fixture")
   @@schema("testschema")
 }
 
-// Did the Web / the App run this number. One row per (number, platform).
-model PlatformRun {
-  id           Int               @id @default(autoincrement())
-  runNo        Int               @map("run_no")
-  platform     TestPlatform
-  status       PlatformRunStatus @default(running)
-  device       String? // e.g. "chrome", an Android device name
-  startedAt    DateTime          @default(now()) @map("started_at")
-  lastSignalAt DateTime          @default(now()) @map("last_signal_at") // used by the 10-minute rule
-  finishedAt   DateTime?         @map("finished_at")
+// Three rows per run number: A, B and C. Every test of the number uses the same three.
+model TestFixturePerson {
+  runNo                  Int        @map("run_no")
+  person                 TestPerson
+  usernameBase           String     @map("username_base") // the server adds the test, the number and the platform
+  firstName              String     @map("first_name")
+  lastName               String     @map("last_name")
+  phoneNumber            String     @map("phone_number")
+  bankName               String     @map("bank_name")
+  accountNumber          String     @map("account_number")
+  partitionUsername      String     @map("partition_username")
+  partitionName          String     @map("partition_name")
+  partitionPhone         String     @map("partition_phone")
+  partitionAccountLength Int        @map("partition_account_length")
 
-  run     TestRun      @relation(fields: [runNo], references: [runNo], onDelete: Restrict)
-  results CodeResult[]
+  fixture TestFixture @relation(fields: [runNo], references: [runNo], onDelete: Restrict)
 
-  @@unique([runNo, platform])
-  @@map("platform_run")
+  @@id([runNo, person])
+  @@map("test_fixture_person")
   @@schema("testschema")
 }
 
-// Result of one piece of test code: a spec, or a common / api / util function called inside a spec
-model CodeResult {
-  id            Int              @id @default(autoincrement())
-  runNo         Int              @map("run_no")
-  platformRunId Int              @map("platform_run_id")
-  kind          CodeKind
-  testCase      String           @map("test_case") // the test's label
-  name          String // test title or function name, e.g. "createBankAccount"
-  file          String
-  parentId      Int?             @map("parent_id") // the spec result that called this code; empty for a spec
-  status        CodeResultStatus
-  attempt       Int              @default(1) // retry number
-  errorMessage  String?          @map("error_message")
-  startedAt     DateTime         @map("started_at")
-  durationMs    Int              @map("duration_ms")
+// Internal, for the run itself: who runs a number now, joining it, and the 10-minute rule. Not a result.
+model RunProgress {
+  runNo        Int          @map("run_no")
+  platform     TestPlatform
+  status       RunStatus    @default(running)
+  device       String? // e.g. "chrome", an Android device name
+  startedAt    DateTime     @default(now()) @map("started_at")
+  lastSignalAt DateTime     @default(now()) @map("last_signal_at") // used by the 10-minute rule
+  finishedAt   DateTime?    @map("finished_at")
 
-  run         TestRun      @relation(fields: [runNo], references: [runNo], onDelete: Restrict)
-  platformRun PlatformRun  @relation(fields: [platformRunId], references: [id], onDelete: Restrict)
-  parent      CodeResult?  @relation("CalledFrom", fields: [parentId], references: [id], onDelete: Restrict)
-  children    CodeResult[] @relation("CalledFrom")
+  fixture TestFixture @relation(fields: [runNo], references: [runNo], onDelete: Restrict)
+
+  @@id([runNo, platform])
+  @@map("run_progress")
+  @@schema("testschema")
+}
+
+// How the Web tests ran on the fixtures of a number: one row for a test (kind "spec") and one for every tool it called
+model WebTestRecord {
+  id           Int              @id @default(autoincrement())
+  runNo        Int              @map("run_no")
+  kind         CodeKind
+  testCase     String           @map("test_case") // the test's label
+  name         String // test title or function name, e.g. "createBankAccount"
+  file         String
+  parentId     Int?             @map("parent_id") // the spec row that called this code; empty for a spec
+  status       CodeResultStatus
+  attempt      Int              @default(1) // retry number
+  errorMessage String?          @map("error_message")
+  startedAt    DateTime         @map("started_at")
+  durationMs   Int              @map("duration_ms")
+
+  fixture  TestFixture     @relation(fields: [runNo], references: [runNo], onDelete: Restrict)
+  parent   WebTestRecord?  @relation("WebCalledFrom", fields: [parentId], references: [id], onDelete: Restrict)
+  children WebTestRecord[] @relation("WebCalledFrom")
 
   @@index([runNo, kind])
   @@index([testCase])
-  @@map("code_result")
+  @@map("web_test_record")
+  @@schema("testschema")
+}
+
+// How the App tests ran on the fixtures of a number: one row for a test (kind "spec") and one for every tool it called
+model AppTestRecord {
+  id           Int              @id @default(autoincrement())
+  runNo        Int              @map("run_no")
+  kind         CodeKind
+  testCase     String           @map("test_case") // the test's label
+  name         String // test title or function name, e.g. "createBankAccount"
+  file         String
+  parentId     Int?             @map("parent_id") // the spec row that called this code; empty for a spec
+  status       CodeResultStatus
+  attempt      Int              @default(1) // retry number
+  errorMessage String?          @map("error_message")
+  startedAt    DateTime         @map("started_at")
+  durationMs   Int              @map("duration_ms")
+
+  fixture  TestFixture     @relation(fields: [runNo], references: [runNo], onDelete: Restrict)
+  parent   AppTestRecord?  @relation("AppCalledFrom", fields: [parentId], references: [id], onDelete: Restrict)
+  children AppTestRecord[] @relation("AppCalledFrom")
+
+  @@index([runNo, kind])
+  @@index([testCase])
+  @@map("app_test_record")
+  @@schema("testschema")
+}
+
+// The finished report of a number on the Web, written once, when the run ends. No row: it has not ended.
+// true / false: all code of that kind passed / something failed. Empty: none ran, or the run was blocked.
+// The final result of both platforms is the view testschema.final_test_report (see the migration).
+model WebTestReport {
+  runNo      Int          @id @map("run_no")
+  specOk     Boolean?     @map("spec_ok")
+  commonOk   Boolean?     @map("common_ok")
+  apiOk      Boolean?     @map("api_ok")
+  result     ReportResult
+  reportedAt DateTime     @default(now()) @map("reported_at")
+
+  fixture TestFixture @relation(fields: [runNo], references: [runNo], onDelete: Restrict)
+
+  @@map("web_test_report")
+  @@schema("testschema")
+}
+
+// The finished report of a number on the App, written once, when the run ends. No row: it has not ended.
+// true / false: all code of that kind passed / something failed. Empty: none ran, or the run was blocked.
+// The final result of both platforms is the view testschema.final_test_report (see the migration).
+model AppTestReport {
+  runNo      Int          @id @map("run_no")
+  specOk     Boolean?     @map("spec_ok")
+  commonOk   Boolean?     @map("common_ok")
+  apiOk      Boolean?     @map("api_ok")
+  result     ReportResult
+  reportedAt DateTime     @default(now()) @map("reported_at")
+
+  fixture TestFixture @relation(fields: [runNo], references: [runNo], onDelete: Restrict)
+
+  @@map("app_test_report")
   @@schema("testschema")
 }

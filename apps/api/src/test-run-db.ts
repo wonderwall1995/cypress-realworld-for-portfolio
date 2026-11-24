@@ -4,10 +4,17 @@
  * One number line for the Web and the App. A platform joins the newest number when it has not run it yet;
  * otherwise (or when that number is blocked) newest + 1 is opened with new values. Older numbers are closed.
  */
-import { PlatformRun, TestPlatform, TestRun } from "@prisma/client";
+import { RunProgress, RunStatus, TestFixturePerson, TestPlatform } from "@prisma/client";
 import prisma, { DbClient } from "./prisma";
 import { HttpError } from "./http-error";
-import { makeFixtureRows } from "./test-fixture-rules";
+import {
+  FIXTURE_RULES,
+  FixtureValues,
+  makeFixturePeople,
+  makeFixtureValues,
+  usernameOf,
+} from "./test-fixture-rules";
+import { finalResultOf, writeReport } from "./test-report-db";
 import { fixturePassword } from "./test-run-secret";
 
 /** A running platform without a signal for this long has died: its number becomes blocked. */
@@ -20,39 +27,88 @@ export const changeRuns = <T>(now: Date, change: (tx: DbClient) => Promise<T>): 
   prisma.$transaction(
     async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${LOCK})`;
-      const dead = await tx.platformRun.findMany({
+      const dead = await tx.runProgress.findMany({
         where: {
           status: "running",
           lastSignalAt: { lt: new Date(now.getTime() - SIGNAL_LIMIT_MS) },
         },
       });
-      for (const run of dead) await blockPlatformRun(tx, run);
+      for (const run of dead) await endRun(tx, run, "blocked", now);
       return change(tx);
     },
     { maxWait: 15_000, timeout: 15_000 }
   );
 
-const blockPlatformRun = async (tx: DbClient, run: PlatformRun) => {
-  await tx.platformRun.update({ where: { id: run.id }, data: { status: "blocked" } });
-  await tx.testRun.update({ where: { runNo: run.runNo }, data: { status: "blocked" } });
+/** The end of a platform's run: its progress and its report are written together. */
+const endRun = async (
+  tx: DbClient,
+  { runNo, platform }: RunProgress,
+  status: "finished" | "blocked",
+  now: Date
+) => {
+  await tx.runProgress.update({
+    where: { runNo_platform: { runNo, platform } },
+    data: status === "finished" ? { status, lastSignalAt: now, finishedAt: now } : { status },
+  });
+  await writeReport(tx, runNo, platform, status, now);
 };
 
-const PLATFORM_MARK: Record<TestPlatform, string> = { web: "w", app: "a" };
+export type NumberStatus = "open" | "blocked";
+
+/** One platform that stopped midway blocks the whole number. */
+const numberStatus = (progress: { status: RunStatus }[]): NumberStatus =>
+  progress.some((run) => run.status === "blocked") ? "blocked" : "open";
 
 export type Fixtures = Record<string, Record<string, string>>;
 
-/** The stored values of a number, by test label. */
+const personItems = ({ person, ...values }: TestFixturePerson): Record<string, string> => ({
+  [`${person}.usernameBase`]: values.usernameBase,
+  [`${person}.firstName`]: values.firstName,
+  [`${person}.lastName`]: values.lastName,
+  [`${person}.phoneNumber`]: values.phoneNumber,
+  [`${person}.bankName`]: values.bankName,
+  [`${person}.accountNumber`]: values.accountNumber,
+  [`${person}.partition.username`]: values.partitionUsername,
+  [`${person}.partition.name`]: values.partitionName,
+  [`${person}.partition.phone`]: values.partitionPhone,
+  [`${person}.partition.accountLength`]: String(values.partitionAccountLength),
+});
+
+/** The stored values of a number, by test label: every test gets its people and its own values. */
 const readFixtures = async (tx: DbClient, runNo: number): Promise<Fixtures> => {
-  const rows = await tx.testFixture.findMany({
+  const stored = await tx.testFixture.findUniqueOrThrow({
     where: { runNo },
-    orderBy: [{ testCase: "asc" }, { item: "asc" }],
+    include: { people: true },
   });
   const fixtures: Fixtures = {};
-  for (const { testCase, item, value } of rows) (fixtures[testCase] ??= {})[item] = value;
+  for (const [testCase, rule] of Object.entries(FIXTURE_RULES)) {
+    const items: Record<string, string> = {};
+    for (const person of rule.people) {
+      const row = stored.people.find((one) => one.person === person);
+      if (row) Object.assign(items, personItems(row));
+    }
+    for (const [item, column] of Object.entries(rule.values ?? {})) {
+      if (stored[column] !== null) items[item] = String(stored[column]);
+    }
+    fixtures[testCase] = items;
+  }
   return fixtures;
 };
 
-/** The values as a test uses them: username (base + number + platform) and password are added for every person. */
+/** Makes the values that the number does not have yet: all of a new number, or new columns of an open one. */
+const fillFixtures = async (tx: DbClient, runNo: number) => {
+  const stored = await tx.testFixture.findUniqueOrThrow({ where: { runNo } });
+  const made = makeFixtureValues();
+  const columns = Object.keys(made) as (keyof FixtureValues)[];
+  const missing = columns.filter((column) => stored[column] === null);
+  await tx.testFixture.update({
+    where: { runNo },
+    data: Object.fromEntries(missing.map((column) => [column, made[column]])),
+  });
+  await tx.testFixturePerson.createMany({ data: makeFixturePeople(runNo), skipDuplicates: true });
+};
+
+/** The values as a test uses them: username and password are added for every person. */
 const forPlatform = (
   fixtures: Fixtures,
   runNo: number,
@@ -65,7 +121,7 @@ const forPlatform = (
     for (const [item, value] of Object.entries(items)) {
       const [person, name] = item.split(".");
       if (name !== "usernameBase") continue;
-      out[testCase][`${person}.username`] = `${value}${runNo}${PLATFORM_MARK[platform]}`;
+      out[testCase][`${person}.username`] = usernameOf(value, testCase, runNo, platform);
       out[testCase][`${person}.password`] = fixturePassword(secret, runNo, testCase, person);
     }
   }
@@ -87,20 +143,23 @@ export const startRun = (
   now = new Date()
 ): Promise<StartedRun> =>
   changeRuns(now, async (tx) => {
-    const newest = await tx.testRun.findFirst({
+    const newest = await tx.testFixture.findFirst({
       orderBy: { runNo: "desc" },
-      include: { platformRuns: true },
+      include: { progress: true },
     });
     const canJoin =
-      newest?.status === "open" && !newest.platformRuns.some((run) => run.platform === platform);
+      newest !== null &&
+      numberStatus(newest.progress) === "open" &&
+      !newest.progress.some((run) => run.platform === platform);
 
-    // newest + 1, not the sequence of the column: a sequence loses a number when a request fails
+    // newest + 1, not a sequence: a sequence loses a number when a request fails
     const runNo = canJoin ? newest.runNo : (newest?.runNo ?? 0) + 1;
-    if (!canJoin) await tx.testRun.create({ data: { runNo, openedBy: platform, createdAt: now } });
+    if (!canJoin) {
+      await tx.testFixture.create({ data: { runNo, openedBy: platform, createdAt: now } });
+    }
 
-    // an open number gets the values of rules that were added after it was opened; stored values stay
-    await tx.testFixture.createMany({ data: makeFixtureRows(runNo), skipDuplicates: true });
-    await tx.platformRun.create({
+    await fillFixtures(tx, runNo); // stored values stay
+    await tx.runProgress.create({
       data: { runNo, platform, device, startedAt: now, lastSignalAt: now },
     });
 
@@ -110,39 +169,40 @@ export const startRun = (
 
 export type RunEvent = "signal" | "finish" | "block";
 
+export interface RunState {
+  runNo: number;
+  status: NumberStatus;
+  platformStatus: RunStatus;
+  /** "pending" until both platforms have ended */
+  finalResult: string;
+}
+
 /** What a running platform tells about itself. Returns the state of the number after it. */
 export const reportRun = async (
   runNo: number,
   platform: TestPlatform,
   event: RunEvent,
   now = new Date()
-): Promise<{ runNo: number; status: TestRun["status"]; platformStatus: PlatformRun["status"] }> => {
+): Promise<RunState> => {
   // the answer is returned, not thrown, so that blocking the dead runs is saved also when the report is refused
   const answer = await changeRuns(now, async (tx) => {
-    const run = await tx.platformRun.findUnique({
-      where: { runNo_platform: { runNo, platform } },
-    });
+    const where = { runNo_platform: { runNo, platform } };
+    const run = await tx.runProgress.findUnique({ where });
     if (!run) return new HttpError(404, "this platform has not started this run number");
     if (run.status !== "running") {
       return new HttpError(409, `this run is not running any more (${run.status})`);
     }
 
-    if (event === "block") await blockPlatformRun(tx, run);
-    else {
-      await tx.platformRun.update({
-        where: { id: run.id },
-        data: {
-          lastSignalAt: now,
-          ...(event === "finish" ? { status: "finished", finishedAt: now } : {}),
-        },
-      });
-    }
+    if (event === "signal") await tx.runProgress.update({ where, data: { lastSignalAt: now } });
+    else await endRun(tx, run, event === "finish" ? "finished" : "blocked", now);
 
-    const after = await tx.platformRun.findUniqueOrThrow({
-      where: { id: run.id },
-      include: { run: true },
-    });
-    return { runNo, status: after.run.status, platformStatus: after.status };
+    const progress = await tx.runProgress.findMany({ where: { runNo } });
+    return {
+      runNo,
+      status: numberStatus(progress),
+      platformStatus: progress.find((one) => one.platform === platform)!.status,
+      finalResult: await finalResultOf(tx, runNo),
+    };
   });
   if (answer instanceof HttpError) throw answer;
   return answer;
@@ -150,11 +210,14 @@ export const reportRun = async (
 
 /** Every number with its date and states, newest first (the regression check chooses from this list). */
 export const listRuns = (now = new Date()) =>
-  changeRuns(now, (tx) =>
-    tx.testRun.findMany({
+  changeRuns(now, async (tx) => {
+    const numbers = await tx.testFixture.findMany({
       orderBy: { runNo: "desc" },
-      include: {
-        platformRuns: {
+      select: {
+        runNo: true,
+        openedBy: true,
+        createdAt: true,
+        progress: {
           select: {
             platform: true,
             status: true,
@@ -165,8 +228,14 @@ export const listRuns = (now = new Date()) =>
           orderBy: { platform: "asc" },
         },
       },
-    })
-  );
+    });
+    // "status" and "platformRuns" are the names that the test runners read
+    return numbers.map(({ progress, ...number }) => ({
+      ...number,
+      status: numberStatus(progress),
+      platformRuns: progress,
+    }));
+  });
 
 /** The values of one number, as that platform used them. Reading never makes a new value. */
 export const getRunFixtures = async (
@@ -174,7 +243,7 @@ export const getRunFixtures = async (
   platform: TestPlatform,
   secret: string
 ): Promise<Fixtures> => {
-  if (!(await prisma.testRun.findUnique({ where: { runNo } }))) {
+  if (!(await prisma.testFixture.findUnique({ where: { runNo } }))) {
     throw new HttpError(404, "this run number does not exist");
   }
   return forPlatform(await readFixtures(prisma, runNo), runNo, platform, secret);
@@ -185,7 +254,7 @@ export const getLatestPublicFixtures = async (): Promise<{
   runNo: number | null;
   fixtures: Fixtures;
 }> => {
-  const newest = await prisma.testRun.findFirst({ orderBy: { runNo: "desc" } });
+  const newest = await prisma.testFixture.findFirst({ orderBy: { runNo: "desc" } });
   if (!newest) return { runNo: null, fixtures: {} };
 
   const fixtures = await readFixtures(prisma, newest.runNo);

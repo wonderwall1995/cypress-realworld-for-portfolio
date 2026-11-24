@@ -8,17 +8,15 @@ import { HttpError } from "../http-error";
 import testRunRoutes from "../test-run-routes";
 import { getRunResults, MAX_ERROR_LENGTH, recordResult, shortError } from "../test-result-db";
 import { reportRun, SIGNAL_LIMIT_MS, startRun } from "../test-run-db";
-import { assertTestDatabase } from "./db-setup/testDb";
+import { emptyTestSchema } from "./db-setup/emptyTestSchema";
 
 const SECRET = "s".repeat(40);
 const start = (platform: "web" | "app") => startRun(platform, undefined, SECRET);
+const countOf = async (where = {}) => ({
+  web: await prisma.webTestRecord.count({ where }),
+  app: await prisma.appTestRecord.count({ where }),
+});
 
-const emptyTestSchema = async () => {
-  assertTestDatabase();
-  await prisma.$executeRawUnsafe(
-    "TRUNCATE TABLE testschema.code_result, testschema.platform_run, testschema.test_fixture, testschema.test_run RESTART IDENTITY CASCADE"
-  );
-};
 beforeEach(emptyTestSchema);
 afterAll(async () => {
   await emptyTestSchema();
@@ -74,7 +72,7 @@ describe("results of a run", () => {
 
     await reportRun(1, "web", "finish");
     expect(await recordResult(1, "web", outcome())).toEqual({ stored: 0 });
-    expect(await prisma.codeResult.count()).toBe(3);
+    expect(await countOf()).toEqual({ web: 3, app: 0 });
   });
 
   it("another attempt, another start and the other platform are other results", async () => {
@@ -84,7 +82,7 @@ describe("results of a run", () => {
     await recordResult(1, "web", outcome({ attempt: 2 }));
     await recordResult(1, "web", outcome({ startedAt: "2026-11-24T01:00:01.000Z" }));
     await recordResult(1, "app", outcome());
-    expect(await prisma.codeResult.count({ where: { kind: "spec" } })).toBe(4);
+    expect(await countOf({ kind: "spec" })).toEqual({ web: 3, app: 1 });
   });
 
   it("the same tool called many times in one test is stored every time", async () => {
@@ -94,7 +92,7 @@ describe("results of a run", () => {
       "web",
       outcome({ steps: [step("signIn"), step("signIn"), step("signIn")] })
     );
-    expect(await prisma.codeResult.count({ where: { name: "signIn" } })).toBe(3);
+    expect(await countOf({ name: "signIn" })).toEqual({ web: 3, app: 0 });
   });
 
   it("refuses a run that was not started (404) or has ended (409)", async () => {
@@ -103,7 +101,7 @@ describe("results of a run", () => {
     await expect(recordResult(9, "web", outcome())).rejects.toMatchObject({ status: 404 });
     await reportRun(1, "web", "finish");
     await expect(recordResult(1, "web", outcome())).rejects.toMatchObject({ status: 409 });
-    expect(await prisma.codeResult.count()).toBe(0);
+    expect(await countOf()).toEqual({ web: 0, app: 0 });
   });
 
   it("a result is a signal: the run stays alive", async () => {
@@ -199,13 +197,13 @@ describe("the address", () => {
   ])("refuses %s (422)", async (_what, wrong) => {
     await start("web");
     expect((await send(web(wrong))).status).toBe(422);
-    expect(await prisma.codeResult.count()).toBe(0);
+    expect(await countOf()).toEqual({ web: 0, app: 0 });
   });
 
   it("accepts a label that only the App has, and the biggest allowed list of tools", async () => {
     await start("web");
     const steps = Array.from({ length: 300 }, () => step("createBankAccountsWithApi"));
     expect((await send(web({ testCase: "session-expired", steps }))).status).toBe(201);
-    expect(await prisma.codeResult.count()).toBe(301);
+    expect(await countOf()).toEqual({ web: 301, app: 0 });
   });
 });

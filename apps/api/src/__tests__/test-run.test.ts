@@ -7,21 +7,21 @@ import { isValidAccountNumber, isValidPhoneNumber } from "@rwa/shared";
 import prisma from "../prisma";
 import { HttpError } from "../http-error";
 import testRunRoutes from "../test-run-routes";
-import { FIXTURE_RULES, makeFixtureRows, partitionsOf, Person } from "../test-fixture-rules";
+import {
+  FIXTURE_RULES,
+  makeFixturePeople,
+  makeFixtureValues,
+  partitionsOf,
+  Person,
+  usernameOf,
+} from "../test-fixture-rules";
 import { getLatestPublicFixtures, listRuns, reportRun, startRun } from "../test-run-db";
 import { fixturePassword, getTestRunSecret, hasTestRunSecret } from "../test-run-secret";
-import { assertTestDatabase } from "./db-setup/testDb";
+import { emptyTestSchema } from "./db-setup/emptyTestSchema";
 
 const SECRET = "s".repeat(40);
 const start = (platform: "web" | "app", now?: Date) => startRun(platform, undefined, SECRET, now);
 const minutes = (count: number) => new Date(Date.now() + count * 60_000);
-
-const emptyTestSchema = async () => {
-  assertTestDatabase();
-  await prisma.$executeRawUnsafe(
-    "TRUNCATE TABLE testschema.code_result, testschema.platform_run, testschema.test_fixture, testschema.test_run RESTART IDENTITY CASCADE"
-  );
-};
 
 beforeEach(emptyTestSchema);
 afterAll(async () => {
@@ -95,6 +95,7 @@ describe("finish, block and the 10-minute rule", () => {
       runNo: 1,
       status: "open",
       platformStatus: "finished",
+      finalResult: "pending",
     });
     expect((await start("app")).runNo).toBe(1);
   });
@@ -147,7 +148,8 @@ describe("finish, block and the 10-minute rule", () => {
   it("a report that comes too late is refused (409), and the blocked state is saved", async () => {
     await start("web");
     await expect(reportRun(1, "web", "finish", minutes(11))).rejects.toMatchObject({ status: 409 });
-    expect((await prisma.testRun.findUnique({ where: { runNo: 1 } }))!.status).toBe("blocked");
+    expect((await prisma.runProgress.findFirstOrThrow()).status).toBe("blocked");
+    expect((await prisma.webTestReport.findFirstOrThrow()).result).toBe("blocked");
   });
 
   it("refuses a report of a platform that did not start the number (404) or has ended it (409)", async () => {
@@ -160,58 +162,108 @@ describe("finish, block and the 10-minute rule", () => {
 });
 
 describe("fixture values", () => {
-  it("rules added later give an open number only the missing values", async () => {
+  it("one number is one row of values and three people, and every test gets the same three", async () => {
+    const { fixtures } = await start("web");
+    expect(await prisma.testFixture.count()).toBe(1);
+    const people = await prisma.testFixturePerson.findMany({ orderBy: { person: "asc" } });
+    expect(people.map(({ person }) => person)).toEqual(["A", "B", "C"]);
+
+    for (const [testCase, rule] of Object.entries(FIXTURE_RULES)) {
+      for (const row of people) {
+        const has = rule.people.includes(row.person);
+        const of = (item: string) => fixtures[testCase][`${row.person}.${item}`];
+        expect(of("firstName"), testCase).toBe(has ? row.firstName : undefined);
+        expect(of("phoneNumber"), testCase).toBe(has ? row.phoneNumber : undefined);
+        expect(of("partition.accountLength"), testCase).toBe(
+          has ? String(row.partitionAccountLength) : undefined
+        );
+      }
+    }
+  });
+
+  it("every test gets its own values, and no value column is left without a test", async () => {
+    const { fixtures } = await start("web");
+    const stored = await prisma.testFixture.findFirstOrThrow();
+    const asked = Object.entries(FIXTURE_RULES).flatMap(([testCase, rule]) =>
+      Object.entries(rule.values ?? {}).map(([item, column]) => {
+        expect(fixtures[testCase][item], `${testCase}/${item}`).toBe(String(stored[column]));
+        return column;
+      })
+    );
+    expect(asked.sort()).toEqual(Object.keys(makeFixtureValues()).sort());
+  });
+
+  it("an open number gets only the values and people it does not have", async () => {
     const web = await start("web");
-    await prisma.testFixture.delete({
-      where: {
-        runNo_testCase_item: { runNo: 1, testCase: "transfer", item: "cycleDollars" },
-      },
-    });
+    await prisma.testFixture.update({ where: { runNo: 1 }, data: { transferCycleDollars: null } });
+    await prisma.testFixturePerson.delete({ where: { runNo_person: { runNo: 1, person: "C" } } });
     const app = await start("app");
     expect(Number(app.fixtures.transfer.cycleDollars)).toBeGreaterThan(0);
+    expect(app.fixtures.transfer["C.firstName"]).not.toBeUndefined();
     expect(app.fixtures.transfer["A.firstName"]).toBe(web.fixtures.transfer["A.firstName"]);
+    expect(app.fixtures["transaction-detail"].comment).toBe(
+      web.fixtures["transaction-detail"].comment
+    );
   });
 
   it("every value fits its partition and the rules of the app (numbers 1 to 108)", () => {
     const korean = /^[가-힣]+$/;
     for (let runNo = 1; runNo <= 108; runNo += 1) {
-      const values: Record<string, string> = {};
-      for (const row of makeFixtureRows(runNo)) values[`${row.testCase}/${row.item}`] = row.value;
+      for (const row of makeFixturePeople(runNo)) {
+        const partition = partitionsOf(runNo, row.person);
+        expect(row.partitionUsername).toBe(partition.username);
+        expect(row.partitionName).toBe(partition.name);
+        expect(row.partitionPhone).toBe(partition.phone);
+        expect(row.partitionAccountLength).toBe(partition.accountLength);
 
-      for (const [testCase, rule] of Object.entries(FIXTURE_RULES)) {
-        for (const person of rule.people) {
-          const value = (name: string) => values[`${testCase}/${person}.${name}`];
-          const partition = partitionsOf(runNo, person);
+        const base = row.usernameBase;
+        expect(base).toMatch(/[^0-9]$/); // digits follow
+        if (partition.username === "korean") expect(base).toMatch(korean);
+        if (partition.username === "english-digits") expect(base).toMatch(/^[a-z][0-9]{2}[a-z]+$/);
+        if (partition.username === "mixed") expect(base).toMatch(/^[가-힣]+[0-9][a-z]+$/);
 
-          const base = value("usernameBase");
-          expect(base).toMatch(/[^0-9]$/); // the run number follows
-          if (partition.username === "korean") expect(base).toMatch(korean);
-          if (partition.username === "english-digits")
-            expect(base).toMatch(/^[a-z][0-9]{2}[a-z]+$/);
-          if (partition.username === "mixed") expect(base).toMatch(/^[가-힣]+[0-9][a-z]+$/);
-
-          const [min, max] = { one: [1, 1], usual: [2, 6], long: [20, 30] }[partition.name];
-          for (const name of [value("firstName"), value("lastName")]) {
-            expect(name.length).toBeGreaterThanOrEqual(min);
-            expect(name.length).toBeLessThanOrEqual(max);
-          }
-
-          expect(isValidPhoneNumber(value("phoneNumber")), value("phoneNumber")).toBe(true);
-          const phoneStart = { mobile: "010-", international: "+82 ", area: "(02) " };
-          expect(value("phoneNumber").startsWith(phoneStart[partition.phone])).toBe(true);
-
-          expect(isValidAccountNumber(value("accountNumber"))).toBe(true);
-          expect(value("accountNumber")).toHaveLength(partition.accountLength);
+        const [min, max] = { one: [1, 1], usual: [2, 6], long: [20, 30] }[partition.name];
+        for (const name of [row.firstName, row.lastName]) {
+          expect(name.length).toBeGreaterThanOrEqual(min);
+          expect(name.length).toBeLessThanOrEqual(max);
         }
+
+        expect(isValidPhoneNumber(row.phoneNumber), row.phoneNumber).toBe(true);
+        const phoneStart = { mobile: "010-", international: "+82 ", area: "(02) " };
+        expect(row.phoneNumber.startsWith(phoneStart[partition.phone])).toBe(true);
+
+        expect(isValidAccountNumber(row.accountNumber)).toBe(true);
+        expect(row.accountNumber).toHaveLength(partition.accountLength);
       }
     }
   });
 
-  it("the usernames of one number never repeat", () => {
-    for (let runNo = 1; runNo <= 50; runNo += 1) {
-      const bases = makeFixtureRows(runNo).filter((row) => row.item.endsWith(".usernameBase"));
-      expect(new Set(bases.map((row) => row.value)).size).toBe(bases.length);
+  it("no username of one number is a part of another one (the search finds parts)", () => {
+    for (let runNo = 1; runNo <= 120; runNo += 1) {
+      const people = makeFixturePeople(runNo);
+      const usernames = Object.entries(FIXTURE_RULES).flatMap(([testCase, rule]) =>
+        people
+          .filter(({ person }) => rule.people.includes(person))
+          .flatMap(({ usernameBase }) =>
+            (["web", "app"] as const).map((platform) =>
+              usernameOf(usernameBase, testCase, runNo, platform)
+            )
+          )
+      );
+      for (const one of usernames) {
+        expect(usernames.filter((other) => other.includes(one))).toEqual([one]);
+      }
     }
+  });
+
+  it("every test has its own code: two digits, and none only for transfer", () => {
+    const codes = Object.entries(FIXTURE_RULES).map(([testCase, { code }]) => {
+      expect(code, testCase).toMatch(testCase === "transfer" ? /^$/ : /^[0-9]{2}$/);
+      return code;
+    });
+    expect(new Set(codes).size).toBe(codes.length);
+    expect(usernameOf("o34ciat", "transfer", 6, "web")).toBe("o34ciat6w");
+    expect(usernameOf("o34ciat", "transaction-detail", 6, "app")).toBe("o34ciat046a");
   });
 
   it("every run has all three-way partitions, and A meets every partition in any 5 numbers in a row", () => {
@@ -263,10 +315,9 @@ describe("the secret", () => {
     const { fixtures } = await start("web");
     const password = fixtures.transfer["A.password"];
     expect(password).toHaveLength(24);
-    const stored = await prisma.testFixture.findMany();
-    expect(stored.some((row) => row.value === password || row.item.includes("password"))).toBe(
-      false
-    );
+    const stored = JSON.stringify(await prisma.testFixture.findMany({ include: { people: true } }));
+    expect(stored).not.toContain(password);
+    expect(stored.toLowerCase()).not.toContain("password");
   });
 });
 
@@ -328,7 +379,7 @@ describe("routes", () => {
     for (const [method, path, data] of PROTECTED) {
       expect((await call(method, path, data)).status, `${method} ${path}`).toBe(404);
     }
-    expect(await prisma.testRun.count()).toBe(0);
+    expect(await prisma.testFixture.count()).toBe(0);
   });
 
   it("a missing or wrong secret is refused (401) and changes nothing", async () => {
@@ -337,7 +388,7 @@ describe("routes", () => {
         expect((await call(method, path, data, secret)).status, `${method} ${path}`).toBe(401);
       }
     }
-    expect(await prisma.testRun.count()).toBe(0);
+    expect(await prisma.testFixture.count()).toBe(0);
   });
 
   it("start, join, signal, finish, list and read", async () => {
