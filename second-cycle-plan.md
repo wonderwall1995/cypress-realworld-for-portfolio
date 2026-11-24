@@ -61,9 +61,9 @@ The second cycle uses **values only**. Until section 9 is done, do not say that 
 | `pnpm test:run` (starter, all specs, finisher) | Built. It does not retry, and it does not accept `--reporter`. |
 | `runFixtures(label)` in `tests/e2e/fixture/run-fixtures.ts` | Built. It reads `TEST_RUN_FIXTURES`. |
 | `GET /api/testRuns/:runNo/fixtures` (secret needed) | Built. It returns stored values and makes no new ones. |
-| Specs that use the values of a number | **003 only.** All others use random values. |
+| Specs that use the values of a number | 000 to 009 (since 2026-11-24). Numbers before 8: 003 only. |
 | Labels in the server rules (`test-fixture-rules.ts`) | `auth`, `bank-account`, `deposit`, `transfer`, `transaction-detail`, `transaction-filter`, `user-settings`, `transaction-visibility`, `notifications`, `login-logout`. |
-| `web_test_record`, `app_test_record`, `web_test_report`, `app_test_report`, view `final_test_report` | Built (they replaced `code_result` on 2026-11-24). `pnpm test:run` stores every test and the tools it called, and one report at the end. The commit is not stored yet. |
+| `web_test_record`, `app_test_record`, `web_test_report`, `app_test_report`, view `final_test_report` | Built (they replaced `code_result` on 2026-11-24). `pnpm test:run` stores every test and the tools it called, and one report at the end. The commit of the tests and the versions are stored (guide 3.18). |
 | Demo in the browser | Random values. It does not read a run number. |
 
 Two facts to keep in mind:

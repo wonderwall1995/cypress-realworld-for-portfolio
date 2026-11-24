@@ -78,7 +78,7 @@ LLM이 다른 LLM에게 넘기는 설계 문서다. Web(Playwright) 쪽에서 Us
 - 사람만 필요한 새 시험은 DB를 바꾸지 않는다. 새 금액이나 글이 필요하면 `test_fixture`에 칸을 더한다(마이그레이션).
 - 만드는 규칙은 서버의 목록 하나에 둔다(이름표별 항목과 규칙). 이 목록이 Web과 App 사이의 약속이다. 새 테스트를 만들 때 필요한 항목을 이 목록에 더한다(User가 고른 "필요할 때 더하는" 방식).
 - 이미 열린 번호에 없는 항목을 요청하면, 서버가 그때 만들어 저장한다. 뒤에 오는 플랫폼도 같은 값을 받는다.
-- 지금(2026-11-24) 번호의 값을 쓰는 범위가 다르다. **Web은 003(`transfer`)만** 쓰고 나머지 spec은 자기 난수를 쓴다. **App은 000~009 모두 사람의 값을 번호에서 받고**, 금액은 003, 004, 005만 받는다(모바일 세션의 보고). 그래서 같은 번호라도 003 말고는 두 플랫폼의 입력이 같지 않다.
+- Web과 App 모두 000~009에서 사람의 값을 번호에서 받고, 금액과 댓글은 003, 004, 005만 받는다(2026-11-24). 나머지 금액과 001, 002의 계좌 값은 각자의 난수다. 009는 비밀번호와 계좌 값을 스스로 만든다.
 - 목록에 없는 항목을 요청하면 서버는 분명한 오류를 낸다.
 
 ### 3.8 테스트 독립
@@ -138,7 +138,7 @@ LLM이 다른 LLM에게 넘기는 설계 문서다. Web(Playwright) 쪽에서 Us
 
 | 요청 | 하는 일 |
 |---|---|
-| POST / { platform, device? } | 번호를 열거나(201) 합류하고(200) 값을 받는다 |
+| POST / { platform, device?, code? } | 번호를 열거나(201) 합류하고(200) 값과 버전(`versions`)을 받는다. `code`는 3.18 |
 | POST /:runNo/signal, finish, block { platform } | 살아 있음, 끝까지 돌았음, 중간에 멈춤. 답에 `finalResult`가 있다 |
 | POST /:runNo/results | 시험 하나의 결과를 저장한다 (3.17) |
 | GET /:runNo/results | 그 번호에 저장된 결과 전부 |
@@ -204,7 +204,20 @@ POST /api/testRuns/5/results
 - 도구가 도구를 부르면 모두 그 시험의 자식으로 저장한다. 도구끼리의 관계는 저장하지 않는다.
 - **오류는 첫 줄만, 300자까지 저장한다.** DB 탭이 모든 테이블을 보여 주기 때문이다. 서버가 자르지만, 보내는 쪽도 비밀번호를 첫 줄에 넣지 않는다.
 - starter와 finisher, 사람이 멈춰서 끊긴 시험은 기록하지 않는다.
-- 어느 코드(커밋)로 돌았는지는 아직 저장하지 않는다.
+- 어느 코드로 돌았는지는 3.18에 따라 저장한다.
+
+### 3.18 버전 (2026-11-24)
+- 서버, Web 화면, App 빌드가 각각 자기 버전 줄을 가진다: **0.100, 0.101, 0.102 ...** (0.999 다음은 0.1000)
+- **소스 파일의 지문**이 바뀌면 다음 버전이 된다. 같은 지문이 다시 오면 그 버전을 그대로 쓴다. 사람이 올리지 않는다.
+- 앞자리(0)는 **User가 요청할 때만** 올린다(`test-version-db.ts`의 `VERSION_MAJOR`).
+- 지문은 git 없이 계산하고, 커밋하지 않은 변경도 구별한다. 문서와 시험 코드, 줄 끝의 차이는 지문에 들어가지 않는다.
+  - 서버: `apps/api`의 소스와 prisma, `packages/shared/src`. 서버가 켜질 때 한 번 계산한다.
+  - Web 화면: `apps/web`의 소스와 `packages/shared/src`. starter가 계산한다.
+  - App: `pnpm build`가 앱 소스로 계산해 Android 버전 이름에 붙이고, 시험을 시작할 때 기기에서 읽는다.
+- 번호를 열 때 `code: { testCommit, testDirty, target }`을 보낸다. 시험 코드의 커밋, 커밋하지 않은 변경이 있는지, Web 화면 또는 App의 지문이다. 모두 없어도 된다(빈칸).
+- 서버 버전은 시작과 끝에 저장한다. 실행 중에 서버가 바뀐 것을 안다.
+- `final_test_report.same_server`: Web과 App의 시작과 끝, 네 번의 서버 버전이 모두 같으면 true. 두 플랫폼을 비교할 때는 true인 번호만 쓴다. 버전이 다르다고 합류를 막지는 않는다.
+- 번호 1~6은 빈칸이다. 버전이 다르다는 것은 알려 주지만, 결과가 달라진 원인은 알려 주지 않는다.
 
 ## 4. 테이블 (testschema) (2026-11-24 다시 만듦)
 
@@ -213,12 +226,13 @@ Prisma 설계 파일: `apps/api/prisma/schema.prisma`. 지금 모양을 만든 D
 ```
 test_fixture (번호마다 1줄, 모두의 상위)
  ├─ test_fixture_person   번호마다 3줄 (A, B, C)
- ├─ run_progress          번호 + 플랫폼마다 1줄 (내부용)
+ ├─ run_progress          번호 + 플랫폼마다 1줄 (내부용, 버전)
  ├─ web_test_record       기록. 시험과 도구마다 1줄
  ├─ app_test_record       같은 모양
  ├─ web_test_report       완료 보고. 번호마다 1줄
  └─ app_test_report       같은 모양
-final_test_report (뷰)     두 보고와 최종 결과를 번호마다 1줄로 보여 준다
+test_version              버전마다 1줄 (3.18)
+final_test_report (뷰)     두 보고, 최종 결과, 버전을 번호마다 1줄로 보여 준다
 ```
 
 `test_run`, `platform_run`, `code_result`는 없다. 이름표와 항목을 줄로 쌓던 옛 `test_fixture`도 없다.
@@ -250,8 +264,19 @@ final_test_report (뷰)     두 보고와 최종 결과를 번호마다 1줄로 
 | status | `running` / `finished` / `blocked` | |
 | device | text, 빈칸 가능 | 예: `chrome` |
 | started_at, last_signal_at, finished_at | timestamp | 10분 규칙에 쓴다 |
+| server_version, server_version_end | text, 빈칸 가능 | 시작과 끝의 서버 버전 |
+| target_version | text, 빈칸 가능 | Web 화면 또는 App 빌드의 버전 |
+| test_commit, test_dirty | text, boolean, 빈칸 가능 | 시험 코드의 커밋, 커밋하지 않은 변경이 있었는지 |
 
 번호의 상태(`open` / `blocked`)는 저장하지 않는다. 한 플랫폼이라도 blocked이면 그 번호가 blocked다.
+
+### test_version: 버전
+| 칸 | 형 | 뜻 |
+|---|---|---|
+| part, version | `server`/`web`/`app`, text, 함께 PK | 예: `server` 0.100 |
+| major, minor | int | 0, 100 |
+| fingerprint | text | 소스 파일의 지문 16자. (part, major, fingerprint)는 고유하다 |
+| first_seen_at | timestamp | 처음 돈 때 |
 
 ### web_test_record, app_test_record: 기록
 | 칸 | 형 | 뜻 |
@@ -283,23 +308,24 @@ final_test_report (뷰)     두 보고와 최종 결과를 번호마다 1줄로 
 - 재시도한 시험은 마지막 시도만 센다. `skipped`는 세지 않는다. `fixture` 종류는 칸이 없다(기록에는 남는다).
 
 ### final_test_report: 최종 결과 (뷰)
-- 칸: run_no, created_at, web_spec_ok, web_common_ok, web_api_ok, web_result, app_(같음), final_result, decided_at.
+- 칸: run_no, created_at, web_spec_ok, web_common_ok, web_api_ok, web_result, app_(같음), final_result, decided_at, same_server, 그리고 web_과 app_의 version, server_version, server_version_end, test_commit, test_dirty.
 - `final_result`: 한쪽이라도 멈췄으면 `blocked`, 한쪽이 끝나지 않았으면 `pending`, 둘 다 `passed`면 `passed`, 아니면 `failed`.
 - 뷰라서 두 보고와 어긋날 수 없다. Prisma 설계 파일에는 없고, DB 탭에도 나오지 않는다.
-- 보고 테이블의 칸을 바꾸는 마이그레이션은 이 뷰를 먼저 지우고 다시 만들어야 한다.
+- 보고 테이블과 run_progress의 칸을 바꾸는 마이그레이션은 이 뷰를 먼저 지우고 다시 만들어야 한다.
 - 한쪽만 돈 번호는 새 번호가 열리면 닫히므로 `pending`으로 남는다. 통계에서 `blocked`와 `pending`을 뺀다.
 
 ## 5. 구현 상태 (2026-11-24)
 
 | 항목 | 상태 |
 |---|---|
-| testschema 테이블 7개와 뷰 1개 (2026-11-24 다시 만듦) | 만듦. 로컬 개발 DB에 적용함. 1~5번을 옮겼다 |
+| testschema 테이블 8개와 뷰 1개 (2026-11-24 다시 만듦) | 만듦. 로컬 개발 DB에 적용함. 1~5번을 옮겼다 |
 | EC2 서버 DB에 적용 | 안 함 |
 | 서버 API (3.15) | 만듦. app.ts는 Prisma client가 TestFixturePerson을 알 때만 연결한다. 옛 client로 도는 서버는 404로 답한다 (prisma generate 뒤 다시 켜야 한다) |
 | Fixture 규칙 목록 (서버) | `apps/api/src/test-fixture-rules.ts`. 이름표는 auth, bank-account, deposit, transfer, transaction-detail, transaction-filter, user-settings, transaction-visibility, notifications, login-logout |
 | `starter.spec.ts`, `finisher.spec.ts`, 기록기(`tests/test-run-reporter.ts`) | 만듦. 기록기는 결과와 멈춤을 보낸다 |
 | Chrome 하나로 정식 실행 (`pnpm test:run`) | 만듦. 전체 실행만 받는다 |
-| Web spec을 Fixture에 연결 | 003만 함 |
+| Web spec을 Fixture에 연결 | 000~009 모두 함 (2026-11-24) |
+| 버전 기록 (3.18) | 만듦 (2026-11-24). Web은 번호 7부터 |
 | 결과 기록(웹, 앱 따로), 완료 보고, 최종 결과 뷰, 못 보낸 기록의 재전송(3.5, 3.17) | 만듦 (2026-11-24). EC2에는 배포해야 한다 |
 | 시연이 최신 번호의 값을 읽기(3.10) | 안 함 |
 | App(Flutter) 쪽 기록기와 테스트 | 모바일 저장소에 있다. 000~009, `pnpm test:run`, 결과 기록까지 (모바일 커밋 8e75d14. 모바일 세션의 보고) |
@@ -319,7 +345,7 @@ final_test_report (뷰)     두 보고와 최종 결과를 번호마다 1줄로 
 ## 7. 남은 결정
 
 - 2행정(지난 번호의 값으로 다시 돌리기)에서 아이디가 겹치지 않게 하는 방법
-- 결과에 코드(커밋, 커밋하지 않은 변경)와 시험 대상 환경을 어떻게 적을지 (칸을 더하는 마이그레이션이 필요하다)
+- 시험 대상 환경(내 PC, EC2)을 어떻게 적을지
 - EC2의 번호를 쓰면서 내 PC의 앱을 시험하면 지난 유저가 내 PC에 없다. 정식 실행의 앱도 EC2로 할지
 - LLMS.md의 독립 규칙과 리그레션(지난 실행에 기댄다)의 관계
 - 비밀번호의 구간 (지금은 숫자 4자리 하나). 화면은 4자 이상을 요구하지만 서버는 길이를 검사하지 않는다.
