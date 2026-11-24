@@ -83,10 +83,11 @@ describe("Notifications (PostgreSQL)", () => {
   it("marks a notification as read for its owner only", async () => {
     const n = await createPaymentNotification("u1", "t1", PaymentNotificationStatus.received);
 
-    await updateNotificationById("u2", n.id, { isRead: true }); // not the owner
+    expect(await updateNotificationById("u2", n.id, { isRead: true })).toBe(false); // not the owner
+    expect(await updateNotificationById("u1", "none", { isRead: true })).toBe(false);
     expect((await getNotificationById(n.id))!.isRead).toBe(false);
 
-    await updateNotificationById("u1", n.id, { isRead: true });
+    expect(await updateNotificationById("u1", n.id, { isRead: true })).toBe(true);
     expect((await getNotificationById(n.id))!.isRead).toBe(true);
     expect(await getUnreadNotificationsByUserId("u1")).toHaveLength(0);
   });

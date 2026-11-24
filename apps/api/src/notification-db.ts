@@ -152,14 +152,16 @@ export const createNotifications = async (
 };
 
 // Only the owner can change a notification, and only isRead can be edited.
+// Returns false when there is no such notification of this member.
 export const updateNotificationById = async (
   userId: string,
   notificationId: string,
   edits: { isRead?: boolean }
-): Promise<void> => {
-  if (edits.isRead === undefined) return;
-  await prisma.notification.updateMany({
+): Promise<boolean> => {
+  if (edits.isRead === undefined) return true;
+  const { count } = await prisma.notification.updateMany({
     where: { id: notificationId, userId },
     data: { isRead: edits.isRead, modifiedAt: new Date() },
   });
+  return count > 0;
 };

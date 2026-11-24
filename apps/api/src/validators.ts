@@ -157,7 +157,11 @@ export const isTransactionQSValidator = [
 export const isTransactionPayloadValidator = [
   // only transfers (payments) are created; the old request -> notice -> accept flow is gone
   body("transactionType").isIn(["payment"]).trim(),
-  body("privacyLevel").optional().isIn(DefaultPrivacyLevelValues).trim(),
+  // not the old "contacts": there is no friends list any more
+  body("privacyLevel")
+    .optional()
+    .isIn([DefaultPrivacyLevel.public, DefaultPrivacyLevel.private])
+    .trim(),
   body("source").optional().isString().trim(),
   body("myAccountId").isString().trim().notEmpty(),
   body("otherAccountId").optional().isString().trim(),

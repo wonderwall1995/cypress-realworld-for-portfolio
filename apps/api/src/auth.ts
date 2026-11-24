@@ -45,6 +45,14 @@ passport.deserializeUser(async function (id: string, done) {
 });
 
 // authentication routes
+// passport refuses missing values itself; a number or an object must not reach the database or bcrypt
+router.post("/login", (req, res, next) => {
+  const values = [req.body?.username, req.body?.password];
+  if (values.some((value) => value !== undefined && typeof value !== "string")) {
+    return res.status(400).json({ error: "username and password must be text" });
+  }
+  next();
+});
 router.post("/login", passport.authenticate("local"), (req: Request, res: Response): void => {
   if (req.body.remember) {
     req.session!.cookie.maxAge = 24 * 60 * 60 * 1000 * 30; // Expire in 30 days

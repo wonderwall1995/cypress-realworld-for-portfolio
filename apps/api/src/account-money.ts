@@ -4,9 +4,21 @@
  * Everything here runs inside the caller's database transaction.
  */
 import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
 import prisma, { DbClient } from "./prisma";
 import { HttpError } from "./http-error";
 import { MAX_BALANCE_CENTS } from "@rwa/shared";
+
+/**
+ * Holds these members until the end of the transaction, so requests that arrive at the same moment run one after
+ * another for the same member. Every change of bank accounts (make, delete, deposit, withdraw, transfer) calls this
+ * FIRST, before it reads an account. Otherwise an account could be deleted while money goes into it, or the sum of two
+ * accounts could be written from an old reading. Always in id order, so two transfers cannot wait for each other.
+ */
+export const lockUsers = (tx: DbClient, userIds: string[]) =>
+  tx.$queryRaw`
+    SELECT "id" FROM "users" WHERE "id" IN (${Prisma.join([...new Set(userIds)])})
+    ORDER BY "id" FOR NO KEY UPDATE`;
 
 /** The account must exist, belong to `ownerId` and not be deleted. Otherwise an HttpError. */
 export const loadUsableAccount = async (

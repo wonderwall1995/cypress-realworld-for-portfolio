@@ -16,7 +16,7 @@ import shortid from "shortid";
 import { v4 } from "uuid";
 import prisma from "./prisma";
 import { HttpError } from "./http-error";
-import { syncUserBalance } from "./account-money";
+import { lockUsers, syncUserBalance } from "./account-money";
 import {
   applyBankTransferStatusChange,
   BankTransferWithStatus,
@@ -45,6 +45,7 @@ export const moveMoney = (userId: string, input: MoveMoneyInput): Promise<BankTr
       throw new HttpError(400, "type must be deposit or withdrawal");
     }
 
+    await lockUsers(tx, [userId]);
     const account = await tx.bankAccount.findUnique({ where: { id: input.bankAccountId } });
     if (!account) throw new HttpError(404, "bank account not found");
     if (account.userId !== userId) throw new HttpError(403, "this is not your bank account");

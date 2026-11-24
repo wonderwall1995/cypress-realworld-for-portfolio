@@ -7,7 +7,7 @@ import express from "express";
 import prisma from "./prisma";
 import { ensureAuthenticated } from "./helpers";
 import { asyncHandler } from "./async-handler";
-import { syncUserBalance } from "./account-money";
+import { lockUsers, syncUserBalance } from "./account-money";
 
 const router = express.Router();
 
@@ -32,6 +32,7 @@ router.delete(
   asyncHandler(async (req, res) => {
     const userId = req.user?.id!;
     const deleted = await prisma.$transaction(async (tx) => {
+      await lockUsers(tx, [userId]);
       const result = await tx.bankAccount.deleteMany({ where: { userId } });
       await syncUserBalance(tx, userId);
       return result.count;

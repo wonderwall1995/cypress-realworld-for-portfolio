@@ -15,7 +15,7 @@ import {
 import { asyncHandler } from "./async-handler";
 import { omitPassword, toOtherUserResponse } from "./user-response";
 import { HttpError } from "./http-error";
-import { passwordMatches } from "./account-money";
+import { checkPasswordAgain } from "./password-attempts";
 import { User } from "@rwa/shared";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
 import {
@@ -29,14 +29,12 @@ import {
 const router = express.Router();
 
 //POST /users/verifyPassword - scoped-user: is this the signed-in member's own password?
-// Used by the "are you sure?" step before money is moved. 204 yes, 403 no.
+// Used by the "are you sure?" step before money is moved. 204 yes, 403 no, 429 too many wrong ones.
 router.post(
   "/verifyPassword",
   ensureAuthenticated,
   asyncHandler(async (req, res) => {
-    if (!(await passwordMatches(req.user?.id!, req.body?.password))) {
-      throw new HttpError(403, "the password is not correct");
-    }
+    await checkPasswordAgain(req.user?.id!, req.body?.password);
     res.sendStatus(204);
   })
 );

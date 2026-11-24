@@ -7,7 +7,8 @@
 import bcrypt from "bcryptjs";
 import shortid from "shortid";
 import { v4 } from "uuid";
-import type { User as UserRow } from "@prisma/client";
+import { Prisma, type User as UserRow } from "@prisma/client";
+import { HttpError } from "./http-error";
 import prisma from "./prisma";
 import { User } from "@rwa/shared";
 import { formatFullName } from "@rwa/shared";
@@ -44,9 +45,16 @@ export const getUserByUsername = async (username: string): Promise<User | undefi
   return row ? toUser(row) : undefined;
 };
 
+// P2002: the database refused a second row with the same value. Only the user name can be taken by someone else.
+const isTakenUsername = (error: unknown) =>
+  error instanceof Prisma.PrismaClientKnownRequestError &&
+  error.code === "P2002" &&
+  String(error.meta?.target).includes("username");
+
+/** Answers 409 when the user name is taken, also when two sign-ups race. */
 export const createUser = async (userDetails: Partial<User>): Promise<User> => {
   const now = new Date();
-  const row = await prisma.user.create({
+  const saved = prisma.user.create({
     data: {
       id: shortid(),
       uuid: v4(),
@@ -62,6 +70,10 @@ export const createUser = async (userDetails: Partial<User>): Promise<User> => {
       createdAt: now,
       modifiedAt: now,
     },
+  });
+  const row = await saved.catch((error) => {
+    if (isTakenUsername(error)) throw new HttpError(409, "this username is already taken");
+    throw error;
   });
   return toUser(row);
 };

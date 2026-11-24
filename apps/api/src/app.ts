@@ -47,6 +47,7 @@ const schemaWithResolvers = addResolversToSchema({
 });
 
 const app = express();
+app.set("trust proxy", 1); // Nginx in front tells whether the visitor came over HTTPS
 
 app.use(cors(corsOption));
 app.use(logger("dev"));
@@ -59,6 +60,8 @@ app.use(
     resave: false,
     saveUninitialized: false,
     unset: "destroy",
+    // "auto": the cookie is Secure when the visitor came over HTTPS (and still works over HTTP on a developer's PC)
+    cookie: { httpOnly: true, sameSite: "lax", secure: "auto" },
   })
 );
 app.use(passport.initialize());
@@ -140,7 +143,14 @@ app.use((err: any, _req: express.Request, res: express.Response, next: express.N
   if (err instanceof HttpError) {
     return res.status(err.status).json({ error: err.message });
   }
-  return next(err);
+  if (res.headersSent) return next(err);
+  // an error that a library marked as the sender's fault (for example broken JSON) keeps its status;
+  // anything else is ours: it goes to the log, never to the sender
+  const theirs = err?.status >= 400 && err?.status < 500;
+  if (!theirs) console.error(err);
+  return theirs
+    ? res.status(err.status).json({ error: err.message })
+    : res.status(500).json({ error: "internal server error" });
 });
 
 getBackendPort().then((port) => {
