@@ -1,9 +1,9 @@
 import React from "react";
 import { Tabs, Tab, TabsActions } from "@mui/material";
-import { Link, useRouteMatch } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 export default function TransactionNavTabs() {
-  const match = useRouteMatch();
+  const { pathname } = useLocation();
 
   // Route Lookup for tabs
   const navUrls: any = {
@@ -12,12 +12,8 @@ export default function TransactionNavTabs() {
     "/personal": 1,
   };
 
-  // Set selected tab based on url
-  const [value, setValue] = React.useState(navUrls[match.url]);
-
-  const handleChange = (event: React.SyntheticEvent<{}>, newValue: number) => {
-    setValue(newValue);
-  };
+  // the selected tab is the one of the address
+  const value = navUrls[pathname] ?? false;
 
   // The underline under the selected tab is measured only when the window is resized.
   // Hiding or showing the sidebar changes the width of this area without a window resize,
@@ -37,7 +33,6 @@ export default function TransactionNavTabs() {
       ref={tabsRoot}
       action={tabsActions}
       value={value}
-      onChange={handleChange}
       indicatorColor="secondary"
       textColor="inherit"
       centered

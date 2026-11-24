@@ -3,7 +3,7 @@ import { styled } from "@mui/material/styles";
 import { useActor } from "@xstate/react";
 import { Interpreter } from "xstate";
 import { Link } from "react-router-dom";
-import { Button, Container, CssBaseline, TextField, Grid, Box, Typography } from "@mui/material";
+import { Alert, Button, Container, CssBaseline, TextField, Grid, Box, Typography } from "@mui/material";
 import { Formik, Form, Field, FieldProps } from "formik";
 import { string, object, ref } from "yup";
 
@@ -61,7 +61,8 @@ export interface Props {
 }
 
 const SignUpForm: React.FC<Props> = ({ authService }) => {
-  const [, sendAuth] = useActor(authService);
+  const [authState, sendAuth] = useActor(authService);
+  const pending = authState.matches("signup");
   const initialValues: SignUpPayload & { confirmPassword: string } = {
     firstName: "",
     lastName: "",
@@ -84,16 +85,19 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
         <Typography component="h1" variant="h5" data-testid="signup-title">
           회원가입
         </Typography>
+        {authState.context?.signUpMessage && (
+          <Alert data-testid="signup-error" severity="error" sx={{ width: "100%", marginTop: 1 }}>
+            {authState.context.signUpMessage}
+          </Alert>
+        )}
         <Formik
           initialValues={initialValues}
           validationSchema={validationSchema}
-          onSubmit={async (values, { setSubmitting, setFieldValue }) => {
-            setSubmitting(true);
-
+          onSubmit={async (values) => {
             signUpPending(values);
           }}
         >
-          {({ isValid, isSubmitting, dirty }) => (
+          {({ isValid }) => (
             <Form className={classes.form}>
               <Field name="lastName">
                 {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
@@ -216,7 +220,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                 color="primary"
                 className={classes.submit}
                 data-testid="signup-submit"
-                disabled={!isValid || isSubmitting}
+                disabled={!isValid || pending}
               >
                 회원가입
               </Button>

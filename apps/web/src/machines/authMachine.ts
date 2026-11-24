@@ -35,6 +35,7 @@ export type AuthMachineEvents =
 export interface AuthMachineContext {
   user?: User;
   message?: string;
+  signUpMessage?: string; // why the last sign-up was refused (the sign-in screen has its own message)
 }
 
 export const authMachine = Machine<AuthMachineContext, AuthMachineSchema, AuthMachineEvents>(
@@ -58,10 +59,11 @@ export const authMachine = Machine<AuthMachineContext, AuthMachineSchema, AuthMa
         },
       },
       signup: {
+        entry: "clearSignUpMessage",
         invoke: {
           src: "performSignup",
           onDone: { target: "unauthorized", actions: "onSuccess" },
-          onError: { target: "unauthorized", actions: "onError" },
+          onError: { target: "unauthorized", actions: "onSignUpError" },
         },
       },
       loading: {
@@ -149,7 +151,13 @@ export const authMachine = Machine<AuthMachineContext, AuthMachineSchema, AuthMa
     services: {
       performSignup: async (ctx, event) => {
         const payload = omit("type", event);
-        const resp = await httpClient.post(`${API_BASE}/users`, payload);
+        const resp = await httpClient.post(`${API_BASE}/users`, payload).catch((error) => {
+          throw new Error(
+            error.response?.status === 409
+              ? "이미 사용 중인 사용자 ID입니다"
+              : "가입하지 못했습니다. 잠시 뒤 다시 시도하세요"
+          );
+        });
         history.push("/signin");
         return resp.data;
       },
@@ -253,6 +261,12 @@ export const authMachine = Machine<AuthMachineContext, AuthMachineSchema, AuthMa
       })),
       onError: assign((ctx: any, event: any) => ({
         message: event.data.message,
+      })),
+      onSignUpError: assign((ctx: any, event: any) => ({
+        signUpMessage: event.data.message,
+      })),
+      clearSignUpMessage: assign((ctx: any) => ({
+        signUpMessage: undefined,
       })),
     },
   }

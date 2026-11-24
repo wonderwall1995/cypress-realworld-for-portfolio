@@ -75,7 +75,8 @@ const App: React.FC = () => {
           bankAccountsService={bankAccountsService}
         />
       )}
-      {authState.matches("unauthorized") && (
+      {/* also while a sign-up is on its way: a refused one must not empty the form */}
+      {(authState.matches("unauthorized") || authState.matches("signup")) && (
         <Switch>
           <Route exact path="/signup">
             <SignUpForm authService={authService} />
