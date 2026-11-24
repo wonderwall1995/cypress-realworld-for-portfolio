@@ -60,9 +60,12 @@ export const dataMachine = (machineId: string) =>
             onDone: { target: "success" },
             onError: { target: "failure", actions: "setMessage" },
           },
-          // a press while the list is being read again must not be lost: it is saved first, then the list is read
           on: {
+            // a press while the list is being read again must not be lost: it is saved first, then the list is read
             UPDATE: "updating",
+            // a new question (for example another filter) while the answer before it is on its way: that answer is
+            // dropped and the new one is read. Otherwise the list would stay on the older filter.
+            FETCH: { target: "loading", cond: "isNewList" },
           },
         },
         updating: {
@@ -134,6 +137,8 @@ export const dataMachine = (machineId: string) =>
         })),
       },
       guards: {
+        // the next page of a list belongs to the list that is there: it does not replace a reading that is on its way
+        isNewList: (ctx: DataContext, event: any) => !(event.page > 1),
         hasData: (ctx: DataContext, event) => !!ctx.results && ctx.results.length > 0,
       },
     }

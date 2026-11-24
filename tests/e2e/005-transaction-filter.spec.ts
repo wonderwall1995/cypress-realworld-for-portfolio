@@ -282,6 +282,24 @@ test("5. 거래 목록 필터: 범위 안의 거래만 보이고, 잘못된 범�
   await page.getByTestId("transaction-list-filter-date-clear-button").click();
   await expectListOnScreen(everything);
 
+  // 10) 통신 중에 바꾼 필터: 앞의 답이 아직 오는 중에 필터를 또 바꿔도, 목록은 마지막 필터의 것이다
+  //     거래 목록의 통신을 붙잡아 두고 두 번 바꾼 뒤 푼다 (느린 서버에서 앞의 필터에 머물던 일이 있었다)
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/transactions**", async (route) => {
+    await held;
+    await route.continue();
+  });
+  await applyAmountFilter(page, "withdrawal", { min: "500", max: "600" }); // 해당 없음
+  await applyAmountFilter(page, "withdrawal", { min: "1", max: "100" }); // 작은 금액
+  release();
+  await expectListOnScreen([sentSmall]);
+  await page.unroute("**/api/transactions**");
+  await applyAmountFilter(page, "withdrawal", { min: "", max: "" });
+  await expectListOnScreen(everything);
+
   // 정리: 세 사람의 은행 계좌를 API로 완전히 지운다 (거래를 지우는 API는 없어서 거래 기록은 남는다)
   for (const who of [A, B, C]) {
     await loginWithApi(page, who.user);
