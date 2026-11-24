@@ -392,7 +392,7 @@ class LocatorExpectation {
     await beforeStep(where);
     let element = await this.locator.until(isVisible, "보이는");
     highlight(element);
-    const squeeze = (text: string) => text.replace(/s+/g, " ").trim();
+    const squeeze = (text: string) => text.replace(/\s+/g, " ").trim();
     const deadline = Date.now() + WAIT_LIMIT;
     while (squeeze(element.textContent ?? "") !== squeeze(expected)) {
       if (Date.now() > deadline) {
