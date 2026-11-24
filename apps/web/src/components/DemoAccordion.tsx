@@ -65,6 +65,10 @@ interface Props {
   api?: ApiExchange;
   /** every API request of this run: the API bar can show them again after they have passed */
   apis?: ApiExchange[];
+  /** only one test runs (부분 실행) */
+  single?: boolean;
+  /** tells which test the viewer picked and looks at now (the 시연 tab is open); undefined when there is none */
+  onChoose: (index: number | undefined) => void;
 }
 
 /**
@@ -76,7 +80,7 @@ interface Props {
  * - The arrow in the header folds it to a thin strip and unfolds it. Folding does not stop the demo.
  * - The tabs at the bottom switch between the test file and the shared files it uses.
  */
-export default function DemoAccordion({ current, next, state, index, activeFile, activeLine, error, api, apis }: Props) {
+export default function DemoAccordion({ current, next, state, index, activeFile, activeLine, error, api, apis, single, onChoose }: Props) {
   const [width, setWidth] = React.useState(() => Math.min(DEFAULT_WIDTH, maxWidth()));
   // The accordion is always on screen, so it can always be folded and unfolded (also when no demo runs).
   // It starts folded, so the first screen (sign in) keeps its full width until the demo starts.
@@ -96,15 +100,22 @@ export default function DemoAccordion({ current, next, state, index, activeFile,
       setFolded(false);
       setView("demo");
       setPinned(undefined);
+      if (!single) setChosen(undefined); // all tests run: the pick is over
     } else if (state === "idle" && before !== "idle") {
       setView("ide");
+      setPinned(undefined);
+      setChosen(undefined);
     }
-  }, [state]);
+  }, [state, single]);
 
   // Which test the "시연" tab shows. It follows the test that runs. A card ("테스트 별 코드 확인") can pick another one;
   // the pick ends when the run moves to another test.
   const [pinned, setPinned] = React.useState<number | undefined>();
   const [cardsOpen, setCardsOpen] = React.useState(false);
+  // The pick itself, kept also while its test runs alone. It counts only while the viewer looks at the 시연 tab.
+  const [chosen, setChosen] = React.useState<number | undefined>();
+  const chosenInView = folded || view !== "demo" ? undefined : chosen;
+  React.useEffect(() => onChoose(chosenInView), [onChoose, chosenInView]);
   React.useEffect(() => setPinned(undefined), [index]);
   const viewIndex = pinned ?? index;
   const viewed = demoQueue[viewIndex] ?? current;
@@ -292,6 +303,7 @@ export default function DemoAccordion({ current, next, state, index, activeFile,
             viewIndex={viewIndex}
             onPick={(at) => {
               setPinned(at === index ? undefined : at);
+              setChosen(at);
               setCardsOpen(false); // the picked card brings the code screen back
             }}
           />
@@ -373,9 +385,9 @@ export default function DemoAccordion({ current, next, state, index, activeFile,
                 </Typography>
               )}
             </Box>
-            {view === "demo" && current.files.length > 1 && (
+            {view === "demo" && viewed.files.length > 1 && (
               <Box sx={{ display: "flex", gap: 0.5, px: 1, pt: 1, flexWrap: "wrap" }}>
-                {current.files.map((file) => {
+                {viewed.files.map((file) => {
                   const active = file.path === shown.path;
                   const look = KIND_LOOK[file.kind];
                   return (
@@ -384,7 +396,7 @@ export default function DemoAccordion({ current, next, state, index, activeFile,
                       key={active ? `${file.path}#${changeId}` : file.path}
                       size="small"
                       disableElevation
-                      onClick={() => setPicked(current.files.indexOf(file))}
+                      onClick={() => setPicked(viewed.files.indexOf(file))}
                       title={file.path}
                       data-testid="demo-tab"
                       data-active={active}
@@ -425,7 +437,7 @@ export default function DemoAccordion({ current, next, state, index, activeFile,
             )}
             <Box sx={{ p: 1 }}>
               <Typography variant="caption" data-testid="demo-next" color="text.secondary">
-                다음 테스트: {next ? next.path : "없음"}
+                다음 테스트: {next ? next.path : single ? "없음 (부분 실행)" : "없음"}
               </Typography>
             </Box>
           </Box>

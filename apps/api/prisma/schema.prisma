@@ -429,3 +429,66 @@ model AppTestReport {
   @@map("app_test_report")
   @@schema("testschema")
 }
+
+// ---- The demo in the browser (what visitors did). Nothing to do with the run numbers above.
+
+enum DemoRunMode {
+  all
+  partial
+
+  @@schema("testschema")
+}
+
+enum DemoRunStatus {
+  running
+  paused
+  finished // every test that was asked for has passed
+  failed // a test failed
+  stopped // the visitor stopped it, closed the page, or is gone
+
+  @@schema("testschema")
+}
+
+enum DemoStopReason {
+  button
+  closed
+  lost // no signal for a while
+
+  @@schema("testschema")
+}
+
+// One demo of one visitor. It is going on only while endedAt is empty.
+model DemoRun {
+  id           Int             @id @default(autoincrement())
+  mode         DemoRunMode
+  status       DemoRunStatus   @default(running)
+  stopReason   DemoStopReason? @map("stop_reason")
+  startedAt    DateTime        @default(now()) @map("started_at")
+  lastSignalAt DateTime        @default(now()) @map("last_signal_at")
+  endedAt      DateTime?       @map("ended_at")
+  tokenHash    String          @map("token_hash") // only the browser that started it knows the token
+
+  tests DemoTestRecord[]
+
+  @@index([status, lastSignalAt])
+  @@map("demo_run")
+  @@schema("testschema")
+}
+
+// One test that a demo played. skipped: it was left before its end.
+model DemoTestRecord {
+  id           Int              @id @default(autoincrement())
+  demoRunId    Int              @map("demo_run_id")
+  testCase     String           @map("test_case")
+  file         String
+  status       CodeResultStatus
+  errorMessage String?          @map("error_message")
+  startedAt    DateTime         @map("started_at")
+  durationMs   Int              @map("duration_ms")
+
+  run DemoRun @relation(fields: [demoRunId], references: [id], onDelete: Restrict)
+
+  @@index([demoRunId])
+  @@map("demo_test_record")
+  @@schema("testschema")
+}

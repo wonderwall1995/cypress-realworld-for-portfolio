@@ -18,6 +18,7 @@ import { demoQueue } from "../demo/queue";
 import { demoController, useDemo } from "../demo/controller";
 import { buildPlan, currentTestIdAt } from "../demo/plan";
 import DemoNotice from "../components/DemoNotice";
+import DemoStartDialog from "../components/DemoStartDialog";
 
 const PREFIX = "App";
 
@@ -51,6 +52,14 @@ const App: React.FC = () => {
     [demo.index]
   );
   const currentTestId = currentTestIdAt(demoPlan, demo.state, demo.activeFile, demo.activeLine);
+
+  // the test that the viewer picked ("테스트 별 코드 확인") and looks at: starting the demo asks whether to run only it
+  const [chosenTest, setChosenTest] = React.useState<number | undefined>();
+  const [askingStart, setAskingStart] = React.useState(false);
+  const startDemo = (only?: number) => {
+    setAskingStart(false);
+    demoController.start(only);
+  };
 
   const isLoggedIn =
     authState.matches("authorized") ||
@@ -100,7 +109,9 @@ const App: React.FC = () => {
         {demoQueue[demo.index] && (
           <DemoAccordion
             current={demoQueue[demo.index]}
-            next={demoQueue[demo.index + 1]}
+            next={demo.single ? undefined : demoQueue[demo.index + 1]}
+            single={demo.single}
+            onChoose={setChosenTest}
             state={demo.state}
             index={demo.index}
             activeFile={demo.activeFile}
@@ -112,13 +123,22 @@ const App: React.FC = () => {
         )}
       </Box>
       <DemoNotice notice={demo.notice} />
+      <DemoStartDialog
+        open={askingStart && chosenTest !== undefined}
+        fileName={chosenTest === undefined ? "" : demoQueue[chosenTest].name}
+        total={demoQueue.length}
+        onPartial={() => startDemo(chosenTest)}
+        onAll={() => startDemo()}
+        onClose={() => setAskingStart(false)}
+      />
       <DemoFooter
         state={demo.state}
         hasPrev={demo.index > 0}
         hasNext={demo.index < demoQueue.length - 1}
         currentTestId={currentTestId}
         progress={demo.state === "idle" ? undefined : { current: demo.index + 1, total: demoQueue.length }}
-        onStart={demoController.start}
+        single={demo.single}
+        onStart={() => (chosenTest === undefined ? startDemo() : setAskingStart(true))}
         onTogglePause={demoController.togglePause}
         onPrev={demoController.prev}
         onNext={demoController.next}

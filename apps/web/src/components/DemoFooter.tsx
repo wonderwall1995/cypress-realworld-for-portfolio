@@ -19,6 +19,8 @@ interface Props {
   currentTestId?: string;
   /** which test of how many runs now (right area); empty while no demo runs */
   progress?: { current: number; total: number };
+  /** only one test runs (부분 실행) */
+  single?: boolean;
   onStart: () => void;
   onTogglePause: () => void;
   onPrev: () => void;
@@ -30,7 +32,7 @@ interface Props {
  * Footer of the whole web, like the control bar of a video player (centred):
  * [<] [시연 시작] [|| or ▶] [■ stop, red] [>]
  * "시연 시작" stays in place while the demo runs, but it is dimmed and cannot be pressed.
- * After the demo has ended it can be pressed again (it starts from the first test).
+ * After the demo has ended it can be pressed again (it starts from the first test, or asks when a test is picked).
  */
 export default function DemoFooter({
   state,
@@ -38,6 +40,7 @@ export default function DemoFooter({
   hasNext,
   currentTestId,
   progress,
+  single,
   onStart,
   onTogglePause,
   onPrev,
@@ -128,7 +131,7 @@ export default function DemoFooter({
             sx={{ display: "flex", alignItems: "baseline", gap: 1, whiteSpace: "nowrap" }}
           >
             <Typography variant="caption" sx={{ color: "text.secondary", fontSize: 12 }}>
-              테스트
+              {single ? "부분 실행" : "테스트"}
             </Typography>
             <Box
               component="span"
