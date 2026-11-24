@@ -48,7 +48,7 @@ LLM이 다른 LLM에게 넘기는 설계 문서다. Web(Playwright) 쪽에서 Us
 
 ### 3.3 동시 시작 (2026-11-23 변경)
 - Web과 App이 같은 번호를 동시에 시작하면 **기다리지 않고 같이 돈다.** 같은 번호, 같은 값이고 유저만 다르다(217w와 217a, 3.14).
-- 전에는 나중 쪽이 기다리기로 했다. 같은 유저를 함께 쓴다고 보았기 때문이다. DB의 `waiting` 상태 값은 남아 있지만 쓰지 않는다.
+- 전에는 나중 쪽이 기다리기로 했다. 같은 유저를 함께 쓴다고 보았기 때문이다. DB의 `waiting` 상태 값은 없앴다(2026-11-24).
 
 ### 3.4 완료와 Blocked
 - 실행이 끝까지 돌면 그 플랫폼은 그 번호를 "했다"(`finished`). 각 테스트의 성공/실패는 그대로 기록한다. 실패도 정상적인 결과다.
@@ -71,10 +71,11 @@ LLM이 다른 LLM에게 넘기는 설계 문서다. Web(Playwright) 쪽에서 Us
 
 ### 3.7 Fixture
 - 서버(API)가 한곳에서 만든다. 클라이언트(Playwright, Wdio)는 난수를 만들지 않고 받아서 쓴다. 그래서 난수 규칙이 서버 한 곳에만 있다.
-- 키는 **번호 / 이름표 / 항목**이다. 예: `217 / deposit / amount`.
-  - Web의 입금 테스트와 App의 입금 테스트는 같은 값을 받는다.
-  - 입금 테스트와 계좌 테스트는 다른 값을 받는다. 그래서 병렬로 돌아도 서로 부딪히지 않는다.
-- 항목은 칸이 아니라 줄로 저장한다. 새 테스트가 새 항목을 필요로 해도 DB 구조를 바꾸지 않는다.
+- **번호마다 한 줄(시험의 금액과 댓글)과 사람 세 줄(A, B, C)** 로 저장한다. 값은 칸이다. (2026-11-24 변경. 전에는 번호 / 이름표 / 항목마다 한 줄이었고, 번호 하나가 217줄이었다)
+  - Web과 App은 같은 값을 받는다.
+  - 한 번호의 모든 시험이 같은 A, B, C를 쓴다. 시험마다 다른 것은 아이디뿐이다(3.14). 그래서 병렬로 돌아도 서로 부딪히지 않는다.
+  - 시험이 부르는 이름(이름표와 항목, 예: `transfer`의 `A.firstName`)과 서버의 답은 전과 같다.
+- 사람만 필요한 새 시험은 DB를 바꾸지 않는다. 새 금액이나 글이 필요하면 `test_fixture`에 칸을 더한다(마이그레이션).
 - 만드는 규칙은 서버의 목록 하나에 둔다(이름표별 항목과 규칙). 이 목록이 Web과 App 사이의 약속이다. 새 테스트를 만들 때 필요한 항목을 이 목록에 더한다(User가 고른 "필요할 때 더하는" 방식).
 - 이미 열린 번호에 없는 항목을 요청하면, 서버가 그때 만들어 저장한다. 뒤에 오는 플랫폼도 같은 값을 받는다.
 - 지금(2026-11-24) 번호의 값을 쓰는 범위가 다르다. **Web은 003(`transfer`)만** 쓰고 나머지 spec은 자기 난수를 쓴다. **App은 000~009 모두 사람의 값을 번호에서 받고**, 금액은 003, 004, 005만 받는다(모바일 세션의 보고). 그래서 같은 번호라도 003 말고는 두 플랫폼의 입력이 같지 않다.
@@ -124,10 +125,12 @@ LLM이 다른 LLM에게 넘기는 설계 문서다. Web(Playwright) 쪽에서 Us
   - 아이디의 앞부분: 한글 / 영문과 숫자 / 한글, 영문, 숫자 섞임. 사람마다 달라야 하므로 한 글자 구간은 두지 않는다.
   - 전화번호: 010-1234-5678 / +82 10-1234-5678 / (02) 123-4567 꼴.
   - 계좌 번호: 9 / 10 / 11 / 12자리.
-- 아이디 = 앞부분(구간) + 실행 번호 + 플랫폼 표시(Web은 w, App은 a). 예: 가나다217w. 같은 번호에서 Web과 App의 유저는 아이디의 마지막 글자만 다르고 나머지 값은 같다.
+- 아이디 = 앞부분(구간) + 시험 코드 두 자리 + 실행 번호 + 플랫폼 표시(Web은 w, App은 a). 예: 004의 A는 가나다라04217w. 003(`transfer`)만 코드가 없다: 가나다라217w. 같은 번호에서 Web과 App의 유저는 아이디의 마지막 글자만 다르고 나머지 값은 같다.
   - 이렇게 나누는 이유: 같은 아이디로 두 번 가입할 수 없고, 같은 유저를 함께 쓰면 거래 개수 같은 판정이 깨진다.
   - 한 플랫폼은 한 번호를 한 번만 돌므로 겹치지 않는다. 정식 실행은 재시도하지 않는다(3.9).
-  - 앞부분은 이름표(test_case)마다 다르게 만든다. 그래야 같은 번호의 003과 005의 A가 겹치지 않는다.
+  - 시험 코드는 서버의 규칙 목록(`test-fixture-rules.ts`)에 있다. 같은 번호의 004와 005의 A가 겹치지 않게 한다. 바꾸거나 다시 쓰지 않는다. (2026-11-24 변경. 전에는 앞부분을 이름표마다 다르게 만들었다)
+  - 코드는 번호 앞에 둔다. 화면의 찾기는 아이디의 일부도 찾으므로, 003의 A(`x6w`)를 찾을 때 004의 A(`x046w`)가 나오면 안 된다.
+  - 003에 코드가 없는 것은 1~5번의 003 유저(코드가 없던 때)를 계속 찾기 위해서다.
 - 구간만으로는 화면 문제를 잡지 못한다. 예: 긴 이름이면 거래 목록의 좋아요 줄이 다음 줄에 가려졌다(2026-11-23 확인, 2026-11-24 고침). 가려졌는지 보는 판정은 아직 없다.
 
 ### 3.15 서버 API (2026-11-23)
@@ -136,7 +139,7 @@ LLM이 다른 LLM에게 넘기는 설계 문서다. Web(Playwright) 쪽에서 Us
 | 요청 | 하는 일 |
 |---|---|
 | POST / { platform, device? } | 번호를 열거나(201) 합류하고(200) 값을 받는다 |
-| POST /:runNo/signal, finish, block { platform } | 살아 있음, 끝까지 돌았음, 중간에 멈춤 |
+| POST /:runNo/signal, finish, block { platform } | 살아 있음, 끝까지 돌았음, 중간에 멈춤. 답에 `finalResult`가 있다 |
 | POST /:runNo/results | 시험 하나의 결과를 저장한다 (3.17) |
 | GET /:runNo/results | 그 번호에 저장된 결과 전부 |
 | GET / | 번호, 날짜, 상태 목록 (리그레션이 고를 때) |
@@ -149,8 +152,9 @@ LLM이 다른 LLM에게 넘기는 설계 문서다. Web(Playwright) 쪽에서 Us
 - 10분 규칙은 다음 요청이 왔을 때 적용한다.
 
 ### 3.16 과거 이력을 쓰는 법 (2026-11-23, 보류)
-- 픽스처(test_fixture)는 **입력 값의 저장소**이고, 테스트 레코드(code_result)는 그 값으로 돈 **결과의 기록**이다.
-- `finished`는 끝까지 돌았다는 뜻이다. **통과했다는 뜻이 아니다.** 통과했는지는 code_result의 spec 줄을 본다.
+- 픽스처(test_fixture, test_fixture_person)는 **입력 값의 저장소**이고, 기록(web_test_record, app_test_record)은 그 값으로 돈 **결과의 기록**, 보고(web_test_report, app_test_report)는 **완료된 상태**다.
+- `finished`는 끝까지 돌았다는 뜻이다. **통과했다는 뜻이 아니다.** 통과했는지는 보고의 `result`를 본다.
+- 1~5번에서 옮긴 사람의 값은 003의 것이다. 1~5번의 다른 시험 사람의 값은 버렸으므로, 그 번호들에서는 `transfer`의 값만 쓴다.
 - 과거에 실패한 시험을 다시 돌리는 것(재시험)은 보류다. 방법과 횟수를 정하지 않았다.
 - 기록은 고치지 않고 쌓기만 한다. EC2에 유저와 기록이 쌓이는 것은 의도다.
 - Web과 App의 결과 비교는 당장의 목표가 아니다. 서버 API는 둘 다 쓸 수 있게 둔다.
@@ -194,6 +198,7 @@ POST /api/testRuns/5/results
 | 404 / 409 | 시작하지 않은 실행 / 이미 끝났거나 막힌 실행 |
 | 422 / 401 | 형식이 틀림 / 비밀 값이 틀림 |
 
+- 플랫폼에 따라 web_test_record 또는 app_test_record에 저장한다.
 - **같은 결과의 기준:** 번호, 플랫폼, 이름표, 이름, 시도, 시작 시각이 모두 같으면 같은 결과다. 다시 보낼 때 시작 시각을 바꾸지 않는다.
 - **먼저 파일에 적고 보낸다.** 끝나기 직전에 파일의 것을 모두 한 번 더 보내고, 하나라도 저장되지 않으면 finish 대신 block을 보낸다(3.5). 끝난 뒤에는 새 결과를 받지 않는다.
 - 도구가 도구를 부르면 모두 그 시험의 자식으로 저장한다. 도구끼리의 관계는 저장하지 않는다.
@@ -201,76 +206,101 @@ POST /api/testRuns/5/results
 - starter와 finisher, 사람이 멈춰서 끊긴 시험은 기록하지 않는다.
 - 어느 코드(커밋)로 돌았는지는 아직 저장하지 않는다.
 
-## 4. 테이블 (testschema)
+## 4. 테이블 (testschema) (2026-11-24 다시 만듦)
 
-Prisma 설계 파일: `apps/api/prisma/schema.prisma`. DB 변경 파일: `apps/api/prisma/migrations/20261122000000_add_testschema/migration.sql`, `20261123000000_rename_codekind_util_to_fixture/migration.sql`(종류 값 util을 fixture로 바꿈).
+Prisma 설계 파일: `apps/api/prisma/schema.prisma`. 지금 모양을 만든 DB 변경 파일: `apps/api/prisma/migrations/20261124010000_fixture_parent_and_reports/migration.sql`.
 
-### test_run: 실행 번호
+```
+test_fixture (번호마다 1줄, 모두의 상위)
+ ├─ test_fixture_person   번호마다 3줄 (A, B, C)
+ ├─ run_progress          번호 + 플랫폼마다 1줄 (내부용)
+ ├─ web_test_record       기록. 시험과 도구마다 1줄
+ ├─ app_test_record       같은 모양
+ ├─ web_test_report       완료 보고. 번호마다 1줄
+ └─ app_test_report       같은 모양
+final_test_report (뷰)     두 보고와 최종 결과를 번호마다 1줄로 보여 준다
+```
+
+`test_run`, `platform_run`, `code_result`는 없다. 이름표와 항목을 줄로 쌓던 옛 `test_fixture`도 없다.
+
+### test_fixture: 번호와 시험의 값
 | 칸 | 형 | 뜻 |
 |---|---|---|
-| run_no | serial, PK | 실행 번호 |
-| status | `open` / `blocked` | 쓸 수 있음 / 무효 |
+| run_no | int, PK | 실행 번호 (가장 큰 번호 + 1) |
 | opened_by | `web` / `app` | 이 번호를 처음 연 쪽 |
 | created_at | timestamp | 연 시각 |
+| transfer_cycle_dollars | int | 003의 금액 |
+| detail_dollars, detail_comment | int, text | 004의 금액과 댓글 |
+| filter_sent_small_dollars, filter_sent_big_dollars, filter_got_small_dollars, filter_got_big_dollars | int | 005의 금액 |
 
-### test_fixture: 난수 값
+값의 칸은 빈칸일 수 있다(번호보다 나중에 생긴 칸). 열린 번호에 합류할 때 서버가 채운다.
+
+### test_fixture_person: 사람의 값
 | 칸 | 형 | 뜻 |
 |---|---|---|
-| run_no | int, FK -> test_run | 실행 번호 |
-| test_case | text | 이름표 |
-| item | text | 항목 이름 |
-| value | text | 값. 숫자도 글자로 저장하고 꺼낼 때 바꾼다 |
-| created_at | timestamp | 만든 시각 |
+| run_no, person | int FK, `A`/`B`/`C`, 함께 PK | |
+| username_base | text | 아이디의 앞부분. 서버가 시험 코드, 번호, 플랫폼 표시를 붙인다(3.14) |
+| first_name, last_name, phone_number, bank_name, account_number | text | |
+| partition_username, partition_name, partition_phone, partition_account_length | text, 마지막만 int | 구간(3.14) |
 
-PK는 (run_no, test_case, item)이다. 같은 키로 값이 두 개 생기지 않는다.
-
-### platform_run: 번호별 플랫폼 실행
+### run_progress: 진행 (내부용)
 | 칸 | 형 | 뜻 |
 |---|---|---|
-| id | serial, PK | |
-| run_no | int, FK -> test_run | |
-| platform | `web` / `app` | |
-| status | `waiting` / `running` / `finished` / `blocked` | |
-| device | text, 빈칸 가능 | 예: `chrome`, Android 기기 이름 |
-| started_at | timestamp | |
-| last_signal_at | timestamp | 마지막 신호 시각. 10분 규칙에 쓴다 |
-| finished_at | timestamp, 빈칸 가능 | |
+| run_no, platform | int FK, `web`/`app`, 함께 PK | 한 플랫폼은 한 번호를 한 번만 돈다 |
+| status | `running` / `finished` / `blocked` | |
+| device | text, 빈칸 가능 | 예: `chrome` |
+| started_at, last_signal_at, finished_at | timestamp | 10분 규칙에 쓴다 |
 
-(run_no, platform)은 고유하다. "이 플랫폼이 이 번호를 이미 했다"를 DB가 보장한다.
+번호의 상태(`open` / `blocked`)는 저장하지 않는다. 한 플랫폼이라도 blocked이면 그 번호가 blocked다.
 
-### code_result: 코드 결과
+### web_test_record, app_test_record: 기록
 | 칸 | 형 | 뜻 |
 |---|---|---|
-| id | serial, PK | |
-| run_no | int, FK -> test_run | Grafana가 번호로 바로 묶어 셀 수 있게 둔다 |
-| platform_run_id | int, FK -> platform_run | |
+| id | serial, PK | 테이블마다 따로 센다 |
+| run_no | int, FK -> test_fixture | |
 | kind | `spec` / `common` / `api` / `fixture` | |
 | test_case | text | 이름표 |
 | name | text | 테스트 제목 또는 함수 이름 (예: `createBankAccount`) |
 | file | text | 파일 이름 |
-| parent_id | int, FK -> code_result, 빈칸 가능 | 이 코드를 부른 spec 결과. spec 자체는 빈칸 |
+| parent_id | int, 같은 테이블 FK, 빈칸 가능 | 이 코드를 부른 spec 줄. spec 자체는 빈칸 |
 | status | `passed` / `failed` / `skipped` | |
 | attempt | int, 기본 1 | 재시도 번호 |
 | error_message | text, 빈칸 가능 | |
-| started_at | timestamp | |
-| duration_ms | int | |
+| started_at, duration_ms | timestamp, int | |
 
 색인: (run_no, kind), (test_case).
 
-집계 뷰("Web과 App이 모두 끝낸 번호" 등)는 아직 없다. 실제 데이터가 쌓인 뒤 Grafana를 붙일 때 만든다.
+### web_test_report, app_test_report: 완료 보고
+| 칸 | 형 | 뜻 |
+|---|---|---|
+| run_no | int, PK, FK -> test_fixture | |
+| spec_ok, common_ok, api_ok | boolean, 빈칸 가능 | 그 종류가 모두 성공 / 하나라도 실패. 빈칸은 돌지 않았거나 Blocked |
+| result | `passed` / `failed` / `blocked` | 그 플랫폼의 결과 |
+| reported_at | timestamp | |
+
+- 끝(finish, block, 10분 규칙)에 한 번 쓴다. 줄이 없으면 아직 끝나지 않은 것이다.
+- `passed`는 spec이 하나 이상 돌아 모두 성공했고, common과 api에 실패가 없다는 뜻이다. 시험이 통과했어도 도구가 하나라도 실패했으면 `failed`다.
+- 재시도한 시험은 마지막 시도만 센다. `skipped`는 세지 않는다. `fixture` 종류는 칸이 없다(기록에는 남는다).
+
+### final_test_report: 최종 결과 (뷰)
+- 칸: run_no, created_at, web_spec_ok, web_common_ok, web_api_ok, web_result, app_(같음), final_result, decided_at.
+- `final_result`: 한쪽이라도 멈췄으면 `blocked`, 한쪽이 끝나지 않았으면 `pending`, 둘 다 `passed`면 `passed`, 아니면 `failed`.
+- 뷰라서 두 보고와 어긋날 수 없다. Prisma 설계 파일에는 없고, DB 탭에도 나오지 않는다.
+- 보고 테이블의 칸을 바꾸는 마이그레이션은 이 뷰를 먼저 지우고 다시 만들어야 한다.
+- 한쪽만 돈 번호는 새 번호가 열리면 닫히므로 `pending`으로 남는다. 통계에서 `blocked`와 `pending`을 뺀다.
 
 ## 5. 구현 상태 (2026-11-24)
 
 | 항목 | 상태 |
 |---|---|
-| testschema 테이블 4개, 상태 값 목록 5개 | 만듦. 로컬 개발 DB에 적용함 |
+| testschema 테이블 7개와 뷰 1개 (2026-11-24 다시 만듦) | 만듦. 로컬 개발 DB에 적용함. 1~5번을 옮겼다 |
 | EC2 서버 DB에 적용 | 안 함 |
-| 서버 API (3.15) | 만듦. app.ts는 Prisma client가 TestRun을 알 때만 연결한다. 옛 client로 도는 서버는 404로 답한다 (prisma generate 뒤 다시 켜야 한다) |
+| 서버 API (3.15) | 만듦. app.ts는 Prisma client가 TestFixturePerson을 알 때만 연결한다. 옛 client로 도는 서버는 404로 답한다 (prisma generate 뒤 다시 켜야 한다) |
 | Fixture 규칙 목록 (서버) | `apps/api/src/test-fixture-rules.ts`. 이름표는 auth, bank-account, deposit, transfer, transaction-detail, transaction-filter, user-settings, transaction-visibility, notifications, login-logout |
 | `starter.spec.ts`, `finisher.spec.ts`, 기록기(`tests/test-run-reporter.ts`) | 만듦. 기록기는 결과와 멈춤을 보낸다 |
 | Chrome 하나로 정식 실행 (`pnpm test:run`) | 만듦. 전체 실행만 받는다 |
 | Web spec을 Fixture에 연결 | 003만 함 |
-| 결과 기록(code_result), 못 보낸 기록의 재전송(3.5, 3.17) | 만듦 (2026-11-24). 마이그레이션은 없다. EC2에는 배포해야 한다 |
+| 결과 기록(웹, 앱 따로), 완료 보고, 최종 결과 뷰, 못 보낸 기록의 재전송(3.5, 3.17) | 만듦 (2026-11-24). EC2에는 배포해야 한다 |
 | 시연이 최신 번호의 값을 읽기(3.10) | 안 함 |
 | App(Flutter) 쪽 기록기와 테스트 | 모바일 저장소에 있다. 000~009, `pnpm test:run`, 결과 기록까지 (모바일 커밋 8e75d14. 모바일 세션의 보고) |
 
