@@ -3,7 +3,7 @@ import { styled } from "@mui/material/styles";
 import { useActor } from "@xstate/react";
 import { Interpreter } from "xstate";
 import { Link } from "react-router-dom";
-import { Button, Container, CssBaseline, TextField, Grid, Box, Typography } from "@mui/material";
+import { Alert, Button, Container, CssBaseline, TextField, Grid, Box, Typography } from "@mui/material";
 import { Formik, Form, Field, FieldProps } from "formik";
 import { string, object, ref } from "yup";
 
@@ -46,7 +46,7 @@ const StyledContainer = styled(Container)(({ theme }) => ({
 const validationSchema = object({
   firstName: string().required("이름을 입력하세요"),
   lastName: string().required("성을 입력하세요"),
-  username: string().required("사용자 이름을 입력하세요"),
+  username: string().required("사용자 ID를 입력하세요"),
   password: string().min(4, "비밀번호는 4자 이상이어야 합니다").required("비밀번호를 입력하세요"),
   phoneNumber: string()
     .required("연락처를 입력하세요")
@@ -61,7 +61,8 @@ export interface Props {
 }
 
 const SignUpForm: React.FC<Props> = ({ authService }) => {
-  const [, sendAuth] = useActor(authService);
+  const [authState, sendAuth] = useActor(authService);
+  const pending = authState.matches("signup");
   const initialValues: SignUpPayload & { confirmPassword: string } = {
     firstName: "",
     lastName: "",
@@ -84,16 +85,19 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
         <Typography component="h1" variant="h5" data-testid="signup-title">
           회원가입
         </Typography>
+        {authState.context?.signUpMessage && (
+          <Alert data-testid="signup-error" severity="error" sx={{ width: "100%", marginTop: 1 }}>
+            {authState.context.signUpMessage}
+          </Alert>
+        )}
         <Formik
           initialValues={initialValues}
           validationSchema={validationSchema}
-          onSubmit={async (values, { setSubmitting, setFieldValue }) => {
-            setSubmitting(true);
-
+          onSubmit={async (values) => {
             signUpPending(values);
           }}
         >
-          {({ isValid, isSubmitting, dirty }) => (
+          {({ isValid }) => (
             <Form className={classes.form}>
               <Field name="lastName">
                 {({ field, meta: { error, value, initialValue, touched } }: FieldProps) => (
@@ -105,10 +109,13 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     id="lastName"
                     label="성"
                     type="text"
+                    placeholder="성과 이름이 웹 데모 시연 특성상 공개됩니다. 주의해주세요!"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ "& input::placeholder": { fontSize: "0.85rem" } }}
                     autoFocus
                     data-testid="signup-last-name"
                     error={(touched || value !== initialValue) && Boolean(error)}
-                    helperText={touched || value !== initialValue ? error : ""}
+                    helperText={(touched || value !== initialValue ? error : "") || " "}
                     {...field}
                   />
                 )}
@@ -123,9 +130,12 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     id="firstName"
                     label="이름"
                     type="text"
+                    placeholder="성과 이름이 웹 데모 시연 특성상 공개됩니다. 주의해주세요!"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ "& input::placeholder": { fontSize: "0.85rem" } }}
                     data-testid="signup-first-name"
                     error={(touched || value !== initialValue) && Boolean(error)}
-                    helperText={touched || value !== initialValue ? error : ""}
+                    helperText={(touched || value !== initialValue ? error : "") || " "}
                     {...field}
                   />
                 )}
@@ -138,11 +148,11 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     required
                     fullWidth
                     id="username"
-                    label="사용자 이름"
+                    label="사용자 ID"
                     type="text"
                     data-testid="signup-username"
                     error={(touched || value !== initialValue) && Boolean(error)}
-                    helperText={touched || value !== initialValue ? error : ""}
+                    helperText={(touched || value !== initialValue ? error : "") || " "}
                     {...field}
                   />
                 )}
@@ -161,7 +171,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     InputLabelProps={{ shrink: true }}
                     data-testid="signup-phone-number"
                     error={(touched || value !== initialValue) && Boolean(error)}
-                    helperText={touched || value !== initialValue ? error : ""}
+                    helperText={(touched || value !== initialValue ? error : "") || " "}
                     {...field}
                   />
                 )}
@@ -175,10 +185,13 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     fullWidth
                     label="비밀번호 (4자 이상)"
                     type="password"
+                    placeholder="비밀번호는 자신이 쓰던 것을 쓰면 안 됩니다!"
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ "& input::placeholder": { color: "error.main", opacity: 1 } }}
                     id="password"
                     data-testid="signup-password"
                     error={(touched || value !== initialValue) && Boolean(error)}
-                    helperText={touched || value !== initialValue ? error : ""}
+                    helperText={(touched || value !== initialValue ? error : "") || " "}
                     {...field}
                   />
                 )}
@@ -195,7 +208,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                     data-testid="signup-confirmPassword"
                     type="password"
                     error={(touched || value !== initialValue) && Boolean(error)}
-                    helperText={touched || value !== initialValue ? error : ""}
+                    helperText={(touched || value !== initialValue ? error : "") || " "}
                     {...field}
                   />
                 )}
@@ -207,7 +220,7 @@ const SignUpForm: React.FC<Props> = ({ authService }) => {
                 color="primary"
                 className={classes.submit}
                 data-testid="signup-submit"
-                disabled={!isValid || isSubmitting}
+                disabled={!isValid || pending}
               >
                 회원가입
               </Button>

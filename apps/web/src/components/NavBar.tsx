@@ -120,7 +120,7 @@ const NavBar: React.FC<NavBarProps> = ({ drawerOpen, toggleDrawer, notifications
   const [notificationsState] = useActor(notificationsService);
 
   const allNotifications = notificationsState?.context?.results;
-  const unreadCount = allNotifications ? allNotifications.length : 0;
+  const unreadCount = allNotifications ? allNotifications.filter((n) => !n.isRead).length : 0;
   const xsBreakpoint = useMediaQuery(theme.breakpoints.only("xs"));
 
   return (

@@ -11,8 +11,7 @@ import {
   attachViewerAccount,
 } from "./transaction-db";
 import { asyncHandler } from "./async-handler";
-import { passwordMatches } from "./account-money";
-import { HttpError } from "./http-error";
+import { checkPasswordAgain } from "./password-attempts";
 import { getViewableTransaction } from "./transaction-access";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
 import {
@@ -100,9 +99,7 @@ router.post(
     delete transactionPayload.password;
 
     // money leaves the sender's account: the sender must type their own password again
-    if (transactionType === "payment" && !(await passwordMatches(req.user?.id!, password))) {
-      throw new HttpError(403, "the password is not correct");
-    }
+    if (transactionType === "payment") await checkPasswordAgain(req.user?.id!, password);
 
     /* istanbul ignore next */
     const transaction = await createTransaction(req.user?.id!, transactionType, transactionPayload);

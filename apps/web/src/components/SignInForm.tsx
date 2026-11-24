@@ -19,14 +19,13 @@ import { string, object } from "yup";
 
 import RWALogo from "./SvgRwaLogo";
 import SourceCredit from "./SourceCredit";
-import UpdateNotesDialog from "./UpdateNotesDialog";
-import { StickyNote2 as NoteIcon } from "@mui/icons-material";
+import UpdateNotesDialog from "./UpdateNotesDialog";import { StickyNote2 as NoteIcon } from "@mui/icons-material";
 import { SignInPayload } from "@rwa/shared";
 import { AuthMachineContext, AuthMachineEvents, AuthMachineSchema } from "../machines/authMachine";
 import { Alert } from "@mui/material";
 
 const validationSchema = object({
-  username: string().required("사용자 이름을 입력하세요"),
+  username: string().required("사용자 ID를 입력하세요"),
   password: string().min(4, "비밀번호는 4자 이상이어야 합니다").required("비밀번호를 입력하세요"),
 });
 
@@ -115,12 +114,12 @@ const SignInForm: React.FC<Props> = ({ authService }) => {
                     margin="normal"
                     fullWidth
                     id="username"
-                    label="사용자 이름"
+                    label="사용자 ID"
                     type="text"
                     autoFocus
                     data-testid="signin-username"
                     error={(touched || value !== initialValue) && Boolean(error)}
-                    helperText={touched || value !== initialValue ? error : ""}
+                    helperText={(touched || value !== initialValue ? error : "") || " "}
                     {...field}
                   />
                 )}
@@ -136,7 +135,7 @@ const SignInForm: React.FC<Props> = ({ authService }) => {
                     id="password"
                     data-testid="signin-password"
                     error={touched && value !== initialValue && Boolean(error)}
-                    helperText={touched && value !== initialValue && touched ? error : ""}
+                    helperText={(touched && value !== initialValue && touched ? error : "") || " "}
                     {...field}
                   />
                 )}

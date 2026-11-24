@@ -66,6 +66,24 @@ export const getUnreadNotificationsByUserId = async (
   return rows.map(toNotification);
 };
 
+/** How many read notifications the list keeps showing. Unread ones are never left out. */
+export const READ_LIMIT = 50;
+
+// Every unread notification and the READ_LIMIT newest read ones, newest first. The order is when they were made:
+// by modifiedAt a notification would jump to the top when it is marked as read.
+export const getNotificationHistoryByUserId = async (
+  userId: string
+): Promise<NotificationType[]> => {
+  const orderBy = [{ createdAt: "desc" as const }, { id: "asc" as const }];
+  const [unread, read] = await Promise.all([
+    prisma.notification.findMany({ where: { userId, isRead: false }, orderBy }),
+    prisma.notification.findMany({ where: { userId, isRead: true }, orderBy, take: READ_LIMIT }),
+  ]);
+  return [...unread, ...read]
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? -1 : 1))
+    .map(toNotification);
+};
+
 const baseData = (userId: string, transactionId: string) => {
   const now = new Date();
   return {
@@ -134,14 +152,16 @@ export const createNotifications = async (
 };
 
 // Only the owner can change a notification, and only isRead can be edited.
+// Returns false when there is no such notification of this member.
 export const updateNotificationById = async (
   userId: string,
   notificationId: string,
   edits: { isRead?: boolean }
-): Promise<void> => {
-  if (edits.isRead === undefined) return;
-  await prisma.notification.updateMany({
+): Promise<boolean> => {
+  if (edits.isRead === undefined) return true;
+  const { count } = await prisma.notification.updateMany({
     where: { id: notificationId, userId },
     data: { isRead: edits.isRead, modifiedAt: new Date() },
   });
+  return count > 0;
 };

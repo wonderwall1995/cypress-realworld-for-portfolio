@@ -5,7 +5,7 @@ import { Formik, Form, Field, FieldProps } from "formik";
 import { string, object } from "yup";
 
 const validationSchema = object({
-  content: string(),
+  content: string().trim().required("댓글을 입력하세요"),
 });
 
 const PREFIX = "CommentForm";

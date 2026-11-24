@@ -5,8 +5,9 @@
 import shortid from "shortid";
 import { v4 } from "uuid";
 import prisma from "./prisma";
-import { BankAccount, isValidAccountNumber } from "@rwa/shared";
+import { BankAccount, isValidAccountNumber, MAX_BANK_ACCOUNTS } from "@rwa/shared";
 import { HttpError } from "./http-error";
+import { lockUsers } from "./account-money";
 
 export const getBankAccountsByUserId = (userId: string) =>
   prisma.bankAccount.findMany({ where: { userId, visible: true }, orderBy: { createdAt: "asc" } });
@@ -25,19 +26,27 @@ export const createBankAccountForUser = async (
     throw new HttpError(400, "accountNumber must be 9 to 12 digits");
   }
 
-  const now = new Date();
-  return prisma.bankAccount.create({
-    data: {
-      id: shortid(),
-      uuid: v4(),
-      userId,
-      bankName: accountDetails.bankName!,
-      accountNumber: accountDetails.accountNumber!,
-      visible: true,
-      balance: 0,
-      createdAt: now,
-      modifiedAt: now,
-    },
+  return prisma.$transaction(async (tx) => {
+    await lockUsers(tx, [userId]);
+    const count = await tx.bankAccount.count({ where: { userId, visible: true } });
+    if (count >= MAX_BANK_ACCOUNTS) {
+      throw new HttpError(400, `a user can have at most ${MAX_BANK_ACCOUNTS} bank accounts`);
+    }
+
+    const now = new Date();
+    return tx.bankAccount.create({
+      data: {
+        id: shortid(),
+        uuid: v4(),
+        userId,
+        bankName: accountDetails.bankName!,
+        accountNumber: accountDetails.accountNumber!,
+        visible: true,
+        balance: 0,
+        createdAt: now,
+        modifiedAt: now,
+      },
+    });
   });
 };
 
@@ -50,6 +59,7 @@ export const removeBankAccountById = async (
   bankAccountId: string
 ): Promise<boolean> =>
   prisma.$transaction(async (tx) => {
+    await lockUsers(tx, [userId]);
     const account = await tx.bankAccount.findFirst({ where: { id: bankAccountId, userId } });
     if (!account) return false;
     if (account.balance !== 0) {

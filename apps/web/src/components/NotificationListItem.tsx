@@ -30,6 +30,8 @@ export interface NotificationListItemProps {
   updateNotification: Function;
 }
 
+const READ_OPACITY = 0.65; // paler than an unread one, but the text can still be read
+
 const PREFIX = "NotificationListItem";
 
 const classes = {
@@ -81,10 +83,13 @@ const NotificationListItem: React.FC<NotificationListItemProps> = ({
   }
 
   return (
-    <StyledListItem data-testid={`notification-list-item-${notification.id}`}>
+    <StyledListItem
+      data-testid={`notification-list-item-${notification.id}`}
+      sx={{ opacity: notification.isRead ? READ_OPACITY : 1 }}
+    >
       <ListItemIcon>{listItemIcon!}</ListItemIcon>
       <ListItemText primary={listItemText} />
-      {xsBreakpoint && (
+      {!notification.isRead && xsBreakpoint && (
         <IconButton
           aria-label="읽음으로 표시"
           color="primary"
@@ -95,7 +100,7 @@ const NotificationListItem: React.FC<NotificationListItemProps> = ({
           <CheckIcon />
         </IconButton>
       )}
-      {!xsBreakpoint && (
+      {!notification.isRead && !xsBreakpoint && (
         <Button
           color="primary"
           size="small"

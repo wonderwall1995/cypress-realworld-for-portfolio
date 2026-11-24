@@ -56,3 +56,9 @@ amplifytools.xcconfig
 
 # local environment (copy .env.example to .env)
 .env
+
+# server security notes (not for the public repository)
+docs/aws-guide.md
+
+# resume and portfolio images (local only, not for the public repository)
+resume/

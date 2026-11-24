@@ -58,6 +58,29 @@ describe("Likes, comments and notifications (PostgreSQL)", () => {
     expect(forSender[0]).toHaveProperty("likeId", like.id);
   });
 
+  it("a member can like a transaction only once (409), also when two requests race", async () => {
+    const [sender, receiver, fan] = [await makeUser(1), await makeUser(2), await makeUser(3)];
+    const tx = await createTx(sender.id, "payment", payload(receiver.id));
+
+    const results = await Promise.allSettled([
+      createLikes(fan.id, tx.id),
+      createLikes(fan.id, tx.id),
+    ]);
+    const refused = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+    expect(refused).toHaveLength(1);
+    expect(refused[0].reason).toMatchObject({ status: 409 });
+
+    await expect(createLikes(fan.id, tx.id)).rejects.toMatchObject({ status: 409 });
+    expect(await getLikesByTransactionId(tx.id)).toHaveLength(1);
+    // a refused like sends no notification
+    const forSender = (await getNotificationsByUserId(sender.id)).filter((n: any) => n.likeId);
+    expect(forSender).toHaveLength(1);
+
+    // another member can still like it
+    await createLikes(receiver.id, tx.id);
+    expect(await getLikesByTransactionId(tx.id)).toHaveLength(2);
+  });
+
   it("a comment notifies the sender and the receiver of the transaction", async () => {
     const [sender, receiver, other] = [await makeUser(1), await makeUser(2), await makeUser(3)];
     const tx = await createTx(sender.id, "payment", payload(receiver.id));

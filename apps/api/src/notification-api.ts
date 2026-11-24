@@ -12,7 +12,7 @@
 import prisma from "./prisma";
 import { NotificationResponseItem, NotificationType } from "@rwa/shared";
 import { isCommentNotification, isLikeNotification } from "@rwa/shared";
-import { getUnreadNotificationsByUserId } from "./notification-db";
+import { getNotificationHistoryByUserId, getUnreadNotificationsByUserId } from "./notification-db";
 
 export const formatNotificationsForApiResponse = async (
   notifications: NotificationType[]
@@ -71,3 +71,9 @@ export const getUnreadNotificationsForApi = async (
   userId: string
 ): Promise<NotificationResponseItem[]> =>
   formatNotificationsForApiResponse(await getUnreadNotificationsByUserId(userId));
+
+// The same with the newest read ones (see getNotificationHistoryByUserId), ready for the API.
+export const getNotificationHistoryForApi = async (
+  userId: string
+): Promise<NotificationResponseItem[]> =>
+  formatNotificationsForApiResponse(await getNotificationHistoryByUserId(userId));

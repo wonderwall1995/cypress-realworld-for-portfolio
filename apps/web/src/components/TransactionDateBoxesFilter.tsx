@@ -118,10 +118,13 @@ const DatePartsBox: React.FC<DatePartsBoxProps> = ({
               value={value[part]}
               placeholder={placeholder}
               onChange={(event) => setPart(part, event.target.value, max)}
-              onBlur={() => {
+              onBlur={(event) => {
                 // one digit in month or day: show it as two digits (3 -> 03)
-                if (part !== "year" && value[part].length === 1) {
-                  onChange({ ...value, [part]: value[part].padStart(2, "0") });
+                // The text of the field, not "value": the second digit moves the cursor on at once, and "value"
+                // still has only the first digit then (11 became 01)
+                const text = event.target.value;
+                if (part !== "year" && text.length === 1) {
+                  onChange({ ...value, [part]: text.padStart(2, "0") });
                 }
               }}
               onKeyDown={(event) => {

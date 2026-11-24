@@ -70,7 +70,7 @@ const PrivateRoutesContainer: React.FC<Props> = ({
   useEffect(() => {
     // before the first answer the list is only the empty starting value
     if (!notificationsState.matches("success") || !notificationResults) return;
-    const received = notificationResults.filter((n) => n.status === "received");
+    const received = notificationResults.filter((n) => n.status === "received" && !n.isRead);
     if (seenReceived.current === null) {
       seenReceived.current = new Set(received.map((n) => n.id)); // what was already there is not news
       return;

@@ -16,7 +16,7 @@ import shortid from "shortid";
 import { v4 } from "uuid";
 import prisma from "./prisma";
 import { HttpError } from "./http-error";
-import { syncUserBalance } from "./account-money";
+import { lockUsers, syncUserBalance } from "./account-money";
 import {
   applyBankTransferStatusChange,
   BankTransferWithStatus,
@@ -45,6 +45,7 @@ export const moveMoney = (userId: string, input: MoveMoneyInput): Promise<BankTr
       throw new HttpError(400, "type must be deposit or withdrawal");
     }
 
+    await lockUsers(tx, [userId]);
     const account = await tx.bankAccount.findUnique({ where: { id: input.bankAccountId } });
     if (!account) throw new HttpError(404, "bank account not found");
     if (account.userId !== userId) throw new HttpError(403, "this is not your bank account");
@@ -63,6 +64,17 @@ export const moveMoney = (userId: string, input: MoveMoneyInput): Promise<BankTr
 
     if (!deposit && after < 0) throw new HttpError(400, "not enough balance");
     if (after > MAX_BALANCE_CENTS) throw new HttpError(400, "the balance would be too large");
+
+    // The user's own balance (the sum of all their accounts) is stored in the same size of number,
+    // so a deposit must not push that sum over the limit either.
+    if (deposit) {
+      const sums = await tx.$queryRaw<{ total: bigint | number | null }[]>`
+        SELECT COALESCE(SUM("balance"), 0) AS total FROM "bank_accounts"
+        WHERE "userId" = ${userId} AND "visible"`;
+      if (Number(sums[0]?.total ?? 0) + cents > MAX_BALANCE_CENTS) {
+        throw new HttpError(400, "the balance would be too large");
+      }
+    }
 
     // A deposit also shows up in the feeds as an "outside deposit" transaction (only its owner sees it):
     // sender = fixed text, receiver = the user, private, already complete.

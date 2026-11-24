@@ -5,6 +5,8 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // public: the app tables. testschema: test runs, shared fixtures and results (the app reset does not touch it)
+  schemas  = ["public", "testschema"]
 }
 
 // "contacts" is a leftover: there is no friends list any more, so it behaves like "private"
@@ -12,17 +14,23 @@ enum PrivacyLevel {
   public
   private
   contacts
+
+  @@schema("public")
 }
 
 enum TransactionStatus {
   pending
   incomplete
   complete
+
+  @@schema("public")
 }
 
 enum BankTransferType {
   withdrawal
   deposit
+
+  @@schema("public")
 }
 
 // requested -> completed | failed | canceled
@@ -31,6 +39,8 @@ enum BankTransferStatus {
   completed
   failed
   canceled
+
+  @@schema("public")
 }
 
 model User {
@@ -49,6 +59,7 @@ model User {
   modifiedAt          DateTime
 
   @@map("users")
+  @@schema("public")
 }
 
 model BankAccount {
@@ -64,6 +75,7 @@ model BankAccount {
 
   @@index([userId])
   @@map("bank_accounts")
+  @@schema("public")
 }
 
 model Transaction {
@@ -89,6 +101,7 @@ model Transaction {
   @@index([senderId])
   @@index([receiverId])
   @@map("transactions")
+  @@schema("public")
 }
 
 model Like {
@@ -99,8 +112,10 @@ model Like {
   createdAt     DateTime
   modifiedAt    DateTime
 
+  @@unique([userId, transactionId]) // one like per member and transaction
   @@index([transactionId])
   @@map("likes")
+  @@schema("public")
 }
 
 model Comment {
@@ -114,6 +129,7 @@ model Comment {
 
   @@index([transactionId])
   @@map("comments")
+  @@schema("public")
 }
 
 // payment / like / comment notifications share one table
@@ -131,6 +147,7 @@ model Notification {
 
   @@index([userId])
   @@map("notifications")
+  @@schema("public")
 }
 
 // Virtual deposit / withdrawal: no real money moves, only balances and records change.
@@ -153,6 +170,7 @@ model BankTransfer {
   @@index([userId])
   @@index([source])
   @@map("bank_transfers")
+  @@schema("public")
 }
 
 // Append-only history: one row per status change. Never updated, never deleted.
@@ -174,4 +192,240 @@ model BankTransferLog {
   @@index([bankTransferId])
   @@index([userId, createdAt])
   @@map("bank_transfer_logs")
+  @@schema("public")
+}
+
+// ===== testschema: test runs shared by the Web (Playwright) and the App (Flutter) =====
+// One run number line for both platforms. A platform joins the newest number if it has not run it yet,
+// otherwise the server opens newest+1 with new fixtures. Older numbers are closed.
+
+enum TestPlatform {
+  web
+  app
+
+  @@schema("testschema")
+}
+
+// server: apps/api. web: the Web screens. app: the App build
+enum VersionPart {
+  server
+  web
+  app
+
+  @@schema("testschema")
+}
+
+enum TestPerson {
+  A
+  B
+  C
+
+  @@schema("testschema")
+}
+
+// blocked: stopped midway (or no signal for 10 minutes)
+enum RunStatus {
+  running
+  finished
+  blocked
+
+  @@schema("testschema")
+}
+
+// spec: a test file. common: screen actions (tests/e2e/common). api: API tools (tests/e2e/api).
+// fixture: the code that makes or reads the values that tests use (tests/e2e/fixture)
+enum CodeKind {
+  spec
+  common
+  api
+  fixture
+
+  @@schema("testschema")
+}
+
+enum CodeResultStatus {
+  passed
+  failed
+  skipped
+
+  @@schema("testschema")
+}
+
+enum ReportResult {
+  passed
+  failed
+  blocked
+
+  @@schema("testschema")
+}
+
+// One row per run number: the number itself and the values that belong to one test (amounts, a comment).
+// The values of a person are in test_fixture_person. Web and App read the same values.
+// The prefix of a value column is the test that uses it. Empty: the column is newer than the number.
+model TestFixture {
+  runNo                  Int          @id @map("run_no") // newest + 1, made by the server
+  openedBy               TestPlatform @map("opened_by")
+  createdAt              DateTime     @default(now()) @map("created_at")
+  transferCycleDollars   Int?         @map("transfer_cycle_dollars")
+  detailDollars          Int?         @map("detail_dollars")
+  detailComment          String?      @map("detail_comment")
+  filterSentSmallDollars Int?         @map("filter_sent_small_dollars")
+  filterSentBigDollars   Int?         @map("filter_sent_big_dollars")
+  filterGotSmallDollars  Int?         @map("filter_got_small_dollars")
+  filterGotBigDollars    Int?         @map("filter_got_big_dollars")
+
+  people     TestFixturePerson[]
+  progress   RunProgress[]
+  webRecords WebTestRecord[]
+  appRecords AppTestRecord[]
+  webReport  WebTestReport?
+  appReport  AppTestReport?
+
+  @@map("test_fixture")
+  @@schema("testschema")
+}
+
+// Three rows per run number: A, B and C. Every test of the number uses the same three.
+model TestFixturePerson {
+  runNo                  Int        @map("run_no")
+  person                 TestPerson
+  usernameBase           String     @map("username_base") // the server adds the test, the number and the platform
+  firstName              String     @map("first_name")
+  lastName               String     @map("last_name")
+  phoneNumber            String     @map("phone_number")
+  bankName               String     @map("bank_name")
+  accountNumber          String     @map("account_number")
+  partitionUsername      String     @map("partition_username")
+  partitionName          String     @map("partition_name")
+  partitionPhone         String     @map("partition_phone")
+  partitionAccountLength Int        @map("partition_account_length")
+
+  fixture TestFixture @relation(fields: [runNo], references: [runNo], onDelete: Restrict)
+
+  @@id([runNo, person])
+  @@map("test_fixture_person")
+  @@schema("testschema")
+}
+
+// 0.100, 0.101... for the server, the Web screens and the App build, each with its own line
+model TestVersion {
+  part        VersionPart
+  version     String
+  major       Int
+  minor       Int
+  fingerprint String // of the source files
+  firstSeenAt DateTime    @default(now()) @map("first_seen_at")
+
+  @@id([part, version])
+  @@unique([part, major, fingerprint])
+  @@map("test_version")
+  @@schema("testschema")
+}
+
+// Internal, for the run itself: who runs a number now, joining it, and the 10-minute rule. Not a result.
+model RunProgress {
+  runNo        Int          @map("run_no")
+  platform     TestPlatform
+  status       RunStatus    @default(running)
+  device       String? // e.g. "chrome", an Android device name
+  startedAt    DateTime     @default(now()) @map("started_at")
+  lastSignalAt DateTime     @default(now()) @map("last_signal_at") // used by the 10-minute rule
+  finishedAt   DateTime?    @map("finished_at")
+
+  // what this run worked with (see test_version). Empty: not known
+  serverVersion    String?  @map("server_version") // at the start
+  serverVersionEnd String?  @map("server_version_end") // at the end: another one when the server changed meanwhile
+  targetVersion    String?  @map("target_version") // of the Web screens, or of the App build
+  testCommit       String?  @map("test_commit") // of the test code
+  testDirty        Boolean? @map("test_dirty") // the test code had changes that were not committed
+
+  fixture TestFixture @relation(fields: [runNo], references: [runNo], onDelete: Restrict)
+
+  @@id([runNo, platform])
+  @@map("run_progress")
+  @@schema("testschema")
+}
+
+// How the Web tests ran on the fixtures of a number: one row for a test (kind "spec") and one for every tool it called
+model WebTestRecord {
+  id           Int              @id @default(autoincrement())
+  runNo        Int              @map("run_no")
+  kind         CodeKind
+  testCase     String           @map("test_case") // the test's label
+  name         String // test title or function name, e.g. "createBankAccount"
+  file         String
+  parentId     Int?             @map("parent_id") // the spec row that called this code; empty for a spec
+  status       CodeResultStatus
+  attempt      Int              @default(1) // retry number
+  errorMessage String?          @map("error_message")
+  startedAt    DateTime         @map("started_at")
+  durationMs   Int              @map("duration_ms")
+
+  fixture  TestFixture     @relation(fields: [runNo], references: [runNo], onDelete: Restrict)
+  parent   WebTestRecord?  @relation("WebCalledFrom", fields: [parentId], references: [id], onDelete: Restrict)
+  children WebTestRecord[] @relation("WebCalledFrom")
+
+  @@index([runNo, kind])
+  @@index([testCase])
+  @@map("web_test_record")
+  @@schema("testschema")
+}
+
+// How the App tests ran on the fixtures of a number: one row for a test (kind "spec") and one for every tool it called
+model AppTestRecord {
+  id           Int              @id @default(autoincrement())
+  runNo        Int              @map("run_no")
+  kind         CodeKind
+  testCase     String           @map("test_case") // the test's label
+  name         String // test title or function name, e.g. "createBankAccount"
+  file         String
+  parentId     Int?             @map("parent_id") // the spec row that called this code; empty for a spec
+  status       CodeResultStatus
+  attempt      Int              @default(1) // retry number
+  errorMessage String?          @map("error_message")
+  startedAt    DateTime         @map("started_at")
+  durationMs   Int              @map("duration_ms")
+
+  fixture  TestFixture     @relation(fields: [runNo], references: [runNo], onDelete: Restrict)
+  parent   AppTestRecord?  @relation("AppCalledFrom", fields: [parentId], references: [id], onDelete: Restrict)
+  children AppTestRecord[] @relation("AppCalledFrom")
+
+  @@index([runNo, kind])
+  @@index([testCase])
+  @@map("app_test_record")
+  @@schema("testschema")
+}
+
+// The finished report of a number on the Web, written once, when the run ends. No row: it has not ended.
+// true / false: all code of that kind passed / something failed. Empty: none ran, or the run was blocked.
+// The final result of both platforms is the view testschema.final_test_report (see the migration).
+model WebTestReport {
+  runNo      Int          @id @map("run_no")
+  specOk     Boolean?     @map("spec_ok")
+  commonOk   Boolean?     @map("common_ok")
+  apiOk      Boolean?     @map("api_ok")
+  result     ReportResult
+  reportedAt DateTime     @default(now()) @map("reported_at")
+
+  fixture TestFixture @relation(fields: [runNo], references: [runNo], onDelete: Restrict)
+
+  @@map("web_test_report")
+  @@schema("testschema")
+}
+
+// The finished report of a number on the App, written once, when the run ends. No row: it has not ended.
+// true / false: all code of that kind passed / something failed. Empty: none ran, or the run was blocked.
+// The final result of both platforms is the view testschema.final_test_report (see the migration).
+model AppTestReport {
+  runNo      Int          @id @map("run_no")
+  specOk     Boolean?     @map("spec_ok")
+  commonOk   Boolean?     @map("common_ok")
+  apiOk      Boolean?     @map("api_ok")
+  result     ReportResult
+  reportedAt DateTime     @default(now()) @map("reported_at")
+
+  fixture TestFixture @relation(fields: [runNo], references: [runNo], onDelete: Restrict)
+
+  @@map("app_test_report")
+  @@schema("testschema")
 }

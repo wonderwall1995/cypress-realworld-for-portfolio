@@ -2,9 +2,10 @@
 
 import express from "express";
 import { createNotifications, updateNotificationById } from "./notification-db";
-import { getUnreadNotificationsForApi } from "./notification-api";
+import { getNotificationHistoryForApi, getUnreadNotificationsForApi } from "./notification-api";
 import { openNotificationStream, publishNotifications } from "./notification-stream";
 import { asyncHandler } from "./async-handler";
+import { HttpError } from "./http-error";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
 import {
   isNotificationsBodyValidator,
@@ -15,13 +16,16 @@ const router = express.Router();
 
 // Routes
 
-//GET /notifications/
+//GET /notifications/ - the unread ones. With ?include=read the newest read ones come too.
 router.get(
   "/",
   ensureAuthenticated,
   asyncHandler(async (req, res) => {
     /* istanbul ignore next */
-    const notifications = await getUnreadNotificationsForApi(req.user?.id!);
+    const notifications =
+      req.query.include === "read"
+        ? await getNotificationHistoryForApi(req.user?.id!)
+        : await getUnreadNotificationsForApi(req.user?.id!);
 
     res.status(200);
     res.json({ results: notifications });
@@ -56,8 +60,10 @@ router.patch(
   validateMiddleware([shortIdValidation("notificationId"), ...isNotificationPatchValidator]),
   asyncHandler(async (req, res) => {
     const { notificationId } = req.params;
-    /* istanbul ignore next */
-    await updateNotificationById(req.user?.id!, notificationId, req.body);
+    // someone else's notification looks the same as one that does not exist
+    if (!(await updateNotificationById(req.user?.id!, notificationId, req.body))) {
+      throw new HttpError(404, "notification not found");
+    }
 
     res.sendStatus(204);
   })

@@ -41,7 +41,7 @@ import {
   MAX_AMOUNT_DOLLARS,
   MAX_BALANCE_CENTS,
 } from "@rwa/shared";
-import { loadUsableAccount, moveBetweenAccounts } from "./account-money";
+import { loadUsableAccount, moveBetweenAccounts, lockUsers } from "./account-money";
 import { HttpError } from "./http-error";
 import { createPaymentNotification } from "./notification-db";
 import { publishNotifications } from "./notification-stream";
@@ -396,6 +396,7 @@ export const createTransaction = async (
       );
     }
 
+    await lockUsers(tx, [userId, transactionDetails.receiverId]);
     const sender = await tx.user.findUnique({ where: { id: userId } });
     const receiver = await tx.user.findUnique({ where: { id: transactionDetails.receiverId } });
     if (!sender) throw new Error(`sender not found: ${userId}`);

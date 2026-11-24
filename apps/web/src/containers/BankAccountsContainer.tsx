@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { MAX_BANK_ACCOUNTS } from "@rwa/shared";
 import { BANK_ACCOUNTS_CHANGED } from "../utils/bankAccountEvents";
 import { styled } from "@mui/material/styles";
 import { useActor } from "@xstate/react";
@@ -82,6 +83,9 @@ const BankAccountsContainer: React.FC<Props> = ({ authService, bankAccountsServi
     return () => window.removeEventListener(BANK_ACCOUNTS_CHANGED, refetch);
   }, [sendBankAccounts]);
 
+  // at the limit the server refuses a new account: the screen does not offer one
+  const atLimit = (bankAccountsState?.context.results?.length ?? 0) >= MAX_BANK_ACCOUNTS;
+
   if (match.url === "/bankaccounts/new" && currentUser?.id) {
     return (
       <StyledPaper className={classes.paper}>
@@ -108,12 +112,18 @@ const BankAccountsContainer: React.FC<Props> = ({ authService, bankAccountsServi
             size="large"
             component={RouterLink}
             to="/bankaccounts/new"
+            disabled={atLimit}
             data-testid="bankaccount-new"
           >
             만들기
           </Button>
         </Grid>
       </Grid>
+      {atLimit && (
+        <Alert severity="info" data-testid="bankaccount-limit" sx={{ marginBottom: 1 }}>
+          은행 계좌는 최대 {MAX_BANK_ACCOUNTS}개까지 만들 수 있습니다.
+        </Alert>
+      )}
       {deleteRefusal && (
         <Alert
           severity="error"

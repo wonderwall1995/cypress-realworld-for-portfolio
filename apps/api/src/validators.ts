@@ -66,6 +66,11 @@ export const isUserValidator = [
   check("defaultPrivacyLevel").optional({ checkFalsy: true }).isIn(["public", "private"]),
 ];
 
+// Extra rule for a profile change only: a name may be left out, but not emptied (the screen refuses it too).
+export const isProfileNameValidator = ["firstName", "lastName"].map((name) =>
+  body(name).optional().isString().trim().notEmpty().withMessage(`${name} is required`)
+);
+
 // Extra rule for sign-up only: a phone number is required (settings can still change it later).
 export const isSignUpValidator = [
   body("phoneNumber")
@@ -104,8 +109,17 @@ const minNotAboveMax = (minName: string, maxName: string) =>
       return true;
     });
 
+// Date.parse moves a day that does not exist (2027-02-30) to the next month, so the written day is checked too
+const isRealDay = (value: string) => {
+  const written = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!written) return true; // not written as YYYY-MM-DD: Date.parse alone decides
+  const [year, month, day] = written.slice(1).map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+};
+
 const isDateValue = (value: unknown) =>
-  typeof value === "string" && !Number.isNaN(Date.parse(value));
+  typeof value === "string" && !Number.isNaN(Date.parse(value)) && isRealDay(value);
 
 export const transactionFilterValidators = [
   centsQuery("depositMin"),
@@ -143,7 +157,11 @@ export const isTransactionQSValidator = [
 export const isTransactionPayloadValidator = [
   // only transfers (payments) are created; the old request -> notice -> accept flow is gone
   body("transactionType").isIn(["payment"]).trim(),
-  body("privacyLevel").optional().isIn(DefaultPrivacyLevelValues).trim(),
+  // not the old "contacts": there is no friends list any more
+  body("privacyLevel")
+    .optional()
+    .isIn([DefaultPrivacyLevel.public, DefaultPrivacyLevel.private])
+    .trim(),
   body("source").optional().isString().trim(),
   body("myAccountId").isString().trim().notEmpty(),
   body("otherAccountId").optional().isString().trim(),
@@ -163,7 +181,11 @@ export const isTransactionPublicQSValidator = [
   ...transactionFilterValidators,
 ];
 
-export const isCommentValidator = body("content").isString().trim();
+export const isCommentValidator = body("content")
+  .isString()
+  .trim()
+  .notEmpty()
+  .withMessage("content is required");
 
 export const isNotificationsBodyValidator = [
   body("items.*.type").isIn(NotificationsTypeValues).trim(),

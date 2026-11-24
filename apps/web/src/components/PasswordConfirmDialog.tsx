@@ -66,7 +66,9 @@ const PasswordConfirmDialog: React.FC<Props> = ({
       setError(
         e?.response?.status === 403
           ? "비밀번호가 맞지 않습니다"
-          : "비밀번호를 확인하지 못했습니다. 잠시 뒤 다시 시도하세요"
+          : e?.response?.status === 429
+            ? "비밀번호를 여러 번 틀렸습니다. 10분 뒤에 다시 시도하세요"
+            : "비밀번호를 확인하지 못했습니다. 잠시 뒤 다시 시도하세요"
       );
       setBusy(false);
       return;

@@ -16,8 +16,18 @@ export const transactionDetailMachine = dataMachine("transactionData").withConfi
     createData: async (ctx, event: any) => {
       let route = event.entity === "LIKE" ? "likes" : "comments";
       const payload = flow(omit("type"), omit("entity"))(event);
-      const resp = await httpClient.post(`${API_BASE}/${route}/${payload.transactionId}`, payload);
-      return resp.data;
+      try {
+        const resp = await httpClient.post(
+          `${API_BASE}/${route}/${payload.transactionId}`,
+          payload
+        );
+        return resp.data;
+      } catch (error: any) {
+        // 409: already liked (for example in another tab). 422: the text was refused.
+        // Keep the screen: the machine reads the transaction again, so it shows what the server has.
+        if ([409, 422].includes(error.response?.status)) return undefined;
+        throw error;
+      }
     },
   },
 });

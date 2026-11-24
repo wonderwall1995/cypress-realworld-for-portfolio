@@ -21,9 +21,12 @@ import likeRoutes from "./like-routes";
 import commentRoutes from "./comment-routes";
 import notificationRoutes from "./notification-routes";
 import bankTransferRoutes from "./banktransfer-routes";
+import { Prisma } from "@prisma/client";
 import { HttpError } from "./http-error";
 import { closeAllStreams } from "./notification-stream";
 import testDataRoutes from "./testdata-routes";
+import snapshotRoutes from "./snapshot-routes";
+import demoRoutes from "./demo-routes";
 import { checkAuth0Jwt, verifyOktaToken, checkCognitoJwt, checkGoogleJwt } from "./helpers";
 import resolvers from "./graphql/resolvers";
 import { frontendPort, getBackendPort } from "./port-utils";
@@ -44,6 +47,7 @@ const schemaWithResolvers = addResolversToSchema({
 });
 
 const app = express();
+app.set("trust proxy", 1); // Nginx in front tells whether the visitor came over HTTPS
 
 app.use(cors(corsOption));
 app.use(logger("dev"));
@@ -56,6 +60,8 @@ app.use(
     resave: false,
     saveUninitialized: false,
     unset: "destroy",
+    // "auto": the cookie is Secure when the visitor came over HTTPS (and still works over HTTP on a developer's PC)
+    cookie: { httpOnly: true, sameSite: "lax", secure: "auto" },
   })
 );
 app.use(passport.initialize());
@@ -69,7 +75,20 @@ const api = express.Router();
 
 /* istanbul ignore next */
 if (process.env.NODE_ENV === "test" || process.env.NODE_ENV === "development") {
+  // can wipe or dump the whole database: never in production
   api.use("/testData", testDataRoutes);
+}
+
+// the DB tab of the demo reads the snapshot here (read-only, every NODE_ENV)
+api.use("/demoSnapshot", snapshotRoutes);
+
+// Run numbers and fixtures for the test runners (every NODE_ENV; writes need TEST_RUN_SECRET).
+// Loaded only when the Prisma client of this server knows the testschema tables: an older client
+// (a container that has not run "prisma generate" yet) would stop the whole server.
+if (Prisma.dmmf.datamodel.models.some((model) => model.name === "TestFixturePerson")) {
+  api.use("/testRuns", require("./test-run-routes").default);
+} else {
+  console.warn("[testRuns] closed: run prisma generate to open the test-run routes");
 }
 
 api.use(auth);
@@ -114,6 +133,8 @@ api.use("/likes", likeRoutes);
 api.use("/comments", commentRoutes);
 api.use("/notifications", notificationRoutes);
 api.use("/bankTransfers", bankTransferRoutes);
+// what the demo needs, safe in production too: login needed, only the own data of the user
+api.use("/demo", demoRoutes);
 
 app.use("/api", api);
 
@@ -122,7 +143,14 @@ app.use((err: any, _req: express.Request, res: express.Response, next: express.N
   if (err instanceof HttpError) {
     return res.status(err.status).json({ error: err.message });
   }
-  return next(err);
+  if (res.headersSent) return next(err);
+  // an error that a library marked as the sender's fault (for example broken JSON) keeps its status;
+  // anything else is ours: it goes to the log, never to the sender
+  const theirs = err?.status >= 400 && err?.status < 500;
+  if (!theirs) console.error(err);
+  return theirs
+    ? res.status(err.status).json({ error: err.message })
+    : res.status(500).json({ error: "internal server error" });
 });
 
 getBackendPort().then((port) => {

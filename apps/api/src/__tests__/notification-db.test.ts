@@ -8,8 +8,10 @@ import {
   createPaymentNotification,
   getAllNotifications,
   getNotificationById,
+  getNotificationHistoryByUserId,
   getNotificationsByUserId,
   getUnreadNotificationsByUserId,
+  READ_LIMIT,
   updateNotificationById,
 } from "../notification-db";
 import { resetDatabase } from "./db-setup/reset";
@@ -81,12 +83,54 @@ describe("Notifications (PostgreSQL)", () => {
   it("marks a notification as read for its owner only", async () => {
     const n = await createPaymentNotification("u1", "t1", PaymentNotificationStatus.received);
 
-    await updateNotificationById("u2", n.id, { isRead: true }); // not the owner
+    expect(await updateNotificationById("u2", n.id, { isRead: true })).toBe(false); // not the owner
+    expect(await updateNotificationById("u1", "none", { isRead: true })).toBe(false);
     expect((await getNotificationById(n.id))!.isRead).toBe(false);
 
-    await updateNotificationById("u1", n.id, { isRead: true });
+    expect(await updateNotificationById("u1", n.id, { isRead: true })).toBe(true);
     expect((await getNotificationById(n.id))!.isRead).toBe(true);
     expect(await getUnreadNotificationsByUserId("u1")).toHaveLength(0);
+  });
+
+  it("the history keeps read notifications in the order they were made, and only those of the user", async () => {
+    const made: string[] = [];
+    for (const id of ["t1", "t2", "t3"]) {
+      made.push((await createPaymentNotification("u1", id, PaymentNotificationStatus.received)).id);
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    await createPaymentNotification("u2", "t4", PaymentNotificationStatus.received);
+    await updateNotificationById("u1", made[0], { isRead: true }); // the oldest must not jump to the top
+
+    const history = await getNotificationHistoryByUserId("u1");
+
+    expect(history.map((n) => n.id)).toEqual([...made].reverse());
+    expect(history.map((n) => n.isRead)).toEqual([false, false, true]);
+  });
+
+  it(`the history has every unread notification and the ${READ_LIMIT} newest read ones`, async () => {
+    const row = (index: number, isRead: boolean) => ({
+      id: `n${index}`,
+      uuid: `uuid-${index}`,
+      userId: "u1",
+      transactionId: "t1",
+      isRead,
+      status: "received",
+      createdAt: new Date(index * 1000),
+      modifiedAt: new Date(index * 1000),
+    });
+    const READ = READ_LIMIT + 1;
+    const UNREAD = READ_LIMIT + 10;
+    // the unread ones are the oldest: they still must all be there
+    await prisma.notification.createMany({
+      data: Array.from({ length: UNREAD + READ }, (_, index) => row(index, index >= UNREAD)),
+    });
+
+    const history = await getNotificationHistoryByUserId("u1");
+
+    expect(history.filter((n) => !n.isRead)).toHaveLength(UNREAD);
+    expect(history.filter((n) => n.isRead)).toHaveLength(READ_LIMIT);
+    expect(history[0].id).toBe(`n${UNREAD + READ - 1}`); // the newest read one
+    expect(history.some((n) => n.id === `n${UNREAD}`)).toBe(false); // the oldest read one is left out
   });
 
   it("lists every notification", async () => {

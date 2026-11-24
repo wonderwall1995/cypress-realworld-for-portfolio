@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { styled } from "@mui/material/styles";
 import { get } from "lodash/fp";
 import { useTheme, useMediaQuery, Divider } from "@mui/material";
-import { InfiniteLoader, List, Index } from "react-virtualized";
+import { CellMeasurer, CellMeasurerCache, InfiniteLoader, List, Index } from "react-virtualized";
 import "react-virtualized/styles.css"; // only needs to be imported once
 
 import TransactionItem from "./TransactionItem";
@@ -24,6 +24,8 @@ const StyledInfiniteLoader = styled(InfiniteLoader)(({ theme }) => ({
   },
 }));
 
+const removePx = (str: string) => +str.slice(0, str.length - 2);
+
 export interface TransactionListProps {
   transactions: TransactionResponseItem[];
   loadNextPage: Function;
@@ -39,6 +41,26 @@ const TransactionInfiniteList: React.FC<TransactionListProps> = ({
   const isXsBreakpoint = useMediaQuery(theme.breakpoints.down("sm"));
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
+  // Every row is measured: a long name takes more lines, and a fixed height would let the next row cover them.
+  // A measured height belongs to the transaction, not to the place in the list (a filter changes the places).
+  const transactionsRef = useRef(transactions);
+  transactionsRef.current = transactions;
+  const rowHeights = useRef(
+    new CellMeasurerCache({
+      fixedWidth: true,
+      defaultHeight: removePx(theme.spacing(24)),
+      keyMapper: (index: number) => transactionsRef.current[index]?.id ?? `row-${index}`,
+    })
+  ).current;
+  const listRef = useRef<List | null>(null);
+  useEffect(() => {
+    listRef.current?.recomputeRowHeights();
+  }, [transactions]);
+  useEffect(() => {
+    rowHeights.clearAll(); // the width of the list changes with the screen
+    listRef.current?.recomputeRowHeights();
+  }, [isXsBreakpoint, isMobile, rowHeights]);
+
   const itemCount = pagination.hasNextPages ? transactions.length + 1 : transactions.length;
 
   const loadMoreItems = () => {
@@ -51,20 +73,20 @@ const TransactionInfiniteList: React.FC<TransactionListProps> = ({
     !pagination.hasNextPages || params.index < transactions.length;
 
   // @ts-ignore
-  function rowRenderer({ key, index, style }) {
+  function rowRenderer({ key, index, style, parent }) {
     const transaction = get(index, transactions);
 
     if (index < transactions.length) {
       return (
-        <div key={key} style={style}>
-          <TransactionItem transaction={transaction} />
-          <Divider variant={isMobile ? "fullWidth" : "inset"} />
-        </div>
+        <CellMeasurer key={key} cache={rowHeights} parent={parent} rowIndex={index} columnIndex={0}>
+          <div style={style}>
+            <TransactionItem transaction={transaction} />
+            <Divider variant={isMobile ? "fullWidth" : "inset"} />
+          </div>
+        </CellMeasurer>
       );
     }
   }
-
-  const removePx = (str: string) => +str.slice(0, str.length - 2);
 
   return (
     <StyledInfiniteLoader
@@ -77,12 +99,15 @@ const TransactionInfiniteList: React.FC<TransactionListProps> = ({
         <div data-testid="transaction-list" className={classes.transactionList}>
           <List
             rowCount={itemCount}
-            ref={registerChild}
+            ref={(list) => {
+              listRef.current = list;
+              registerChild(list);
+            }}
+            deferredMeasurementCache={rowHeights}
             onRowsRendered={onRowsRendered}
             height={isXsBreakpoint ? removePx(theme.spacing(74)) : removePx(theme.spacing(88))}
             width={isXsBreakpoint ? removePx(theme.spacing(38)) : removePx(theme.spacing(90))}
-            // a row holds date, title, bank line, memo and likes: taller than before
-            rowHeight={isXsBreakpoint ? removePx(theme.spacing(36)) : removePx(theme.spacing(24))}
+            rowHeight={rowHeights.rowHeight}
             rowRenderer={rowRenderer}
           />
         </div>
