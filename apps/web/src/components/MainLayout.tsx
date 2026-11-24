@@ -10,7 +10,7 @@ import {
 } from "xstate";
 import { Container, Grid, useMediaQuery, useTheme } from "@mui/material";
 
-import { FOOTER_HEIGHT } from "../demo/layout";
+import { FOOTER_HEIGHT, MOBILE_FOOTER_SPACE } from "../demo/layout";
 import NavBar from "./NavBar";
 import NavDrawer from "./NavDrawer";
 import { DataContext, DataEvents, DataSchema } from "../machines/dataMachine";
@@ -27,7 +27,7 @@ const classes = {
 };
 // TODO jss-to-styled codemod: The Fragment root was replaced by div. Change the tag if needed.
 const Root = styled("div")(({ theme }) => ({
-  [`&`]: { display: "flex", flexGrow: 1 },
+  [`&`]: { display: "flex", flexGrow: 1, minWidth: 0 },
 
   [`& .${classes.toolbar}`]: {
     paddingRight: 24, // keep right padding when drawer closed
@@ -35,6 +35,7 @@ const Root = styled("div")(({ theme }) => ({
 
   [`& .${classes.appBarSpacer}`]: {
     minHeight: theme.spacing(13),
+    [theme.breakpoints.down("sm")]: { minHeight: 152 },
     [theme.breakpoints.up("sm")]: {
       minHeight: theme.spacing(14),
     },
@@ -44,12 +45,24 @@ const Root = styled("div")(({ theme }) => ({
     flexGrow: 1,
     height: `calc(100vh - ${FOOTER_HEIGHT}px)`, // the demo footer takes the bottom of the window
     overflow: "auto",
+    minWidth: 0,
+    [theme.breakpoints.down("sm")]: {
+      height: `calc(100dvh - ${MOBILE_FOOTER_SPACE} - 48px)`,
+      overscrollBehavior: "contain",
+      paddingBottom: "env(safe-area-inset-bottom, 0px)",
+    },
   },
 
   [`& .${classes.container}`]: {
     minHeight: "77vh",
     paddingTop: theme.spacing(1),
     paddingBottom: theme.spacing(1),
+    [theme.breakpoints.down("sm")]: {
+      minHeight: 0,
+      paddingLeft: theme.spacing(0.5),
+      paddingRight: theme.spacing(0.5),
+      paddingBottom: theme.spacing(4),
+    },
     [theme.breakpoints.up("sm")]: {
       paddingTop: theme.spacing(4),
       padding: theme.spacing(4),
@@ -77,16 +90,15 @@ const MainLayout: React.FC<Props> = ({ children, notificationsService, authServi
   const xsBreakpoint = useMediaQuery(theme.breakpoints.only("xs"));
 
   const desktopDrawerOpen = drawerState?.matches({ desktop: "open" });
-  const mobileDrawerOpen = drawerState?.matches({ mobile: "open" });
+  const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(true);
   const toggleDesktopDrawer = () => {
     sendDrawer("TOGGLE_DESKTOP");
   };
   const toggleMobileDrawer = () => {
-    sendDrawer("TOGGLE_MOBILE");
+    setMobileDrawerOpen((open) => !open);
   };
 
   const openDesktopDrawer = (payload: any) => sendDrawer("OPEN_DESKTOP", payload);
-  const closeMobileDrawer = () => sendDrawer("CLOSE_MOBILE");
 
   useEffect(() => {
     if (!desktopDrawerOpen && aboveSmallBreakpoint) {
@@ -102,9 +114,7 @@ const MainLayout: React.FC<Props> = ({ children, notificationsService, authServi
         notificationsService={notificationsService}
       />
       <NavDrawer
-        toggleDrawer={xsBreakpoint ? toggleMobileDrawer : toggleDesktopDrawer}
         drawerOpen={xsBreakpoint ? mobileDrawerOpen : desktopDrawerOpen}
-        closeMobileDrawer={closeMobileDrawer}
         authService={authService}
       />
       <main className={classes.content} data-testid="main">

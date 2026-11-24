@@ -29,6 +29,7 @@ import TransactionNavTabs from "./TransactionNavTabs";
 import RWALogo from "./SvgRwaLogo";
 import RWALogoIcon from "./SvgRwaIconLogo";
 import SourceCredit from "./SourceCredit";
+import { MOBILE_SIDEBAR_WIDTH } from "../demo/layout";
 
 const drawerWidth = 240;
 
@@ -67,6 +68,10 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
   [`&.${classes.appBarShift}`]: {
     marginLeft: drawerWidth,
     width: `calc(100% - ${drawerWidth}px)`,
+    [theme.breakpoints.down("sm")]: {
+      marginLeft: MOBILE_SIDEBAR_WIDTH,
+      width: `calc(100% - ${MOBILE_SIDEBAR_WIDTH}px)`,
+    },
     transition: theme.transitions.create(["width", "margin"], {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.enteringScreen,
@@ -98,6 +103,10 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
   [`& .${classes.zeroBadge}`]: {
     backgroundColor: "rgba(255,255,255,0.3)",
     color: "white",
+  },
+  [theme.breakpoints.down("sm")]: {
+    [`& .${classes.toolbar}`]: { paddingLeft: 8, paddingRight: 8 },
+    [`& .${classes.title}`]: { minWidth: 0 },
   },
 }));
 

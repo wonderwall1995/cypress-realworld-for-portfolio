@@ -86,7 +86,7 @@ const DatePartsBox: React.FC<DatePartsBoxProps> = ({
         sx={{
           display: "inline-flex",
           alignItems: "center",
-          padding: "5px 10px",
+          padding: { xs: "5px 4px", sm: "5px 10px" },
           borderRadius: "4px",
           border: "1px solid",
           borderColor: invalid ? "error.main" : "rgba(0, 0, 0, 0.23)",

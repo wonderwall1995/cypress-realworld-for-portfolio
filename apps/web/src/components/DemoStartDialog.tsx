@@ -1,4 +1,5 @@
 import React from "react";
+import { DEMO_Z_INDEX } from "../demo/layout";
 import {
   Button,
   Dialog,
@@ -29,7 +30,14 @@ export default function DemoStartDialog({
   onClose,
 }: Props) {
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth data-testid="demo-start-dialog">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="xs"
+      fullWidth
+      sx={{ zIndex: DEMO_Z_INDEX + 3 }}
+      data-testid="demo-start-dialog"
+    >
       <DialogTitle>무엇을 실행할까요?</DialogTitle>
       <DialogContent>
         <DialogContentText component="div">

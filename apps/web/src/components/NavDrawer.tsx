@@ -4,8 +4,6 @@ import { Interpreter } from "xstate";
 import { useActor } from "@xstate/react";
 import clsx from "clsx";
 import {
-  useMediaQuery,
-  useTheme,
   Box,
   Button,
   Drawer,
@@ -35,6 +33,7 @@ import { BANK_ACCOUNTS_CHANGED } from "../utils/bankAccountEvents";
 import { httpClient } from "../utils/asyncUtils";
 import { API_BASE } from "../utils/apiUtils";
 import { AuthMachineContext, AuthMachineEvents } from "../machines/authMachine";
+import { MOBILE_FOOTER_SPACE, MOBILE_SIDEBAR_WIDTH } from "../demo/layout";
 
 const PREFIX = "NavDrawer";
 
@@ -153,27 +152,45 @@ const StyledDrawer = styled(Drawer)(({ theme }) => ({
   [`& .${classes.bottomNav}`]: {
     marginTop: "auto",
   },
+  [theme.breakpoints.down("sm")]: {
+    flexShrink: 0,
+    "& .MuiDrawer-paper": {
+      width: MOBILE_SIDEBAR_WIDTH,
+      height: `calc(100dvh - ${MOBILE_FOOTER_SPACE} - 48px)`,
+      overflowY: "auto",
+      overflowX: "hidden",
+      "& > *": { flexShrink: 0 },
+      paddingBottom: theme.spacing(2),
+    },
+    "& .MuiDrawer-paper .MuiListItemIcon-root": { minWidth: 28 },
+    "& .MuiDrawer-paper .MuiListItem-root": { paddingLeft: 8, paddingRight: 8 },
+    [`& .${classes.userProfile}`]: {
+      padding: theme.spacing(1),
+      whiteSpace: "normal",
+      overflowWrap: "anywhere",
+    },
+    [`& .${classes.avatar}`]: { display: "none" },
+    [`& .${classes.userProfile} .MuiTypography-root`]: {
+      maxWidth: "100%",
+      whiteSpace: "normal",
+      fontSize: 12,
+    },
+    [`& .${classes.balanceBox}`]: { padding: theme.spacing(1) },
+    [`& .${classes.balanceButtons}`]: { flexDirection: "column" },
+    [`& .${classes.menuItem}`]: { margin: theme.spacing(0, 0.5, 1) },
+  },
 }));
 
 interface Props {
-  closeMobileDrawer: () => void;
-  toggleDrawer: () => void;
   drawerOpen: boolean;
   authService: Interpreter<AuthMachineContext, any, AuthMachineEvents, any>;
 }
 
-const NavDrawer: React.FC<Props> = ({
-  toggleDrawer,
-  closeMobileDrawer,
-  drawerOpen,
-  authService,
-}) => {
-  const theme = useTheme();
+const NavDrawer: React.FC<Props> = ({ drawerOpen, authService }) => {
   const location = useLocation();
   const [authState, sendAuth] = useActor(authService);
   const [depositOpen, setDepositOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
-  const showTemporaryDrawer = useMediaQuery(theme.breakpoints.only("xs"));
 
   const currentUser = authState?.context?.user;
   // How many bank accounts the member has. Without any, the 은행 계좌 button turns yellow.
@@ -206,11 +223,6 @@ const NavDrawer: React.FC<Props> = ({
 
   const signOut = () => sendAuth("LOGOUT");
 
-  // on a phone the drawer covers the page, so close it after a choice
-  const afterChoice = () => {
-    if (showTemporaryDrawer) toggleDrawer();
-  };
-
   const menu = [
     { to: "/", label: "홈", icon: <HomeIcon />, testId: "sidenav-home", exact: true },
     {
@@ -235,15 +247,11 @@ const NavDrawer: React.FC<Props> = ({
   return (
     <StyledDrawer
       data-testid="sidenav"
-      variant={showTemporaryDrawer ? "temporary" : "persistent"}
+      variant="persistent"
       classes={{
         paper: clsx(classes.drawerPaper, !drawerOpen && classes.drawerPaperClose),
       }}
       open={drawerOpen}
-      ModalProps={{
-        onBackdropClick: () => closeMobileDrawer(),
-        closeAfterTransition: showTemporaryDrawer,
-      }}
     >
       <Box className={drawerOpen ? classes.userProfile : classes.userProfileHidden}>
         {currentUser && (
@@ -290,7 +298,6 @@ const NavDrawer: React.FC<Props> = ({
                 size="small"
                 startIcon={<DepositIcon />}
                 onClick={() => {
-                  afterChoice();
                   setDepositOpen(true);
                 }}
                 data-testid="sidenav-deposit"
@@ -303,7 +310,6 @@ const NavDrawer: React.FC<Props> = ({
                 startIcon={<TransferIcon />}
                 component={RouterLink}
                 to="/transaction/new"
-                onClick={afterChoice}
                 data-testid="sidenav-transfer"
               >
                 이체
@@ -322,7 +328,6 @@ const NavDrawer: React.FC<Props> = ({
                 button
                 className={classes.menuItem}
                 selected={isSelected(item.to, item.exact)}
-                onClick={afterChoice}
                 component={RouterLink}
                 to={item.to}
                 data-testid={item.testId}

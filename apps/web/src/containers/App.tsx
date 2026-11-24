@@ -19,6 +19,7 @@ import { demoController, useDemo } from "../demo/controller";
 import { buildPlan, currentTestIdAt } from "../demo/plan";
 import DemoNotice from "../components/DemoNotice";
 import DemoStartDialog from "../components/DemoStartDialog";
+import { MOBILE_FOOTER_SPACE } from "../demo/layout";
 
 const PREFIX = "App";
 
@@ -68,41 +69,50 @@ const App: React.FC = () => {
 
   return (
     // A column of the whole window: the app (and the accordion) above, the demo footer below
-    <Box sx={{ display: "flex", flexDirection: "column", width: "100%", height: "100vh" }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        height: "100vh",
+        "@supports (height: 100dvh)": { height: "100dvh" },
+        paddingBottom: { xs: `calc(${MOBILE_FOOTER_SPACE} + 48px)`, sm: 0 },
+      }}
+    >
       <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
         {/* position: relative keeps the absolute top bar inside this area (not under the accordion) */}
         <Box sx={{ flex: 1, minWidth: 0, overflow: "auto", position: "relative" }}>
           <Root className={classes.root}>
-      <CssBaseline />
+            <CssBaseline />
 
-      {isLoggedIn && (
-        <PrivateRoutesContainer
-          isLoggedIn={isLoggedIn}
-          notificationsService={notificationsService}
-          authService={authService}
-          snackbarService={snackbarService}
-          bankAccountsService={bankAccountsService}
-        />
-      )}
-      {/* also while a sign-up is on its way: a refused one must not empty the form */}
-      {(authState.matches("unauthorized") || authState.matches("signup")) && (
-        <Switch>
-          <Route exact path="/signup">
-            <SignUpForm authService={authService} />
-          </Route>
-          <Route exact path="/signin">
-            <SignInForm authService={authService} />
-          </Route>
-          <Route path="/*">
-            <Redirect
-              to={{
-                pathname: "/signin",
-              }}
-            />
-          </Route>
-        </Switch>
-      )}
-      <AlertBar snackbarService={snackbarService} />
+            {isLoggedIn && (
+              <PrivateRoutesContainer
+                isLoggedIn={isLoggedIn}
+                notificationsService={notificationsService}
+                authService={authService}
+                snackbarService={snackbarService}
+                bankAccountsService={bankAccountsService}
+              />
+            )}
+            {/* also while a sign-up is on its way: a refused one must not empty the form */}
+            {(authState.matches("unauthorized") || authState.matches("signup")) && (
+              <Switch>
+                <Route exact path="/signup">
+                  <SignUpForm authService={authService} />
+                </Route>
+                <Route exact path="/signin">
+                  <SignInForm authService={authService} />
+                </Route>
+                <Route path="/*">
+                  <Redirect
+                    to={{
+                      pathname: "/signin",
+                    }}
+                  />
+                </Route>
+              </Switch>
+            )}
+            <AlertBar snackbarService={snackbarService} />
           </Root>
         </Box>
         {/* always on screen: it can be folded and unfolded at any time, also when no demo runs */}
@@ -136,7 +146,9 @@ const App: React.FC = () => {
         hasPrev={demo.index > 0}
         hasNext={demo.index < demoQueue.length - 1}
         currentTestId={currentTestId}
-        progress={demo.state === "idle" ? undefined : { current: demo.index + 1, total: demoQueue.length }}
+        progress={
+          demo.state === "idle" ? undefined : { current: demo.index + 1, total: demoQueue.length }
+        }
         single={demo.single}
         onStart={() => (chosenTest === undefined ? startDemo() : setAskingStart(true))}
         onTogglePause={demoController.togglePause}

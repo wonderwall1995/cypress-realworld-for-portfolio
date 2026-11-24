@@ -1,6 +1,6 @@
 import React from "react";
 import { Alert, Snackbar } from "@mui/material";
-import { FOOTER_HEIGHT } from "../demo/layout";
+import { DEMO_Z_INDEX, FOOTER_HEIGHT, MOBILE_FOOTER_SPACE } from "../demo/layout";
 
 const SHOW_MS = 2000;
 
@@ -27,7 +27,14 @@ export default function DemoNotice({ notice }: { notice?: { id: number; text: st
       }}
       anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
       // "&&" makes this rule stronger than the default position of the MUI snackbar
-      sx={{ "&&": { bottom: FOOTER_HEIGHT + 12, left: 16 } }}
+      sx={{
+        zIndex: DEMO_Z_INDEX + 2,
+        pointerEvents: "none",
+        "&&": {
+          bottom: { xs: `calc(${MOBILE_FOOTER_SPACE} + 60px)`, sm: FOOTER_HEIGHT + 12 },
+          left: 16,
+        },
+      }}
       data-testid="demo-notice"
     >
       <Alert severity="info" variant="filled" icon={false} sx={{ py: 0.25 }}>
