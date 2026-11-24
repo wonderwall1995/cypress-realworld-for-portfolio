@@ -6,6 +6,7 @@ export interface CommentInfo {
   userId: string;
   transactionId: string;
   content: string;
+  userFullName: string; // 쓴 사람 (성 이름)
 }
 
 /**

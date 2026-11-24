@@ -1,6 +1,16 @@
 import React from "react";
 import { styled } from "@mui/material/styles";
-import { TextField, Button, Grid, Typography } from "@mui/material";
+import {
+  TextField,
+  Button,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
+  Grid,
+  Radio,
+  RadioGroup,
+  Typography,
+} from "@mui/material";
 import { Formik, Form, Field, FieldProps } from "formik";
 import { string, object, mixed } from "yup";
 import { User, DefaultPrivacyLevel, UserSettingsPayload, PHONE_NUMBER_PATTERN } from "@rwa/shared";
@@ -66,7 +76,12 @@ const UserSettingsForm: React.FC<UserSettingsProps> = ({
     lastName: userProfile.lastName,
     email: userProfile.email ?? "",
     phoneNumber: userProfile.phoneNumber ?? "",
-    defaultPrivacyLevel: userProfile.defaultPrivacyLevel,
+    // A new member has no value yet: the server sends such transfers as public.
+    // The old "contacts" works like private (there is no friends list any more).
+    defaultPrivacyLevel:
+      (userProfile.defaultPrivacyLevel ?? DefaultPrivacyLevel.public) === DefaultPrivacyLevel.public
+        ? DefaultPrivacyLevel.public
+        : DefaultPrivacyLevel.private,
   };
 
   return (
@@ -146,6 +161,44 @@ const UserSettingsForm: React.FC<UserSettingsProps> = ({
                   helperText={touched || value !== initialValue ? error : ""}
                   {...field}
                 />
+              )}
+            </Field>
+            <Field name="defaultPrivacyLevel">
+              {({ field, form }: FieldProps) => (
+                <FormControl margin="dense" fullWidth>
+                  <FormLabel id="user-settings-privacy-label">내 이체의 공개 범위</FormLabel>
+                  <RadioGroup
+                    row
+                    aria-labelledby="user-settings-privacy-label"
+                    data-testid="user-settings-privacy"
+                    name={field.name}
+                    value={field.value}
+                    onChange={(_event, next) => {
+                      form.setFieldValue(field.name, next);
+                      onEdit?.();
+                    }}
+                  >
+                    <FormControlLabel
+                      value={DefaultPrivacyLevel.public}
+                      control={
+                        <Radio size="small" data-testid="user-settings-privacy-public-radio" />
+                      }
+                      label="공개"
+                      data-testid="user-settings-privacy-public"
+                    />
+                    <FormControlLabel
+                      value={DefaultPrivacyLevel.private}
+                      control={
+                        <Radio size="small" data-testid="user-settings-privacy-private-radio" />
+                      }
+                      label="비공개"
+                      data-testid="user-settings-privacy-private"
+                    />
+                  </RadioGroup>
+                  <Typography variant="caption" color="textSecondary">
+                    앞으로 보내는 이체에 적용됩니다. 비공개는 나와 받는 사람에게만 보입니다.
+                  </Typography>
+                </FormControl>
               )}
             </Field>
             {/* this space is always kept, so the page does not jump when a result appears */}

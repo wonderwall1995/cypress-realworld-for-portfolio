@@ -43,7 +43,7 @@ const validationSchema = object({
     .integer("금액은 소수점 없이 정수로 입력하세요")
     .min(1, "금액은 1달러 이상이어야 합니다")
     .max(MAX_AMOUNT_DOLLARS, `금액은 ${MAX_AMOUNT_DOLLARS.toLocaleString()}달러 이하여야 합니다`),
-  description: string().required("메모를 입력하세요"),
+  description: string(), // the memo may stay empty
   senderId: string(),
   receiverId: string(),
 });
@@ -205,10 +205,9 @@ const TransactionCreateStepTwo: React.FC<TransactionCreateStepTwoProps> = ({
                       variant="outlined"
                       margin="dense"
                       fullWidth
-                      required
                       id={"transaction-create-description-input"}
                       type="text"
-                      placeholder="메모를 입력하세요"
+                      placeholder="메모 (선택)"
                       data-testid={"transaction-create-description-input"}
                       error={(touched || value !== initialValue) && Boolean(error)}
                       helperText={touched || value !== initialValue ? error : ""}
@@ -222,6 +221,7 @@ const TransactionCreateStepTwo: React.FC<TransactionCreateStepTwoProps> = ({
                   accounts={myAccounts}
                   value={myAccountId}
                   onChange={setMyAccountId}
+                  neededCents={Number(values.amount) * 100}
                 />
                 {payNotEnough(values.amount) && (
                   <Typography
@@ -302,10 +302,21 @@ const TransactionCreateStepTwo: React.FC<TransactionCreateStepTwoProps> = ({
         summary={
           pending && (
             <>
-              {myAccount?.bankName} ····{myAccount?.last4} → {receiver.lastName}{" "}
-              {receiver.firstName}님 {otherAccount?.bankName} ····{otherAccount?.last4}
-              <br />
-              <b>{formatAmount(Number(pending.amount) * 100)}</b>
+              <div data-testid="transaction-confirm-from">
+                {myAccount?.bankName} ····{myAccount?.last4}
+              </div>
+              <div aria-hidden>↓</div>
+              <div data-testid="transaction-confirm-to">
+                {receiver.lastName} {receiver.firstName}님 {otherAccount?.bankName} ····
+                {otherAccount?.last4}
+              </div>
+              <Box
+                component="b"
+                data-testid="transaction-confirm-amount"
+                sx={{ fontSize: "calc(1em + 3px)" }}
+              >
+                {formatAmount(Number(pending.amount) * 100)}
+              </Box>
             </>
           )
         }

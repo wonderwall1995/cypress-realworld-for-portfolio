@@ -15,6 +15,7 @@ import {
 import { asyncHandler } from "./async-handler";
 import { omitPassword, toOtherUserResponse } from "./user-response";
 import { HttpError } from "./http-error";
+import { getUserIdsWithBankAccount } from "./bankaccount-db";
 import { checkPasswordAgain } from "./password-attempts";
 import { User } from "@rwa/shared";
 import { ensureAuthenticated, validateMiddleware } from "./helpers";
@@ -27,6 +28,15 @@ import {
   isSignUpValidator,
 } from "./validators";
 const router = express.Router();
+
+// Members without a bank account stay in the list (the App finds the names of people there); the flag tells them apart
+const toOtherUsers = async (users: User[]) => {
+  const withAccount = await getUserIdsWithBankAccount();
+  return users.map((user) => ({
+    ...toOtherUserResponse(user),
+    hasBankAccount: withAccount.has(user.id),
+  }));
+};
 
 //POST /users/verifyPassword - scoped-user: is this the signed-in member's own password?
 // Used by the "are you sure?" step before money is moved. 204 yes, 403 no, 429 too many wrong ones.
@@ -46,7 +56,7 @@ router.get(
   asyncHandler(async (req, res) => {
     /* istanbul ignore next */
     const users = removeUserFromResults(req.user?.id!, await getAllUsers());
-    res.status(200).json({ results: users.map((user) => toOtherUserResponse(user)) });
+    res.status(200).json({ results: await toOtherUsers(users) });
   })
 );
 
@@ -60,7 +70,7 @@ router.get(
     /* istanbul ignore next */
     const users = removeUserFromResults(req.user?.id!, await searchUsers(q as string));
 
-    res.status(200).json({ results: users.map((user) => toOtherUserResponse(user)) });
+    res.status(200).json({ results: await toOtherUsers(users) });
   })
 );
 

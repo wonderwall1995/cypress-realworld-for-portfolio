@@ -2,7 +2,7 @@ import React from "react";
 import { styled } from "@mui/material/styles";
 import { Paper } from "@mui/material";
 import UsersList from "./UsersList";
-import { User } from "@rwa/shared";
+import { OtherUser } from "@rwa/shared";
 import UserListSearchForm from "./UserListSearchForm";
 
 const PREFIX = "TransactionCreateStepOne";
@@ -24,7 +24,7 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
 export interface TransactionCreateStepOneProps {
   setReceiver: Function;
   userListSearch: Function;
-  users: User[];
+  users: OtherUser[];
 }
 
 const TransactionCreateStepOne: React.FC<TransactionCreateStepOneProps> = ({
@@ -35,7 +35,11 @@ const TransactionCreateStepOne: React.FC<TransactionCreateStepOneProps> = ({
   return (
     <StyledPaper className={classes.paper} elevation={0}>
       <UserListSearchForm userListSearch={userListSearch} />
-      <UsersList users={users} setReceiver={setReceiver} />
+      {/* money cannot be sent to a member who has no bank account */}
+      <UsersList
+        users={(users ?? []).filter((user) => user.hasBankAccount !== false)}
+        setReceiver={setReceiver}
+      />
     </StyledPaper>
   );
 };

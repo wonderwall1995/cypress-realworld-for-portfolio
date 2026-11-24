@@ -45,6 +45,8 @@ import { random } from "./fixture/random";
 import { randomComment } from "./fixture/random-comment";
 import { fixtureValue, runFixtures } from "./fixture/run-fixtures";
 
+const GRAY = "rgba(0, 0, 0, 0.54)"; // 누르지 않은 좋아요
+const BLUE = "rgb(25, 118, 210)"; // 내가 누른 좋아요
 const START_DOLLARS = 1000; // 두 사람이 처음에 각자 계좌에 가진 돈
 
 test("4. 거래 상세: 좋아요와 댓글이 화면과 서버에서 같고, 중복 좋아요와 빈 댓글은 거절된다", async ({
@@ -57,6 +59,7 @@ test("4. 거래 상세: 좋아요와 댓글이 화면과 서버에서 같고, �
   const fixtures = runFixtures("transaction-detail");
   const dollars = fixtures ? Number(fixtureValue(fixtures, "dollars")) : random(1, 500);
   const text = fixtures ? fixtureValue(fixtures, "comment") : randomComment();
+  const noMemo = await transferWithApi(page, A, B, 1, ""); // 메모를 비운 이체
   const transaction = await transferWithApi(page, A, B, dollars, "거래 상세 시험");
   const id: string = transaction.id;
 
@@ -70,9 +73,12 @@ test("4. 거래 상세: 좋아요와 댓글이 화면과 서버에서 같고, �
   await expect(likeCount).toHaveText("0");
   await expect(commentItems).toHaveCount(0);
 
-  // 1) 좋아요
+  // 1) 좋아요 (누르기 전에는 강조하지 않고, 누르면 강조한다)
+  const likeButton = page.getByTestId(`transaction-like-button-${id}`);
+  await expect(likeButton).toHaveCSS("color", GRAY);
   //    화면: 누르면 버튼이 꺼지고(공통 코드) 개수가 1이 된다
   await likeTransaction(page, id);
+  await expect(likeButton).toHaveCSS("color", BLUE);
   await expect(likeCount).toHaveText("1");
   //    서버: 좋아요가 하나이고, 누른 사람이 A다
   const likes = await getLikesWithApi(page, id);
@@ -88,11 +94,15 @@ test("4. 거래 상세: 좋아요와 댓글이 화면과 서버에서 같고, �
   //    화면: 쓰고 Enter를 누르면 목록에 보인다(공통 코드). 댓글은 하나다
   await writeComment(page, id, text);
   await expect(commentItems).toHaveCount(1);
-  //    서버: 댓글이 하나이고, 내용과 쓴 사람이 같다
+  //    서버: 댓글이 하나이고, 내용과 쓴 사람(이름까지)이 같다
   const comments = await getCommentsWithApi(page, id);
-  expect(comments.map(({ userId, content }) => ({ userId, content }))).toEqual([
-    { userId: A.user.id, content: text },
-  ]);
+  const writer = `${A.user.lastName} ${A.user.firstName}`;
+  expect(
+    comments.map(({ userId, content, userFullName }) => ({ userId, content, userFullName }))
+  ).toEqual([{ userId: A.user.id, content: text, userFullName: writer }]);
+  //    화면: 댓글 아래에 쓴 사람과 쓴 시각이 보인다
+  await expect(page.getByTestId(`comment-author-${comments[0].id}`)).toHaveText(writer);
+  await expect(page.getByTestId(`comment-time-${comments[0].id}`)).toContainText(":");
 
   // 4) 거절: 빈 댓글
   //    화면: 빈 칸과 공백에서 Enter를 누르면 안내가 나오고, 댓글은 늘지 않는다
@@ -114,6 +124,11 @@ test("4. 거래 상세: 좋아요와 댓글이 화면과 서버에서 같고, �
   await page.reload();
   await expect(likeCount).toHaveText("1");
   await expect(commentItems).toHaveCount(1);
+
+  // 6) 메모를 비운 거래의 상세에는 메모 줄이 없다
+  await expect(page.getByTestId("transaction-description")).toHaveCount(1);
+  await openTransactionDetail(page, noMemo.id);
+  await expect(page.getByTestId("transaction-description")).toHaveCount(0);
 
   // 정리: 두 사람의 은행 계좌를 API로 완전히 지운다 (거래를 지우는 API는 없어서 거래 기록은 남는다)
   for (const who of [A, B]) {

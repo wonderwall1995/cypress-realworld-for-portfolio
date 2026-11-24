@@ -108,16 +108,18 @@ const TransactionDetail: React.FC<TransactionProps> = ({
             <Grid item>
               <TransactionTitle transaction={transaction} />
             </Grid>
-            <Grid item>
-              <Typography
-                variant="body2"
-                color="textSecondary"
-                gutterBottom
-                data-testid="transaction-description"
-              >
-                {transaction.description}
-              </Typography>
-            </Grid>
+            {transaction.description && (
+              <Grid item>
+                <Typography
+                  variant="body2"
+                  color="textSecondary"
+                  gutterBottom
+                  data-testid="transaction-description"
+                >
+                  {transaction.description}
+                </Typography>
+              </Grid>
+            )}
           </Grid>
         </Grid>
         <Grid item>
@@ -138,8 +140,12 @@ const TransactionDetail: React.FC<TransactionProps> = ({
             </Grid>
             <Grid item>
               <IconButton
-                color="primary"
+                // gray before, blue after I liked it (the button is off then, but it must not look off)
+                color="default"
                 disabled={currentUserLikesTransaction(currentUser, transaction)}
+                sx={{
+                  "&.Mui-disabled": { color: "primary.main" },
+                }}
                 onClick={() => transactionLike(transaction.id)}
                 data-testid={`transaction-like-button-${transaction.id}`}
                 size="large"

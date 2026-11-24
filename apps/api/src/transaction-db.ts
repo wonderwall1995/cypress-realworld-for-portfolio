@@ -19,7 +19,7 @@ import {
   EXTERNAL_DEPOSIT_NAME,
   EXTERNAL_DEPOSIT_SENDER_ID,
   Like,
-  Comment,
+  CommentResponseItem,
   NotificationType,
   PaymentNotificationStatus,
   Transaction,
@@ -43,6 +43,7 @@ import {
 } from "@rwa/shared";
 import { loadUsableAccount, moveBetweenAccounts, lockUsers } from "./account-money";
 import { HttpError } from "./http-error";
+import { withCommentAuthors } from "./comment-db";
 import { createPaymentNotification } from "./notification-db";
 import { publishNotifications } from "./notification-stream";
 
@@ -215,7 +216,7 @@ export const getTransactionsForUserByObj = async (
 const fullName = (user?: { firstName: string; lastName: string }) =>
   user ? `${user.lastName} ${user.firstName}` : "";
 
-/** Adds names, avatars, likes and comments. Three queries for the whole list. */
+/** Adds names, avatars, likes and comments (with their writers). Four queries for the whole list. */
 export const formatTransactionsForApiResponse = async (
   transactions: Transaction[],
   client: DbClient = prisma
@@ -240,8 +241,8 @@ export const formatTransactionsForApiResponse = async (
   const userById = new Map(users.map((u) => [u.id, u]));
   const likesBy = new Map<string, Like[]>();
   likes.forEach((l) => likesBy.set(l.transactionId, [...(likesBy.get(l.transactionId) ?? []), l]));
-  const commentsBy = new Map<string, Comment[]>();
-  comments.forEach((c) =>
+  const commentsBy = new Map<string, CommentResponseItem[]>();
+  (await withCommentAuthors(comments, client)).forEach((c) =>
     commentsBy.set(c.transactionId, [...(commentsBy.get(c.transactionId) ?? []), c])
   );
 

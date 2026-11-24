@@ -4,7 +4,7 @@
 
 - 속성: `data-testid` (Playwright `getByTestId()` 기본 속성)
 - `${...}`가 들어간 id는 동적 값입니다. 접두사로 찾으세요. 예: `[data-testid^="transaction-item-"]`
-- 합계: 파일 47개, test id 226개 (동적 49개)
+- 합계: 파일 47개, test id 236개 (동적 51개)
 - id가 없는 상호작용 요소: 0개 (맨 아래 참고)
 
 ## 사용 예시
@@ -17,11 +17,11 @@ await page.getByTestId("sidenav-signout").click();
 
 | 줄  | test id               | 종류                | 요소        | 컴포넌트      | 연결 방식  | UI 특징        |
 | --- | --------------------- | ------------------- | ----------- | ------------- | ---------- | -------------- |
-| 58  | `${testId}-info`      | 동적 (testId)       | `Box`       | AccountRow    | attribute  | -              |
-| 62  | `${testId}-bank-name` | 동적 (testId)       | `Box`       | AccountRow    | attribute  | component=span |
-| 71  | `${testId}-balance`   | 동적 (testId)       | `Box`       | AccountRow    | attribute  | text="잔액"    |
-| 92  | `${testId}-value`     | 동적 (testId)       | `TextField` | AccountSelect | inputProps | onChange       |
-| 118 | `${testId}-${a.id}`   | 동적 (testId, a.id) | `MenuItem`  | AccountSelect | attribute  | -              |
+| 62  | `${testId}-info`      | 동적 (testId)       | `Box`       | AccountRow    | attribute  | -              |
+| 66  | `${testId}-bank-name` | 동적 (testId)       | `Box`       | AccountRow    | attribute  | component=span |
+| 75  | `${testId}-balance`   | 동적 (testId)       | `Box`       | AccountRow    | attribute  | text="잔액"    |
+| 102 | `${testId}-value`     | 동적 (testId)       | `TextField` | AccountSelect | inputProps | onChange       |
+| 132 | `${testId}-${a.id}`   | 동적 (testId, a.id) | `MenuItem`  | AccountSelect | attribute  | -              |
 
 ## src/components/AlertBar.tsx
 
@@ -72,7 +72,9 @@ await page.getByTestId("sidenav-signout").click();
 
 | 줄  | test id                           | 종류              | 요소       | 컴포넌트        | 연결 방식 | UI 특징 |
 | --- | --------------------------------- | ----------------- | ---------- | --------------- | --------- | ------- |
-| 12  | `comment-list-item-${comment.id}` | 동적 (comment.id) | `ListItem` | CommentListItem | attribute | -       |
+| 23  | `comment-list-item-${comment.id}` | 동적 (comment.id) | `ListItem` | CommentListItem | attribute | -       |
+| 35  | `comment-author-${comment.id}`    | 동적 (comment.id) | `Box`      | CommentListItem | attribute | -       |
+| 62  | `comment-time-${comment.id}`      | 동적 (comment.id) | `span`     | CommentListItem | attribute | -       |
 
 ## src/components/DbSnapshot.tsx
 
@@ -259,10 +261,10 @@ await page.getByTestId("sidenav-signout").click();
 | --- | -------------------------- | ------------------- | ------------------- | --------------------- | ---------- | ---------------------------------- |
 | 83  | `${testIdPrefix}-dialog`   | 동적 (testIdPrefix) | `Dialog`            | PasswordConfirmDialog | attribute  | -                                  |
 | 92  | `${testIdPrefix}-summary`  | 동적 (testIdPrefix) | `DialogContentText` | PasswordConfirmDialog | attribute  | component=div                      |
-| 99  | `${testIdPrefix}-password` | 동적 (testIdPrefix) | `TextField`         | PasswordConfirmDialog | inputProps | onChange, onKeyDown, type=password |
-| 118 | `${testIdPrefix}-error`    | 동적 (testIdPrefix) | `Alert`             | PasswordConfirmDialog | attribute  | -                                  |
-| 124 | `${testIdPrefix}-cancel`   | 동적 (testIdPrefix) | `Button`            | PasswordConfirmDialog | attribute  | onClick, text="취소"               |
-| 127 | `${testIdPrefix}-confirm`  | 동적 (testIdPrefix) | `Button`            | PasswordConfirmDialog | attribute  | onClick                            |
+| 97  | `${testIdPrefix}-password` | 동적 (testIdPrefix) | `TextField`         | PasswordConfirmDialog | inputProps | onChange, onKeyDown, type=password |
+| 116 | `${testIdPrefix}-error`    | 동적 (testIdPrefix) | `Alert`             | PasswordConfirmDialog | attribute  | -                                  |
+| 122 | `${testIdPrefix}-cancel`   | 동적 (testIdPrefix) | `Button`            | PasswordConfirmDialog | attribute  | onClick, text="취소"               |
+| 125 | `${testIdPrefix}-confirm`  | 동적 (testIdPrefix) | `Button`            | PasswordConfirmDialog | attribute  | onClick                            |
 
 ## src/components/SignInForm.tsx
 
@@ -331,7 +333,7 @@ await page.getByTestId("sidenav-signout").click();
 | 줄  | test id                                      | 종류 | 요소     | 컴포넌트                   | 연결 방식 | UI 특징                                                      |
 | --- | -------------------------------------------- | ---- | -------- | -------------------------- | --------- | ------------------------------------------------------------ |
 | 116 | `new-transaction-return-to-transactions`     | 정적 | `Button` | TransactionCreateStepThree | attribute | to=/, component=${RouterLink}, text="거래 목록으로 돌아가기" |
-| 127 | `new-transaction-create-another-transaction` | 정적 | `Button` | TransactionCreateStepThree | attribute | onClick, text="다른 거래 만들기"                             |
+| 127 | `new-transaction-create-another-transaction` | 정적 | `Button` | TransactionCreateStepThree | attribute | onClick, text="다른 이체 진행하기"                           |
 
 ## src/components/TransactionCreateStepTwo.tsx
 
@@ -345,6 +347,9 @@ await page.getByTestId("sidenav-signout").click();
 | 238 | `transaction-create-receive-card`      | 정적 | `Paper`      | TransactionCreateStepTwo | attribute | -                                                      |
 | 248 | `transaction-create-receiver-name`     | 정적 | `Typography` | TransactionCreateStepTwo | attribute | -                                                      |
 | 272 | `transaction-create-submit-payment`    | 정적 | `Button`     | TransactionCreateStepTwo | attribute | type=submit, text="이체"                               |
+| 305 | `transaction-confirm-from`             | 정적 | `div`        | TransactionCreateStepTwo | attribute | text="····"                                            |
+| 309 | `transaction-confirm-to`               | 정적 | `div`        | TransactionCreateStepTwo | attribute | text="님 ····"                                         |
+| 313 | `transaction-confirm-amount`           | 정적 | `Box`        | TransactionCreateStepTwo | attribute | component=b                                            |
 
 ## src/components/TransactionDateBoxesFilter.tsx
 
@@ -364,9 +369,9 @@ await page.getByTestId("sidenav-signout").click();
 | 82  | `transaction-item-${transaction.id}`        | 동적 (transaction.id) | `Grid`       | TransactionDetail | attribute | -                              |
 | 92  | `transaction-sender-avatar`                 | 정적                  | `Avatar`     | TransactionDetail | attribute | -                              |
 | 97  | `transaction-receiver-avatar`               | 정적                  | `Avatar`     | TransactionDetail | attribute | -                              |
-| 112 | `transaction-description`                   | 정적                  | `Typography` | TransactionDetail | attribute | -                              |
-| 136 | `transaction-like-count-${transaction.id}`  | 동적 (transaction.id) | `Grid`       | TransactionDetail | attribute | -                              |
-| 140 | `transaction-like-button-${transaction.id}` | 동적 (transaction.id) | `IconButton` | TransactionDetail | attribute | onClick                        |
+| 113 | `transaction-description`                   | 정적                  | `Typography` | TransactionDetail | attribute | -                              |
+| 138 | `transaction-like-count-${transaction.id}`  | 동적 (transaction.id) | `Grid`       | TransactionDetail | attribute | -                              |
+| 142 | `transaction-like-button-${transaction.id}` | 동적 (transaction.id) | `IconButton` | TransactionDetail | attribute | onClick                        |
 
 ## src/components/TransactionInfiniteList.tsx
 
@@ -437,15 +442,20 @@ await page.getByTestId("sidenav-signout").click();
 
 ## src/components/UserSettingsForm.tsx
 
-| 줄  | test id                           | 종류 | 요소         | 컴포넌트         | 연결 방식  | UI 특징                    |
-| --- | --------------------------------- | ---- | ------------ | ---------------- | ---------- | -------------------------- |
-| 84  | `user-settings-form`              | 정적 | `Form`       | UserSettingsForm | attribute  | onInput                    |
-| 87  | `user-settings-lastName-input`    | 정적 | `TextField`  | UserSettingsForm | inputProps | type=text                  |
-| 104 | `user-settings-firstName-input`   | 정적 | `TextField`  | UserSettingsForm | inputProps | type=text                  |
-| 121 | `user-settings-email-input`       | 정적 | `TextField`  | UserSettingsForm | inputProps | type=text                  |
-| 137 | `user-settings-phoneNumber-input` | 정적 | `TextField`  | UserSettingsForm | inputProps | type=text                  |
-| 152 | `user-settings-message`           | 정적 | `Typography` | UserSettingsForm | attribute  | role=status, component=div |
-| 175 | `user-settings-submit`            | 정적 | `Button`     | UserSettingsForm | attribute  | type=submit, text="저장"   |
+| 줄  | test id                               | 종류 | 요소               | 컴포넌트         | 연결 방식  | UI 특징                      |
+| --- | ------------------------------------- | ---- | ------------------ | ---------------- | ---------- | ---------------------------- |
+| 99  | `user-settings-form`                  | 정적 | `Form`             | UserSettingsForm | attribute  | onInput                      |
+| 102 | `user-settings-lastName-input`        | 정적 | `TextField`        | UserSettingsForm | inputProps | type=text                    |
+| 119 | `user-settings-firstName-input`       | 정적 | `TextField`        | UserSettingsForm | inputProps | type=text                    |
+| 136 | `user-settings-email-input`           | 정적 | `TextField`        | UserSettingsForm | inputProps | type=text                    |
+| 152 | `user-settings-phoneNumber-input`     | 정적 | `TextField`        | UserSettingsForm | inputProps | type=text                    |
+| 170 | `user-settings-privacy`               | 정적 | `RadioGroup`       | UserSettingsForm | attribute  | onChange, name=${field.name} |
+| 181 | `user-settings-privacy-public`        | 정적 | `FormControlLabel` | UserSettingsForm | attribute  | -                            |
+| 184 | `user-settings-privacy-public-radio`  | 정적 | `Radio`            | UserSettingsForm | attribute  | -                            |
+| 189 | `user-settings-privacy-private`       | 정적 | `FormControlLabel` | UserSettingsForm | attribute  | -                            |
+| 192 | `user-settings-privacy-private-radio` | 정적 | `Radio`            | UserSettingsForm | attribute  | -                            |
+| 205 | `user-settings-message`               | 정적 | `Typography`       | UserSettingsForm | attribute  | role=status, component=div   |
+| 228 | `user-settings-submit`                | 정적 | `Button`           | UserSettingsForm | attribute  | type=submit, text="저장"     |
 
 ## src/components/UsersList.tsx
 

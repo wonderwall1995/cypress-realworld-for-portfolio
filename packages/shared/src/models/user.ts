@@ -20,6 +20,12 @@ export interface User {
   modifiedAt: Date;
 }
 
+/** Another member, as the user list and the search give them. */
+export type OtherUser = Omit<User, "password" | "balance"> & {
+  /** Money can be sent to this member: there is at least one bank account that is not deleted. */
+  hasBankAccount: boolean;
+};
+
 export type UserSettingsPayload = Pick<
   User,
   "firstName" | "lastName" | "email" | "phoneNumber" | "defaultPrivacyLevel"

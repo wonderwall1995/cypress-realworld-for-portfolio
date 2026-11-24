@@ -2,10 +2,10 @@ import React from "react";
 import { List } from "@mui/material";
 
 import UserListItem from "./UserListItem";
-import { User } from "@rwa/shared";
+import { OtherUser } from "@rwa/shared";
 
 export interface UsersListProps {
-  users: User[];
+  users: OtherUser[];
   setReceiver: Function;
 }
 
@@ -13,7 +13,7 @@ const UsersList: React.FC<UsersListProps> = ({ users, setReceiver }) => {
   return (
     <List data-testid="users-list">
       {users &&
-        users.map((user: User, index: number) => (
+        users.map((user: OtherUser, index: number) => (
           <UserListItem key={user.id} user={user} setReceiver={setReceiver} index={index} />
         ))}
     </List>

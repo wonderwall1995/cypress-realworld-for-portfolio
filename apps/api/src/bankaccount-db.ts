@@ -12,6 +12,16 @@ import { lockUsers } from "./account-money";
 export const getBankAccountsByUserId = (userId: string) =>
   prisma.bankAccount.findMany({ where: { userId, visible: true }, orderBy: { createdAt: "asc" } });
 
+/** Which members have at least one bank account that is not deleted. One question to the database for everybody. */
+export const getUserIdsWithBankAccount = async (): Promise<Set<string>> => {
+  const rows = await prisma.bankAccount.findMany({
+    where: { visible: true },
+    distinct: ["userId"],
+    select: { userId: true },
+  });
+  return new Set(rows.map((row) => row.userId));
+};
+
 export const getBankAccountById = (id: string) => prisma.bankAccount.findUnique({ where: { id } });
 
 export const createBankAccountForUser = async (

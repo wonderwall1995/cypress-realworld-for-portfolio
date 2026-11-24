@@ -33,6 +33,8 @@ interface Props {
   /** accounts that cannot be used get this text next to them and cannot be chosen */
   disabledReason?: (account: AccountChoice) => string | undefined;
   helperText?: string;
+  /** The money that has to leave the account. A balance that covers it is green (only my own accounts have one). */
+  neededCents?: number;
 }
 
 const cut = {
@@ -51,8 +53,10 @@ const AccountRow: React.FC<{
   account: AccountChoice;
   testId: string;
   reason?: string;
-}> = ({ account, testId, reason }) => {
+  neededCents?: number;
+}> = ({ account, testId, reason, neededCents = 0 }) => {
   const hasBalance = account.balance !== undefined;
+  const enough = hasBalance && account.balance! > 0 && account.balance! >= neededCents;
   return (
     <Box sx={{ display: "flex", alignItems: "center", width: "100%", minWidth: 0, gap: 1 }}>
       <Box
@@ -70,7 +74,12 @@ const AccountRow: React.FC<{
       {hasBalance && (
         <Box
           data-testid={`${testId}-balance`}
-          sx={{ flexShrink: 0, textAlign: "right", whiteSpace: "nowrap" }}
+          sx={{
+            flexShrink: 0,
+            textAlign: "right",
+            whiteSpace: "nowrap",
+            color: enough ? "success.main" : undefined,
+          }}
         >
           잔액 {formatAmount(account.balance!)}
         </Box>
@@ -88,6 +97,7 @@ const AccountSelect: React.FC<Props> = ({
   onChange,
   disabledReason,
   helperText,
+  neededCents,
 }) => (
   <TextField
     select
@@ -107,7 +117,11 @@ const AccountSelect: React.FC<Props> = ({
       SelectDisplayProps: { "data-testid": testId } as React.HTMLAttributes<HTMLDivElement>,
       renderValue: (selected) => {
         const account = accounts?.find((a) => a.id === selected);
-        return account ? <AccountRow account={account} testId={`${testId}-shown`} /> : "";
+        return account ? (
+          <AccountRow account={account} testId={`${testId}-shown`} neededCents={neededCents} />
+        ) : (
+          ""
+        );
       },
       MenuProps: { disablePortal: false },
     }}
@@ -122,7 +136,12 @@ const AccountSelect: React.FC<Props> = ({
           data-testid={`${testId}-${a.id}`}
           sx={{ minWidth: 0 }}
         >
-          <AccountRow account={a} testId={`${testId}-${a.id}-row`} reason={reason} />
+          <AccountRow
+            account={a}
+            testId={`${testId}-${a.id}-row`}
+            reason={reason}
+            neededCents={neededCents}
+          />
         </MenuItem>
       );
     })}

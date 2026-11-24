@@ -38,6 +38,7 @@ import { getMeWithApi, Me } from "./api/get-me";
 import { getMyBalanceWithApi } from "./api/get-my-balance";
 import { hardDeleteBankAccountsWithApi } from "./api/hard-delete-bank-accounts";
 import { loginWithApi } from "./api/login";
+import { transferWithApi } from "./api/transfer";
 import { signIn } from "./common/signin";
 import { fillUserSettings, openUserSettings, saveUserSettings } from "./common/user-settings";
 import { Profile, randomProfile } from "./fixture/random-profile";
@@ -130,7 +131,22 @@ test("6. 사용자 설정: 정보를 고치고 되돌릴 수 있고, 잘못된 �
   await expect(fullName).toHaveText(`${original.lastName} ${original.firstName}`);
   expect(profileOf(await getMeWithApi(page))).toEqual(original);
 
-  // 7) 거절된 요청은 남의 정보를 바꾸지 않았다 (서버). 화면 시험이 끝났으므로 B로 로그인해서 B의 정보를 읽는다
+  // 7) 공개 범위 (화면): 비공개로 저장하면 앞으로 보내는 이체가 비공개가 되고, 공개로 되돌릴 수 있다
+  const chosen = (level: string) =>
+    page.locator(`[data-testid="user-settings-privacy-${level}"] input:checked`);
+  await expect(chosen("public")).toHaveCount(1);
+  for (const level of ["private", "public"]) {
+    await page.getByTestId(`user-settings-privacy-${level}`).click();
+    await page.getByTestId("user-settings-submit").click();
+    await expect(page.getByTestId("user-settings-message")).toHaveText("설정 저장 성공");
+    await page.reload();
+    await expect(chosen(level)).toHaveCount(1);
+    //    서버 판정: 저장된 값과, 범위를 정하지 않고 보낸 이체가 그 범위다
+    expect((await getMeWithApi(page)).defaultPrivacyLevel).toBe(level);
+    expect((await transferWithApi(page, A, B, 1)).privacyLevel).toBe(level);
+  }
+
+  // 8) 거절된 요청은 남의 정보를 바꾸지 않았다 (서버). 화면 시험이 끝났으므로 B로 로그인해서 B의 정보를 읽는다
   await loginWithApi(page, B.user);
   expect(profileOf(await getMeWithApi(page))).toEqual(signedUp(B));
 
