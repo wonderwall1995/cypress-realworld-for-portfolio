@@ -19,7 +19,10 @@ import { demoController, useDemo } from "../demo/controller";
 import { buildPlan, currentTestIdAt } from "../demo/plan";
 import DemoNotice from "../components/DemoNotice";
 import DemoStartDialog from "../components/DemoStartDialog";
-import { MOBILE_FOOTER_SPACE } from "../demo/layout";
+import MobileDesktopViewport, {
+  MOBILE_DESKTOP_WIDTH,
+  useMobileDesktopViewport,
+} from "../components/MobileDesktopViewport";
 
 const PREFIX = "App";
 
@@ -30,6 +33,8 @@ const classes = {
 const Root = styled("div")(({ theme }) => ({
   [`&.${classes.root}`]: {
     display: "flex",
+    width: "100%",
+    height: "100%",
   },
 }));
 
@@ -38,6 +43,7 @@ const Root = styled("div")(({ theme }) => ({
 window.authService = authService;
 
 const App: React.FC = () => {
+  const { mobile, scale, canvasScale } = useMobileDesktopViewport();
   const [authState] = useActor(authService);
   const [, , notificationsService] = useMachine(notificationsMachine);
 
@@ -73,13 +79,25 @@ const App: React.FC = () => {
       sx={{
         display: "flex",
         flexDirection: "column",
-        width: "100%",
-        height: "100vh",
-        "@supports (height: 100dvh)": { height: "100dvh" },
-        paddingBottom: { xs: `calc(${MOBILE_FOOTER_SPACE} + 48px)`, sm: 0 },
+        width: canvasScale < 1 ? MOBILE_DESKTOP_WIDTH : "100%",
+        height: `${100 / canvasScale}vh`,
+        "@supports (height: 100dvh)": { height: `${100 / canvasScale}dvh` },
+        zoom: canvasScale,
+        "--demo-footer-height": mobile
+          ? `calc(${64 / scale}px + env(safe-area-inset-bottom, 0px))`
+          : "48px",
+        overflow: "hidden",
       }}
     >
-      <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
+      <Box
+        sx={{
+          display: "flex",
+          flex: 1,
+          minHeight: 0,
+          position: "relative",
+          paddingRight: mobile ? `${52 / scale}px` : 0,
+        }}
+      >
         {/* position: relative keeps the absolute top bar inside this area (not under the accordion) */}
         <Box sx={{ flex: 1, minWidth: 0, overflow: "auto", position: "relative" }}>
           <Root className={classes.root}>
@@ -160,4 +178,10 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
+export default function ResponsiveApp() {
+  return (
+    <MobileDesktopViewport>
+      <App />
+    </MobileDesktopViewport>
+  );
+}

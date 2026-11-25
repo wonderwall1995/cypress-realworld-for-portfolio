@@ -1,6 +1,6 @@
 import React from "react";
 import { Alert, Snackbar } from "@mui/material";
-import { DEMO_Z_INDEX, FOOTER_HEIGHT, MOBILE_FOOTER_SPACE } from "../demo/layout";
+import { DEMO_Z_INDEX, MOBILE_FOOTER_SPACE } from "../demo/layout";
 
 const SHOW_MS = 2000;
 
@@ -31,7 +31,7 @@ export default function DemoNotice({ notice }: { notice?: { id: number; text: st
         zIndex: DEMO_Z_INDEX + 2,
         pointerEvents: "none",
         "&&": {
-          bottom: { xs: `calc(${MOBILE_FOOTER_SPACE} + 60px)`, sm: FOOTER_HEIGHT + 12 },
+          bottom: `calc(${MOBILE_FOOTER_SPACE} + 12px)`,
           left: 16,
         },
       }}

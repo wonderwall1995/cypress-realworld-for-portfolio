@@ -30,6 +30,10 @@ const theme = createTheme({
       defaultProps: { disableEnforceFocus: true },
       styleOverrides: {
         paper: {
+          'html[data-mobile-desktop="true"] &': {
+            maxHeight: `calc(100dvh - ${MOBILE_FOOTER_SPACE} - 64px)`,
+            marginBottom: `calc(${MOBILE_FOOTER_SPACE} + 32px)`,
+          },
           "@media (max-width: 599.95px)": {
             maxHeight: `calc(100dvh - ${MOBILE_FOOTER_SPACE} - 96px)`,
             marginBottom: `calc(${MOBILE_FOOTER_SPACE} + 64px)`,
@@ -39,6 +43,9 @@ const theme = createTheme({
     },
     MuiDrawer: {
       defaultProps: { ModalProps: { disableEnforceFocus: true } },
+    },
+    MuiPopover: {
+      defaultProps: { disableEnforceFocus: true },
     },
     // One rule for the text inside EVERY text box (sign in, sign up, settings, transfer, bank account...):
     // a left/right space so the text and the placeholder do not touch the border, and an even

@@ -9,7 +9,8 @@ import DemoIde from "./DemoIde";
 import DemoApiPanel from "./DemoApiPanel";
 import DemoCards from "./DemoCards";
 import type { ApiExchange } from "../demo/controller";
-import { DEMO_Z_INDEX, MOBILE_FOOTER_SPACE } from "../demo/layout";
+import { DEMO_Z_INDEX } from "../demo/layout";
+import { useMobileDesktopViewport } from "./MobileDesktopViewport";
 
 const MIN_WIDTH = 360; // it cannot get narrower than this
 const DEFAULT_WIDTH = 840; // the width it opens with (kept inside the limits below on a small window)
@@ -74,8 +75,8 @@ interface Props {
 
 /**
  * Accordion at the right of the screen. It is always there (also when no demo runs), so it can always be
- * folded and unfolded. It starts folded and opens by itself when the demo starts (the footer bar starts and
- * stops the demo). The screen gets narrower by the width of this panel.
+ * folded and unfolded. On desktop it opens when the demo starts and takes layout space.
+ * On mobile it opens only on request and overlays the right side without resizing the application.
  * - Header tabs: 시연 (the code of the running test), IDE (a snapshot of the folder tests/e2e), DB (a snapshot of the database).
  * - Drag its left edge to the left to make it wider (the code is easier to read).
  * - The arrow in the header folds it to a thin strip and unfolds it. Folding does not stop the demo.
@@ -94,6 +95,7 @@ export default function DemoAccordion({
   single,
   onChoose,
 }: Props) {
+  const { mobile, scale, canvasScale } = useMobileDesktopViewport();
   const [width, setWidth] = React.useState(() => Math.min(DEFAULT_WIDTH, maxWidth()));
   // The accordion is always on screen, so it can always be folded and unfolded (also when no demo runs).
   // It starts folded, so the first screen (sign in) keeps its full width until the demo starts.
@@ -104,14 +106,16 @@ export default function DemoAccordion({
   const [view, setView] = React.useState<"demo" | "ide" | "db">("ide");
   const drag = React.useRef<{ startX: number; startWidth: number } | null>(null);
 
-  // When a demo starts the accordion opens on the "시연" tab (the running code). When it is stopped it shows the IDE tab again.
+  // Desktop follows the running code automatically. Mobile visibility and view remain the viewer's choice.
   const previousState = React.useRef(state);
   React.useEffect(() => {
     const before = previousState.current;
     previousState.current = state;
     if (state === "running" && (before === "idle" || before === "finished")) {
-      setFolded(false);
-      setView("demo");
+      if (!mobile) {
+        setFolded(false);
+        setView("demo");
+      }
       setPinned(undefined);
       if (!single) setChosen(undefined); // all tests run: the pick is over
     } else if (state === "idle" && before !== "idle") {
@@ -119,7 +123,7 @@ export default function DemoAccordion({
       setPinned(undefined);
       setChosen(undefined);
     }
-  }, [state, single]);
+  }, [state, single, mobile]);
 
   // Which test the "시연" tab shows. It follows the test that runs. A card ("테스트 별 코드 확인") can pick another one;
   // the pick ends when the run moves to another test.
@@ -127,7 +131,7 @@ export default function DemoAccordion({
   const [cardsOpen, setCardsOpen] = React.useState(false);
   // The pick itself, kept also while its test runs alone. It counts only while the viewer looks at the 시연 tab.
   const [chosen, setChosen] = React.useState<number | undefined>();
-  const chosenInView = folded || view !== "demo" ? undefined : chosen;
+  const chosenInView = mobile ? chosen : folded || view !== "demo" ? undefined : chosen;
   React.useEffect(() => onChoose(chosenInView), [onChoose, chosenInView]);
   React.useEffect(() => setPinned(undefined), [index]);
   const viewIndex = pinned ?? index;
@@ -179,9 +183,19 @@ export default function DemoAccordion({
   }, [liveId]);
 
   const lineRef = React.useRef<HTMLDivElement | null>(null);
+  const codeAreaRef = React.useRef<HTMLDivElement | null>(null);
   React.useEffect(() => {
-    lineRef.current?.scrollIntoView({ block: "nearest" });
-  }, [runningLine, picked, folded, changeId, view, api?.id, apiOpen, cardsOpen]); // when the API bar opens the code area gets smaller: keep the running line in view
+    if (folded || view !== "demo" || cardsOpen) return;
+    const area = codeAreaRef.current;
+    const line = lineRef.current;
+    if (!area || !line) return;
+    const bounds = area.getBoundingClientRect();
+    const target = line.getBoundingClientRect();
+    // Scroll only the code pane; scrollIntoView can move the entire mobile viewport.
+    if (target.top < bounds.top) area.scrollTop += (target.top - bounds.top) / canvasScale;
+    else if (target.bottom > bounds.bottom)
+      area.scrollTop += (target.bottom - bounds.bottom) / canvasScale;
+  }, [runningLine, picked, folded, changeId, view, api?.id, apiOpen, cardsOpen, canvasScale]); // when the API bar opens the code area gets smaller: keep the running line in view
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     drag.current = { startX: event.clientX, startWidth: width };
@@ -202,24 +216,19 @@ export default function DemoAccordion({
       data-testid="demo-accordion"
       data-folded={folded}
       sx={{
-        position: { xs: "fixed", sm: "relative" },
+        position: mobile ? "absolute" : "relative",
         zIndex: DEMO_Z_INDEX,
-        bottom: { xs: MOBILE_FOOTER_SPACE, sm: "auto" },
-        left: { xs: 0, sm: "auto" },
-        right: { xs: 0, sm: "auto" },
+        top: mobile ? 0 : "auto",
+        bottom: mobile ? 0 : "auto",
+        right: mobile ? 0 : "auto",
         flexShrink: 0,
-        width: { xs: "100%", sm: folded ? FOLDED_WIDTH : width },
-        height: { xs: folded ? 48 : "min(60dvh, 480px)", sm: "100%" },
-        maxHeight: { xs: `calc(100dvh - ${MOBILE_FOOTER_SPACE})`, sm: "none" },
+        width: mobile ? (folded ? 52 / scale : "65%") : folded ? FOLDED_WIDTH : width,
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         borderLeft: "1px solid #ddd",
         background: "#fff",
         overflow: "hidden",
-        "@media (max-width: 599.95px)": {
-          borderTop: "1px solid #ddd",
-          "& > :first-of-type": { flexShrink: 0 },
-        },
       }}
     >
       {!folded && (
@@ -238,7 +247,7 @@ export default function DemoAccordion({
             cursor: "col-resize",
             zIndex: 1,
             touchAction: "none",
-            display: { xs: "none", sm: "block" },
+            display: mobile ? "none" : "block",
             "&:hover": { background: "rgba(25,118,210,0.25)" },
           }}
         />
@@ -248,32 +257,38 @@ export default function DemoAccordion({
           display: "flex",
           alignItems: "center",
           flexShrink: 0,
-          flexWrap: { xs: "wrap", sm: "nowrap" },
-          gap: { xs: 0.5, sm: 0 },
-          p: { xs: "2px 8px", sm: `${HEADER_PADDING}px` },
+          flexWrap: mobile ? "wrap" : "nowrap",
+          p: mobile ? `${4 / scale}px` : `${HEADER_PADDING}px`,
           borderBottom: folded ? "none" : "1px solid #ddd",
         }}
       >
         <Button
           variant="contained"
-          onClick={() => setFolded(!folded)}
+          onClick={() => {
+            if (folded && mobile && state !== "idle") setView("demo");
+            setFolded(!folded);
+          }}
           aria-expanded={!folded}
           aria-label={folded ? "펼치기" : "접기"}
           title={folded ? "펼치기" : "접기"}
           data-testid="demo-accordion-fold"
           sx={{
             minWidth: 0,
-            width: { xs: 44, sm: BUTTON_SIZE },
-            height: { xs: 44, sm: BUTTON_SIZE },
+            width: mobile ? 44 / scale : BUTTON_SIZE,
+            height: mobile ? 44 / scale : BUTTON_SIZE,
             p: 0,
             flexShrink: 0,
           }}
         >
-          {folded ? <ChevronLeft sx={{ fontSize: 20 }} /> : <ChevronRight sx={{ fontSize: 20 }} />}
+          {folded ? (
+            <ChevronLeft sx={{ fontSize: mobile ? 24 / scale : 20 }} />
+          ) : (
+            <ChevronRight sx={{ fontSize: mobile ? 24 / scale : 20 }} />
+          )}
         </Button>
-        {folded && (
-          <Typography sx={{ display: { xs: "block", sm: "none" }, ml: 1 }}>
-            시연 · 테스트 선택 / 코드 보기
+        {folded && mobile && (
+          <Typography sx={{ writingMode: "vertical-rl", fontSize: 12 / scale, mt: 1 }}>
+            시연
           </Typography>
         )}
         {!folded && (
@@ -283,7 +298,7 @@ export default function DemoAccordion({
               data-testid="demo-file-name"
               title={view === "demo" ? shown.path : VIEW_TITLE[view]}
               noWrap
-              sx={{ ml: { xs: 0, sm: `${HEADER_PADDING}px` }, flex: 1, minWidth: 0 }}
+              sx={{ ml: `${HEADER_PADDING}px`, flex: 1, minWidth: 0 }}
             >
               {view === "demo" ? shown.name : VIEW_TITLE[view]}
             </Typography>
@@ -358,6 +373,7 @@ export default function DemoAccordion({
                 <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
                   <Box
                     data-testid="demo-code-area"
+                    ref={codeAreaRef}
                     sx={{
                       flex: 1,
                       minHeight: 0,

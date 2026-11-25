@@ -7,6 +7,7 @@ import "react-virtualized/styles.css"; // only needs to be imported once
 
 import TransactionItem from "./TransactionItem";
 import { TransactionResponseItem, TransactionPagination } from "@rwa/shared";
+import { useMobileDesktopViewport } from "./MobileDesktopViewport";
 
 const PREFIX = "TransactionInfiniteList";
 
@@ -39,16 +40,18 @@ const TransactionInfiniteList: React.FC<TransactionListProps> = ({
 }) => {
   const theme = useTheme();
   const isXsBreakpoint = useMediaQuery(theme.breakpoints.down("sm"));
+  const { mobile } = useMobileDesktopViewport();
+  const fitContainer = isXsBreakpoint || mobile;
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const listContainerRef = useRef<HTMLDivElement | null>(null);
   const [mobileListWidth, setMobileListWidth] = useState(304);
   useEffect(() => {
     const container = listContainerRef.current;
-    if (!isXsBreakpoint || !container) return;
+    if (!fitContainer || !container) return;
     const observer = new ResizeObserver(() => setMobileListWidth(container.clientWidth));
     observer.observe(container);
     return () => observer.disconnect();
-  }, [isXsBreakpoint]);
+  }, [fitContainer]);
 
   // Every row is measured: a long name takes more lines, and a fixed height would let the next row cover them.
   // A measured height belongs to the transaction, not to the place in the list (a filter changes the places).
@@ -119,7 +122,7 @@ const TransactionInfiniteList: React.FC<TransactionListProps> = ({
             deferredMeasurementCache={rowHeights}
             onRowsRendered={onRowsRendered}
             height={isXsBreakpoint ? removePx(theme.spacing(74)) : removePx(theme.spacing(88))}
-            width={isXsBreakpoint ? mobileListWidth : removePx(theme.spacing(90))}
+            width={fitContainer ? mobileListWidth : removePx(theme.spacing(90))}
             rowHeight={rowHeights.rowHeight}
             rowRenderer={rowRenderer}
           />

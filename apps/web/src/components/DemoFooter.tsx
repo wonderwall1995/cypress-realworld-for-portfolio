@@ -8,7 +8,8 @@ import {
   Stop as StopIcon,
 } from "@mui/icons-material";
 import { DemoState } from "../demo/queue";
-import { DEMO_Z_INDEX, FOOTER_HEIGHT, MOBILE_FOOTER_SPACE } from "../demo/layout";
+import { DEMO_Z_INDEX, MOBILE_FOOTER_SPACE } from "../demo/layout";
+import { useMobileDesktopViewport } from "./MobileDesktopViewport";
 
 interface Props {
   state: DemoState;
@@ -46,6 +47,7 @@ export default function DemoFooter({
   onNext,
   onStop,
 }: Props) {
+  const { mobile, scale } = useMobileDesktopViewport();
   const idle = state === "idle";
   const canToggle = state === "running" || state === "paused"; // not after the queue has ended
   return (
@@ -53,39 +55,45 @@ export default function DemoFooter({
       component="footer"
       data-testid="demo-footer"
       sx={{
-        position: { xs: "fixed", sm: "relative" },
+        position: "relative",
         bottom: 0,
         left: 0,
         right: 0,
         zIndex: DEMO_Z_INDEX + 1,
-        height: { xs: MOBILE_FOOTER_SPACE, sm: FOOTER_HEIGHT },
-        paddingBottom: { xs: "env(safe-area-inset-bottom, 0px)", sm: 0 },
+        height: MOBILE_FOOTER_SPACE,
+        paddingBottom: mobile ? "env(safe-area-inset-bottom, 0px)" : 0,
         flexShrink: 0,
         // three areas: the current testid (left), the demo controls (middle), an empty area (right)
         display: "grid",
-        gridTemplateColumns: { xs: "minmax(0, 1fr) auto", sm: "1fr auto 1fr" },
-        gridTemplateRows: { xs: "32px 64px", sm: "1fr" },
-        "& > :nth-of-type(2)": {
-          gridColumn: { xs: "1 / -1", sm: "auto" },
-          gridRow: { xs: 2, sm: "auto" },
-        },
-        "& > :nth-of-type(3)": {
-          gridColumn: { xs: 2, sm: "auto" },
-          gridRow: { xs: 1, sm: "auto" },
-        },
-        "@media (max-width: 599.95px)": {
-          "& .MuiIconButton-root": { width: 44, height: 44 },
-          "& .MuiButton-root": { minHeight: 44 },
-        },
+        gridTemplateColumns: mobile ? "minmax(0, 1fr) auto" : "1fr auto 1fr",
+        ...(mobile
+          ? {
+              "& > :first-of-type": { display: "none" },
+              "& .MuiIconButton-root": { width: 40 / scale, height: 40 / scale },
+              "& .MuiIconButton-root svg": { fontSize: 24 / scale },
+              "& .MuiButton-root": {
+                minHeight: 40 / scale,
+                minWidth: 68 / scale,
+                fontSize: 12 / scale,
+              },
+            }
+          : {}),
         alignItems: "center",
-        columnGap: { xs: 0.5, sm: 2 },
-        px: { xs: 1, sm: 2 },
+        columnGap: mobile ? `${4 / scale}px` : 2,
+        px: mobile ? `${8 / scale}px` : 2,
         borderTop: "1px solid #ddd",
         background: "#fff",
       }}
     >
       <TestIdArea label="현재 TID" testId={currentTestId} testid="demo-current-tid" />
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: mobile ? `${4 / scale}px` : 1,
+        }}
+      >
         <IconButton
           size="small"
           onClick={onPrev}
@@ -156,13 +164,16 @@ export default function DemoFooter({
             title="지금 실행 중인 테스트 / 전체 테스트"
             sx={{ display: "flex", alignItems: "baseline", gap: 1, whiteSpace: "nowrap" }}
           >
-            <Typography variant="caption" sx={{ color: "text.secondary", fontSize: 12 }}>
+            <Typography
+              variant="caption"
+              sx={{ color: "text.secondary", fontSize: 12, display: mobile ? "none" : "block" }}
+            >
               {single ? "부분 실행" : "테스트"}
             </Typography>
             <Box
               component="span"
               sx={{
-                fontSize: 22,
+                fontSize: mobile ? 12 / scale : 22,
                 fontWeight: 800,
                 lineHeight: 1,
                 color: "#1976d2",

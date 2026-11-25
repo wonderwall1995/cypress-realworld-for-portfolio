@@ -30,6 +30,7 @@ import RWALogo from "./SvgRwaLogo";
 import RWALogoIcon from "./SvgRwaIconLogo";
 import SourceCredit from "./SourceCredit";
 import { MOBILE_SIDEBAR_WIDTH } from "../demo/layout";
+import { useMobileDesktopViewport } from "./MobileDesktopViewport";
 
 const drawerWidth = 240;
 
@@ -123,6 +124,7 @@ interface NavBarProps {
 }
 
 const NavBar: React.FC<NavBarProps> = ({ drawerOpen, toggleDrawer, notificationsService }) => {
+  const { mobile } = useMobileDesktopViewport();
   const match = useLocation();
 
   const theme = useTheme();
@@ -136,6 +138,11 @@ const NavBar: React.FC<NavBarProps> = ({ drawerOpen, toggleDrawer, notifications
     <StyledAppBar
       position="absolute"
       className={clsx(classes.appBar, drawerOpen && classes.appBarShift)}
+      sx={
+        mobile
+          ? { marginLeft: drawerWidth, width: `calc(100% - ${drawerWidth}px)`, transition: "none" }
+          : undefined
+      }
     >
       <Toolbar className={classes.toolbar}>
         <IconButton
