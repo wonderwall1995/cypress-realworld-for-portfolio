@@ -38,9 +38,9 @@ const formatCreatedAt = (value: Date | string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return undefined;
   const two = (number: number) => String(number).padStart(2, "0");
-  const yearMonth = `${date.getFullYear()}/${two(date.getMonth() + 1)}`;
-  const dayTime = `${two(date.getDate())}/${two(date.getHours())}/${two(date.getMinutes())}`;
-  return { yearMonth, dayTime, iso: date.toISOString() };
+  const day = `${date.getFullYear()}/${two(date.getMonth() + 1)}/${two(date.getDate())}`;
+  const time = `${two(date.getHours())}/${two(date.getMinutes())}`;
+  return { day, time, iso: date.toISOString() };
 };
 
 const PREFIX = "NotificationListItem";
@@ -116,7 +116,7 @@ const NotificationListItem: React.FC<NotificationListItemProps> = ({
                 sx={{
                   position: "absolute",
                   left: 0,
-                  right: 64,
+                  right: 80,
                   top: "50%",
                   transform: "translateY(-50%)",
                   overflow: "hidden",
@@ -130,14 +130,14 @@ const NotificationListItem: React.FC<NotificationListItemProps> = ({
                 component="time"
                 dateTime={createdAt.iso}
                 data-testid={`notification-time-${notification.id}`}
-                title={`${createdAt.yearMonth}/${createdAt.dayTime}`}
-                aria-label={`알림 발생 시간 ${createdAt.yearMonth}/${createdAt.dayTime}`}
+                title={`${createdAt.day}/${createdAt.time}`}
+                aria-label={`알림 발생 시간 ${createdAt.day}/${createdAt.time}`}
                 sx={{
                   position: "absolute",
                   right: 0,
                   top: "50%",
                   transform: "translateY(-50%)",
-                  width: 56,
+                  width: 72,
                   fontFamily: "monospace",
                   fontSize: 11,
                   lineHeight: "12px",
@@ -147,9 +147,9 @@ const NotificationListItem: React.FC<NotificationListItemProps> = ({
                   fontVariantNumeric: "tabular-nums",
                 }}
               >
-                {createdAt.yearMonth}
+                {createdAt.day}
                 <br />
-                {createdAt.dayTime}
+                {createdAt.time}
               </Box>
             </>
           ) : (
