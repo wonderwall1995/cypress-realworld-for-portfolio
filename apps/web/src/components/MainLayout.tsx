@@ -16,6 +16,7 @@ import NavDrawer from "./NavDrawer";
 import { DataContext, DataEvents, DataSchema } from "../machines/dataMachine";
 import { AuthMachineContext, AuthMachineEvents, AuthMachineSchema } from "../machines/authMachine";
 import { drawerMachine } from "../machines/drawerMachine";
+import { useMobileDesktopViewport } from "./MobileDesktopViewport";
 
 const PREFIX = "MainLayout";
 
@@ -83,6 +84,7 @@ interface Props {
 }
 
 const MainLayout: React.FC<Props> = ({ children, notificationsService, authService }) => {
+  const { mobile } = useMobileDesktopViewport();
   const theme = useTheme();
   const [drawerState, sendDrawer] = useMachine(drawerMachine);
 
@@ -107,16 +109,30 @@ const MainLayout: React.FC<Props> = ({ children, notificationsService, authServi
   }, [aboveSmallBreakpoint, desktopDrawerOpen]);
 
   return (
-    <Root>
+    <Root
+      sx={
+        mobile
+          ? {
+              height: "100%",
+              [`& .${classes.content}`]: { height: "100%", overscrollBehavior: "contain" },
+            }
+          : undefined
+      }
+    >
       <NavBar
-        toggleDrawer={xsBreakpoint ? toggleMobileDrawer : toggleDesktopDrawer}
-        drawerOpen={xsBreakpoint ? mobileDrawerOpen : desktopDrawerOpen}
+        toggleDrawer={mobile || xsBreakpoint ? toggleMobileDrawer : toggleDesktopDrawer}
+        drawerOpen={mobile || xsBreakpoint ? mobileDrawerOpen : desktopDrawerOpen}
         notificationsService={notificationsService}
       />
-      <NavDrawer
-        drawerOpen={xsBreakpoint ? mobileDrawerOpen : desktopDrawerOpen}
-        authService={authService}
-      />
+      <div
+        data-testid="sidebar-slot"
+        style={mobile ? { width: 240, flexShrink: 0, height: "100%" } : { display: "contents" }}
+      >
+        <NavDrawer
+          drawerOpen={mobile || xsBreakpoint ? mobileDrawerOpen : desktopDrawerOpen}
+          authService={authService}
+        />
+      </div>
       <main className={classes.content} data-testid="main">
         <div className={classes.appBarSpacer} />
         <Container maxWidth="md" className={classes.container}>

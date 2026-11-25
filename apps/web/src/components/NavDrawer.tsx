@@ -34,6 +34,7 @@ import { httpClient } from "../utils/asyncUtils";
 import { API_BASE } from "../utils/apiUtils";
 import { AuthMachineContext, AuthMachineEvents } from "../machines/authMachine";
 import { MOBILE_FOOTER_SPACE, MOBILE_SIDEBAR_WIDTH } from "../demo/layout";
+import { useMobileDesktopViewport } from "./MobileDesktopViewport";
 
 const PREFIX = "NavDrawer";
 
@@ -187,6 +188,7 @@ interface Props {
 }
 
 const NavDrawer: React.FC<Props> = ({ drawerOpen, authService }) => {
+  const { mobile } = useMobileDesktopViewport();
   const location = useLocation();
   const [authState, sendAuth] = useActor(authService);
   const [depositOpen, setDepositOpen] = useState(false);
@@ -247,6 +249,19 @@ const NavDrawer: React.FC<Props> = ({ drawerOpen, authService }) => {
   return (
     <StyledDrawer
       data-testid="sidenav"
+      sx={
+        mobile
+          ? {
+              height: "100%",
+              "& .MuiDrawer-paper": {
+                width: drawerWidth,
+                height: "100%",
+                overflowY: "auto",
+                "& > *": { flexShrink: 0 },
+              },
+            }
+          : undefined
+      }
       variant="persistent"
       classes={{
         paper: clsx(classes.drawerPaper, !drawerOpen && classes.drawerPaperClose),
