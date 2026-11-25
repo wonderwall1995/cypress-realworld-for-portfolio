@@ -88,19 +88,124 @@ test("5. 거래 목록 필터: 범위 안의 거래만 보이고, 잘못된 범�
   const transfers = [sentSmall, sentBig, gotSmall, gotBig];
 
   // ============================================================================================
-  // API: 경계값 분석. 경계와 그 바로 옆(1센트, 1밀리초)을 모두 본다.
-  // 표마다 서버의 답을 모아 한 번에 비교한다. 틀리면 어느 줄이 틀렸는지 그대로 보인다
+  // 화면 먼저: 준비가 끝나면 A로 로그인하고, 구간마다 대표 하나를 눈에 보이게 거른다
   // ============================================================================================
-  await loginWithApi(page, A.user);
+  await page.goto("/signin");
+  await signIn(page, A.user);
+  await expect(page).toHaveURL("/");
   const all = await getMyTransactionsWithApi(page);
   expect(all.length).toBe(5);
   const opening = all.find((item) => transfers.every((sent) => sent.id !== item.id))!; // 처음 입금
+  await openMyTransactions(page);
+
+  // 목록에 이 거래들만 보이는가 (하나도 없으면 빈 목록 안내가 보인다)
+  const expectListOnScreen = async (items: { id: string }[]) => {
+    for (const item of items) {
+      await expect(page.getByTestId(`transaction-item-${item.id}`)).toBeVisible();
+    }
+    await expect(page.locator("[data-testid^=transaction-item-]")).toHaveCount(items.length);
+    if (items.length === 0) await expect(page.getByTestId("empty-list-header")).toBeVisible();
+  };
+  const everything = [opening, ...transfers];
+  await expectListOnScreen(everything);
+
+  // 1) 금액 구간: 작은 금액, 큰 금액, 해당 없음 (출금과 입금)
+  for (const [kind, small, big] of [
+    ["withdrawal", sentSmall, sentBig],
+    ["deposit", gotSmall, gotBig],
+  ] as const) {
+    await applyAmountFilter(page, kind, { min: "1", max: "100" });
+    await expectListOnScreen([small]);
+    await applyAmountFilter(page, kind, { min: "200", max: "400" });
+    await expectListOnScreen([big]);
+    await applyAmountFilter(page, kind, { min: "500", max: "600" });
+    await expectListOnScreen([]);
+    await applyAmountFilter(page, kind, { min: "", max: "" }); // 필터를 없애면 다시 모두 보인다
+    await expectListOnScreen(everything);
+  }
+
+  // 2) 잘못된 금액 구간: 최소가 더 큼, 소수, 한도 초과. 안내가 나오고 적용 버튼이 꺼진다
+  for (const [min, max, message] of [
+    ["100", "50", "최소 금액이 최대 금액보다 클 수 없습니다"],
+    ["10.5", "", "숫자(정수)만 입력하세요"],
+    ["21474837", "", "21,474,836 이하로 입력하세요"],
+  ]) {
+    await fillAmountFilter(page, "withdrawal", { min, max });
+    await expect(page.getByTestId("transaction-list-filter-withdrawal-message")).toHaveText(
+      message
+    );
+    await expect(
+      page.getByTestId("transaction-list-filter-withdrawal-apply-button")
+    ).toBeDisabled();
+    await page.getByTestId("transaction-list-filter-withdrawal-reset-button").click();
+    await expect(page.getByTestId("transaction-list-filter-withdrawal")).toBeHidden();
+    await expectListOnScreen(everything);
+  }
+
+  // 3) 날짜 구간: 미래 구간은 없음, 오늘이 든 구간은 모두 (어제와 내일로 잡아 자정에도 흔들리지 않는다)
+  await fillDateFilter(page, dayFromToday(10), dayFromToday(20));
+  await expectListOnScreen([]);
+  await fillDateFilter(page, dayFromToday(-1), dayFromToday(1));
+  await expectListOnScreen(everything);
+
+  // 4) 잘못된 날짜 구간: 시작이 늦음, 없는 날짜, 덜 쓴 날짜. 안내가 나온다
+  for (const [start, end, message] of [
+    ["2027-03-02", "2027-03-01", "시작일이 종료일보다 늦을 수 없습니다"],
+    ["2027-02-30", "", "시작일: 존재하지 않는 날짜입니다"],
+    ["2027-02", "", "시작일의 연·월·일을 모두 입력하세요"],
+  ]) {
+    await fillDateFilter(page, start, end);
+    await expect(page.getByTestId("transaction-list-filter-date-message")).toHaveText(message);
+  }
+  await page.getByTestId("transaction-list-filter-date-clear-button").click();
+  await expect(page.getByTestId("transaction-list-filter-date-message")).toBeHidden();
+  await expectListOnScreen(everything);
+
+  // 5) 한 글자씩 치기: 친 날짜가 그대로 남는다 (두 자리 월이 01, 00으로 바뀌던 일이 있었다)
+  //    0으로 시작하는 월과 1로 시작하는 월을 하나씩 친다
+  await typeDateFilter(page, "2025-03-07", "2025-11-24");
+  for (const [part, typed] of [
+    ["start-year", "2025"],
+    ["start-month", "03"],
+    ["start-day", "07"],
+    ["end-year", "2025"],
+    ["end-month", "11"],
+    ["end-day", "24"],
+  ]) {
+    await expect(page.getByTestId(`transaction-list-filter-date-${part}`)).toHaveValue(typed);
+  }
+  await page.getByTestId("transaction-list-filter-date-clear-button").click();
+  await expectListOnScreen(everything);
+
+  // 6) 통신 중에 바꾼 필터: 앞의 답이 아직 오는 중에 필터를 또 바꿔도, 목록은 마지막 필터의 것이다
+  //     거래 목록의 통신을 붙잡아 두고 두 번 바꾼 뒤 푼다 (느린 서버에서 앞의 필터에 머물던 일이 있었다)
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/transactions**", async (route) => {
+    await held;
+    await route.continue();
+  });
+  await applyAmountFilter(page, "withdrawal", { min: "500", max: "600" }); // 해당 없음
+  await applyAmountFilter(page, "withdrawal", { min: "1", max: "100" }); // 작은 금액
+  release();
+  await expectListOnScreen([sentSmall]);
+  await page.unroute("**/api/transactions**");
+  await applyAmountFilter(page, "withdrawal", { min: "", max: "" });
+  await expectListOnScreen(everything);
+
+  // ============================================================================================
+  // 화면 시연 뒤 API: 경계값 분석. 경계와 그 바로 옆(1센트, 1밀리초)을 모두 본다.
+  // 표마다 서버의 답을 모아 한 번에 비교한다. 틀리면 어느 줄이 틀렸는지 그대로 보인다
+  // ============================================================================================
+  await loginWithApi(page, A.user);
 
   // 이 필터를 걸었을 때 이 거래가 목록에 있는가
   const isListed = async (id: string, filter: TransactionFilter) =>
     (await getMyTransactionsWithApi(page, filter)).some((item) => item.id === id);
 
-  // 1) 금액의 경계: 거래 금액과 그 1센트 아래, 위를 최소와 최대에 넣는다 (양 끝은 포함이다)
+  // 7) 금액의 경계: 거래 금액과 그 1센트 아래, 위를 최소와 최대에 넣는다 (양 끝은 포함이다)
   for (const [kind, transaction] of [
     ["withdrawal", sentBig],
     ["deposit", gotBig],
@@ -123,7 +228,7 @@ test("5. 거래 목록 필터: 범위 안의 거래만 보이고, 잘못된 범�
     expect(answered).toEqual(expected);
   }
 
-  // 2) 날짜의 경계: 거래 시각과 그 1밀리초 앞, 뒤를 시작과 끝에 넣는다 (양 끝은 포함이다)
+  // 8) 날짜의 경계: 거래 시각과 그 1밀리초 앞, 뒤를 시작과 끝에 넣는다 (양 끝은 포함이다)
   const at = new Date(sentBig.createdAt).getTime();
   const iso = (time: number) => new Date(time).toISOString();
   const datesExpected: [TransactionFilter, boolean][] = [
@@ -144,7 +249,7 @@ test("5. 거래 목록 필터: 범위 안의 거래만 보이고, 잘못된 범�
   const since = await getMyTransactionsWithApi(page, { dateRangeStart: iso(at) });
   expect(since.map((item) => item.id).sort()).toEqual([sentBig.id, gotSmall.id, gotBig.id].sort());
 
-  // 3) 입력의 경계: 받는 값(200)과 거절하는 값(422)의 바로 옆을 본다
+  // 9) 입력의 경계: 받는 값(200)과 거절하는 값(422)의 바로 옆을 본다
   const inputsExpected: [TransactionFilter, number][] = [
     // 금액 (센트): 0부터 최대까지
     [{ withdrawalMin: -1 }, 422],
@@ -175,7 +280,7 @@ test("5. 거래 목록 필터: 범위 안의 거래만 보이고, 잘못된 범�
   }
   expect(inputsAnswered).toEqual(inputsExpected);
 
-  // 4) 각자의 관점: A의 출금은 B와 C에게 입금이고, A의 입금은 B와 C의 출금이다. 남의 거래는 목록에 없다
+  // 10) 각자의 관점: A의 출금은 B와 C에게 입금이고, A의 입금은 B와 C의 출금이다. 남의 거래는 목록에 없다
   const exactly = (kind: string, cents: number): TransactionFilter => ({
     [`${kind}Min`]: cents,
     [`${kind}Max`]: cents,
@@ -194,111 +299,6 @@ test("5. 거래 목록 필터: 범위 안의 거래만 보이고, 잘못된 범�
     expect(await isListed(paid.id, exactly("withdrawal", paid.amount))).toBe(true);
     expect(await isListed(paid.id, exactly("deposit", paid.amount))).toBe(false);
   }
-
-  // ============================================================================================
-  // 화면: 동등분할. 구간마다 대표 하나만 눈에 보이게 거른다 (A의 화면)
-  // ============================================================================================
-  await page.goto("/signin");
-  await signIn(page, A.user);
-  await expect(page).toHaveURL("/");
-  await openMyTransactions(page);
-
-  // 목록에 이 거래들만 보이는가 (하나도 없으면 빈 목록 안내가 보인다)
-  const expectListOnScreen = async (items: { id: string }[]) => {
-    for (const item of items) {
-      await expect(page.getByTestId(`transaction-item-${item.id}`)).toBeVisible();
-    }
-    await expect(page.locator("[data-testid^=transaction-item-]")).toHaveCount(items.length);
-    if (items.length === 0) await expect(page.getByTestId("empty-list-header")).toBeVisible();
-  };
-  const everything = [opening, ...transfers];
-  await expectListOnScreen(everything);
-
-  // 5) 금액 구간: 작은 금액, 큰 금액, 해당 없음 (출금과 입금)
-  for (const [kind, small, big] of [
-    ["withdrawal", sentSmall, sentBig],
-    ["deposit", gotSmall, gotBig],
-  ] as const) {
-    await applyAmountFilter(page, kind, { min: "1", max: "100" });
-    await expectListOnScreen([small]);
-    await applyAmountFilter(page, kind, { min: "200", max: "400" });
-    await expectListOnScreen([big]);
-    await applyAmountFilter(page, kind, { min: "500", max: "600" });
-    await expectListOnScreen([]);
-    await applyAmountFilter(page, kind, { min: "", max: "" }); // 필터를 없애면 다시 모두 보인다
-    await expectListOnScreen(everything);
-  }
-
-  // 6) 잘못된 금액 구간: 최소가 더 큼, 소수, 한도 초과. 안내가 나오고 적용 버튼이 꺼진다
-  for (const [min, max, message] of [
-    ["100", "50", "최소 금액이 최대 금액보다 클 수 없습니다"],
-    ["10.5", "", "숫자(정수)만 입력하세요"],
-    ["21474837", "", "21,474,836 이하로 입력하세요"],
-  ]) {
-    await fillAmountFilter(page, "withdrawal", { min, max });
-    await expect(page.getByTestId("transaction-list-filter-withdrawal-message")).toHaveText(
-      message
-    );
-    await expect(
-      page.getByTestId("transaction-list-filter-withdrawal-apply-button")
-    ).toBeDisabled();
-    await page.getByTestId("transaction-list-filter-withdrawal-reset-button").click();
-    await expect(page.getByTestId("transaction-list-filter-withdrawal")).toBeHidden();
-    await expectListOnScreen(everything);
-  }
-
-  // 7) 날짜 구간: 미래 구간은 없음, 오늘이 든 구간은 모두 (어제와 내일로 잡아 자정에도 흔들리지 않는다)
-  await fillDateFilter(page, dayFromToday(10), dayFromToday(20));
-  await expectListOnScreen([]);
-  await fillDateFilter(page, dayFromToday(-1), dayFromToday(1));
-  await expectListOnScreen(everything);
-
-  // 8) 잘못된 날짜 구간: 시작이 늦음, 없는 날짜, 덜 쓴 날짜. 안내가 나온다
-  for (const [start, end, message] of [
-    ["2027-03-02", "2027-03-01", "시작일이 종료일보다 늦을 수 없습니다"],
-    ["2027-02-30", "", "시작일: 존재하지 않는 날짜입니다"],
-    ["2027-02", "", "시작일의 연·월·일을 모두 입력하세요"],
-  ]) {
-    await fillDateFilter(page, start, end);
-    await expect(page.getByTestId("transaction-list-filter-date-message")).toHaveText(message);
-  }
-  await page.getByTestId("transaction-list-filter-date-clear-button").click();
-  await expect(page.getByTestId("transaction-list-filter-date-message")).toBeHidden();
-  await expectListOnScreen(everything);
-
-  // 9) 한 글자씩 치기: 친 날짜가 그대로 남는다 (두 자리 월이 01, 00으로 바뀌던 일이 있었다)
-  //    0으로 시작하는 월과 1로 시작하는 월을 하나씩 친다
-  await typeDateFilter(page, "2025-03-07", "2025-11-24");
-  for (const [part, typed] of [
-    ["start-year", "2025"],
-    ["start-month", "03"],
-    ["start-day", "07"],
-    ["end-year", "2025"],
-    ["end-month", "11"],
-    ["end-day", "24"],
-  ]) {
-    await expect(page.getByTestId(`transaction-list-filter-date-${part}`)).toHaveValue(typed);
-  }
-  await page.getByTestId("transaction-list-filter-date-clear-button").click();
-  await expectListOnScreen(everything);
-
-  // 10) 통신 중에 바꾼 필터: 앞의 답이 아직 오는 중에 필터를 또 바꿔도, 목록은 마지막 필터의 것이다
-  //     거래 목록의 통신을 붙잡아 두고 두 번 바꾼 뒤 푼다 (느린 서버에서 앞의 필터에 머물던 일이 있었다)
-  let release = () => {};
-  const held = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  await page.route("**/api/transactions**", async (route) => {
-    await held;
-    await route.continue();
-  });
-  await applyAmountFilter(page, "withdrawal", { min: "500", max: "600" }); // 해당 없음
-  await applyAmountFilter(page, "withdrawal", { min: "1", max: "100" }); // 작은 금액
-  release();
-  await expectListOnScreen([sentSmall]);
-  await page.unroute("**/api/transactions**");
-  await applyAmountFilter(page, "withdrawal", { min: "", max: "" });
-  await expectListOnScreen(everything);
 
   // 정리: 세 사람의 은행 계좌를 API로 완전히 지운다 (거래를 지우는 API는 없어서 거래 기록은 남는다)
   for (const who of [A, B, C]) {
